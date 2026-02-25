@@ -1,0 +1,176 @@
+.applied-jobs-container {
+  width: 100%;
+}
+
+.applied-jobs-header {
+  margin-bottom: 24px;
+}
+
+.applied-jobs-header h2 {
+  font-size: 24px;
+  font-weight: 600;
+  color: #212529;
+  margin: 0;
+}
+
+.applied-jobs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.applied-job-card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: var(--shadow-card);
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.applied-job-card:hover {
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-1px);
+}
+
+.applied-job-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.applied-job-info {
+  flex: 1;
+}
+
+.applied-job-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #212529;
+  margin: 0 0 6px 0;
+}
+
+.applied-job-location {
+  font-size: 13px;
+  color: #6c757d;
+}
+
+/* v2 layout (like Interviews card) */
+.applied-job-card-v2 {
+  padding: 20px;
+}
+
+.applied-job-header-v2 {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.applied-status-pill {
+  background: #d4edda;
+  color: #155724;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.applied-job-meta-row {
+  background: #f8f9fa;
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.applied-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #495057;
+  font-size: 14px;
+}
+
+.applied-meta-icon {
+  width: 18px;
+  text-align: center;
+}
+
+.applied-job-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 16px;
+  border-top: 1px solid #e9ecef;
+}
+
+.applied-date {
+  font-size: 13px;
+  color: #6c757d;
+}
+
+.applied-job-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.btn-view-details {
+  padding: 8px 16px;
+  background: white;
+  color: #007bff;
+  border: 1px solid #007bff;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-view-details:hover {
+  background: #007bff;
+  color: white;
+}
+
+/* (deprecated) kept for compatibility; use .btn-withdraw */
+.btn-remove-application {
+  display: none;
+}
+
+.btn-withdraw {
+  padding: 8px 16px;
+  background: white;
+  color: #b91c1c;
+  border: 1px solid rgba(185, 28, 28, 0.5);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-withdraw:hover {
+  background: rgba(185, 28, 28, 0.08);
+}
+
+.btn-view-interview {
+  padding: 8px 16px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-view-interview:hover {
+  background: #0056b3;
+}
+

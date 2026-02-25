@@ -1,0 +1,388 @@
+.ajd-wrap {
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.ajd-back {
+  border: none;
+  background: transparent;
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 10px 8px;
+  border-radius: 10px;
+}
+
+.ajd-back:hover {
+  background: rgba(15, 23, 42, 0.06);
+}
+
+.ajd-card {
+  margin-top: 14px;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid rgba(17, 24, 39, 0.10);
+  box-shadow: var(--shadow-card);
+}
+
+.ajd-card.ajd-error {
+  color: #b91c1c;
+  background: rgba(185, 28, 28, 0.06);
+  border-color: rgba(185, 28, 28, 0.18);
+}
+
+.ajd-feedback-card {
+  margin-top: 20px;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid rgba(16, 185, 129, 0.20);
+  box-shadow: 0 1px 3px rgba(16, 185, 129, 0.10);
+}
+
+.ajd-head {
+  margin-bottom: 10px;
+}
+
+.ajd-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.ajd-sub {
+  margin-top: 4px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.ajd-score {
+  margin: 12px auto 10px;
+  width: 112px;
+  height: 112px;
+  border-radius: 999px;
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.ajd-score-svg {
+  width: 112px;
+  height: 112px;
+  display: block;
+}
+
+.ajd-score-inner {
+  z-index: 2;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+  color: #0f172a;
+}
+
+.ajd-score-num {
+  font-size: 34px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.ajd-score-unit {
+  font-size: 16px;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+.ajd-score-sub {
+  text-align: center;
+  margin-top: 2px;
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+.ajd-score-track {
+  filter: drop-shadow(0 1px 0 rgba(15, 23, 42, 0.06));
+}
+
+.ajd-score-arc {
+  transition: stroke-dashoffset 180ms ease;
+  filter: drop-shadow(0 4px 10px rgba(17, 24, 39, 0.10));
+}
+
+.ajd-sections {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.ajd-sec {
+  background: #ffffff;
+  border-radius: 10px;
+  border: 1px solid rgba(17, 24, 39, 0.10);
+  padding: 14px 14px;
+  box-shadow: 0 4px 12px rgba(17, 24, 39, 0.05);
+}
+
+.ajd-sec-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.ajd-sec-title {
+  color: #111827;
+  font-weight: 500;
+  font-size: 17px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ajd-sec-icon {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ajd-sec-text {
+  color: #374151;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.ajd-sec.tone-green {
+  border-color: rgba(34, 197, 94, 0.35);
+}
+.ajd-sec.tone-lgreen {
+  border-color: rgba(52, 211, 153, 0.35);
+}
+.ajd-sec.tone-yellow {
+  border-color: rgba(250, 204, 21, 0.40);
+}
+.ajd-sec.tone-orange {
+  border-color: rgba(249, 115, 22, 0.40);
+}
+.ajd-sec.tone-red {
+  border-color: rgba(239, 68, 68, 0.40);
+}
+
+.ajd-expl {
+  margin-top: 14px;
+}
+
+.ajd-expl-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 6px;
+}
+
+.ajd-expl-text {
+  color: #374151;
+  font-size: 15px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.ajd-job {
+  margin-top: 16px;
+}
+
+.ajd-note {
+  margin-top: 12px;
+  border: 1px solid rgba(59, 130, 246, 0.22);
+  background: rgba(59, 130, 246, 0.06);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.ajd-note-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.ajd-note-text {
+  color: #334155;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.ajd-muted {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.ajd-resume {
+  margin-top: 14px;
+}
+
+.ajd-resume-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid rgba(17, 24, 39, 0.10);
+  border-radius: 10px;
+  padding: 11px 12px;
+  background: #ffffff;
+  cursor: pointer;
+  transition: background 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.ajd-resume-row:hover {
+  background: rgba(15, 23, 42, 0.03);
+  box-shadow: var(--shadow-card-hover);
+  border-color: rgba(15, 23, 42, 0.14);
+}
+
+.ajd-resume-row:focus {
+  outline: none;
+}
+
+.ajd-resume-row:focus-visible {
+  outline: 3px solid rgba(59, 130, 246, 0.45);
+  outline-offset: 2px;
+}
+
+.ajd-resume-row.is-downloading {
+  cursor: progress;
+  opacity: 0.92;
+}
+
+.ajd-resume-name {
+  color: #111827;
+  font-size: 15px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ajd-resume-hint {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ajd-pending {
+  margin-top: 10px;
+  color: #64748b;
+  font-size: 15px;
+}
+
+/* Candidate Info Section */
+.ajd-candidate-info {
+  margin-bottom: 18px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.12);
+}
+
+.candidate-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.candidate-name-section {
+  margin-top: 8px;
+}
+
+.candidate-name-section h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 4px 0;
+}
+
+.candidate-name-section p {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.candidate-socials {
+  margin-top: 12px;
+}
+
+.socials-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.social-links {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.social-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #374151;
+  font-weight: 500;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.social-link:hover {
+  background: #e5e7eb;
+  border-color: #1976d2;
+  color: #1976d2;
+  transform: translateY(-1px);
+}
+
+.social-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: #1976d2;
+  color: white;
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.social-link.linkedin .social-icon {
+  background: #0077b5;
+}
+
+.social-link.github .social-icon {
+  background: #333;
+}
+
+.social-link.linkedin:hover .social-icon {
+  background: #005a87;
+}
+
+.social-link.github:hover .social-icon {
+  background: #1a1a1a;
+}
