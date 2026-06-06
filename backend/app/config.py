@@ -52,3 +52,4 @@ EMBEDDINGS_MODEL = os.getenv("EMBEDDINGS_MODEL", "BAAI/bge-small-en-v1.5")
 RERANKER_ENABLED = (os.getenv("RERANKER_ENABLED", "1") or "1").strip() in {"1", "true", "True", "yes", "YES"}
 RERANKER_MODEL = os.getenv("RERANKER_MODEL", "BAAI/bge-reranker-base")
 RERANKER_SHORTLIST_SIZE = int(os.getenv("RERANKER_SHORTLIST_SIZE", "8") or "8")
+RERANKER_TIMEOUT_S = float(os.getenv("RERANKER_TIMEOUT_S", "20") or "20")
