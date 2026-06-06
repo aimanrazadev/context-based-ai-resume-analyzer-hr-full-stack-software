@@ -26,6 +26,7 @@ from ..services.resume_parsing import parse_resume_text
 from ..services.ai_job_match import ai_match_resume_to_job
 from ..services.ai_resume_structuring import ai_structure_resume
 from ..services.embeddings import get_or_create_embedding
+from ..services.reranking import build_rerank_text, rerank_candidate_shortlist
 from ..services.semantic_similarity import fallback_semantic_similarity, resume_job_similarity
 from ..services.scoring_engine import score_application
 from ..services.progress_tracker import complete_task, create_task, fail_task, get_task, public_view, update_task
@@ -2048,6 +2049,9 @@ def ranked_candidates(
         .all()
     )
 
+    job_text = f"{job.job_title or ''}\n{job.job_description or ''}".strip()
+    shortlist_inputs: list[dict] = []
+
     items: list[dict] = []
     for a in apps:
         cand = a.candidate
@@ -2056,6 +2060,32 @@ def ranked_candidates(
             breakdown = json.loads(a.score_breakdown_json) if a.score_breakdown_json else None
         except Exception:
             breakdown = None
+        resume = db.query(Resume).filter(Resume.id == int(a.resume_id)).first() if a.resume_id else None
+        ai_resume_analysis = None
+        sections_for_rerank = None
+        if resume:
+            try:
+                structured_payload = json.loads(resume.structured_json) if resume.structured_json else None
+            except Exception:
+                structured_payload = None
+            try:
+                ai_structured_payload = json.loads(resume.ai_structured_json) if getattr(resume, "ai_structured_json", None) else None
+            except Exception:
+                ai_structured_payload = None
+            if isinstance(ai_structured_payload, dict):
+                analysis = ai_structured_payload.get("analysis")
+                ai_resume_analysis = analysis if isinstance(analysis, dict) else None
+                sections = ai_structured_payload.get("sections")
+                sections_for_rerank = sections if isinstance(sections, dict) else None
+            if not sections_for_rerank and isinstance(structured_payload, dict):
+                sections = structured_payload.get("sections")
+                sections_for_rerank = sections if isinstance(sections, dict) else None
+
+        rerank_text = build_rerank_text(
+            extracted_text=getattr(resume, "extracted_text", None) if resume else None,
+            structured_sections=sections_for_rerank,
+            ai_analysis=ai_resume_analysis,
+        )
         items.append(
             {
                 "application_id": a.id,
@@ -2070,12 +2100,107 @@ def ranked_candidates(
                 "skills_score": float(a.skills_score or 0.0),
                 "final_score": int(a.final_score or 0),
                 "breakdown": breakdown,
+                "ai_explanation": a.ai_explanation,
+                "ai_analysis": ai_resume_analysis,
                 "status": a.status,
                 "created_at": a.created_at.isoformat() if isinstance(a.created_at, datetime) else a.created_at,
             }
         )
+        shortlist_inputs.append(
+            {
+                "application_id": int(a.id),
+                "semantic_score": float(a.semantic_score or 0.0),
+                "final_score": int(a.final_score or 0),
+                "rerank_text": rerank_text,
+            }
+        )
 
-    return {"success": True, "job": _job_to_public(job), "candidates": items}
+    rerank_meta = rerank_candidate_shortlist(job_text=job_text, candidates=shortlist_inputs)
+    rerank_per_app = rerank_meta.get("per_application") if isinstance(rerank_meta, dict) else {}
+    if not isinstance(rerank_per_app, dict):
+        rerank_per_app = {}
+
+    for row in items:
+        app_key = str(row["application_id"])
+        ranking = rerank_per_app.get(app_key) if isinstance(rerank_per_app, dict) else None
+        if isinstance(ranking, dict):
+            row["reranking"] = {
+                "was_reranked": True,
+                "model": rerank_meta.get("model"),
+                **ranking,
+            }
+        else:
+            row["reranking"] = {
+                "was_reranked": False,
+                "model": rerank_meta.get("model"),
+            }
+
+        breakdown = row.get("breakdown") or {}
+        if isinstance(breakdown, dict):
+            matched = breakdown.get("matched_skills") or []
+            missing = breakdown.get("missing_skills") or []
+            evidence = breakdown.get("evidence") or []
+            notes = breakdown.get("notes") or []
+        else:
+            matched = []
+            missing = []
+            evidence = []
+            notes = []
+
+        ai_analysis = row.get("ai_analysis") if isinstance(row.get("ai_analysis"), dict) else {}
+        recruiter_summary = str(ai_analysis.get("recruiter_summary") or ai_analysis.get("candidate_summary") or row.get("ai_explanation") or "").strip()
+        recommendation = str(ai_analysis.get("hiring_recommendation") or "").strip()
+        if recommendation:
+            recommendation = recommendation.replace("_", " ").title()
+
+        row["insights"] = {
+            "matched_skills": matched,
+            "missing_skills": missing,
+            "evidence": evidence,
+            "notes": notes,
+            "recruiter_summary": recruiter_summary,
+            "strengths": ai_analysis.get("strengths") if isinstance(ai_analysis.get("strengths"), list) else [],
+            "weaknesses": ai_analysis.get("weaknesses") if isinstance(ai_analysis.get("weaknesses"), list) else [],
+            "missing_skills_ai": ai_analysis.get("missing_skills") if isinstance(ai_analysis.get("missing_skills"), list) else [],
+            "recommendation": recommendation,
+        }
+
+        ranking_reason_parts = []
+        if row["reranking"].get("was_reranked"):
+            ranking_reason_parts.append(
+                f"Reranked from semantic shortlist position {row['reranking'].get('semantic_shortlist_rank')} "
+                f"to {row['reranking'].get('reranked_shortlist_rank')}."
+            )
+        if matched:
+            ranking_reason_parts.append(f"Matched {len(matched)} required skills.")
+        if recruiter_summary:
+            ranking_reason_parts.append(recruiter_summary)
+        elif evidence:
+            ranking_reason_parts.append(str(evidence[0]))
+        row["ranking_explanation"] = " ".join(part for part in ranking_reason_parts if part).strip()
+
+    items.sort(
+        key=lambda row: (
+            0 if row.get("reranking", {}).get("was_reranked") else 1,
+            row.get("reranking", {}).get("reranked_shortlist_rank") or 10**6,
+            -(int(row.get("final_score") or 0)),
+            -(float(row.get("semantic_score") or 0.0)),
+            row.get("created_at") or "",
+        )
+    )
+
+    return {
+        "success": True,
+        "job": _job_to_public(job),
+        "reranking": {
+            "enabled": bool(rerank_meta.get("enabled")),
+            "model": rerank_meta.get("model"),
+            "shortlist_size": rerank_meta.get("shortlist_size"),
+            "shortlisted_application_ids": rerank_meta.get("shortlisted_application_ids") or [],
+            "status": rerank_meta.get("reason"),
+        },
+        "candidates": items,
+    }
 
 
 @router.get("/{job_id:int}/semantic_match/{resume_id:int}")

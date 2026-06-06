@@ -126,244 +126,11 @@ def on_startup() -> None:
         dialect = (getattr(engine, "dialect", None) and engine.dialect.name) or ""
         dialect = str(dialect).lower()
 
-        # SQLite dev mode: create_all() does not add columns to existing tables.
-        # So we do a tiny best-effort migration for columns we rely on.
         if dialect == "sqlite":
-            try:
-                with engine.begin() as conn:
-                    def _sqlite_has_column(table: str, column: str) -> bool:
-                        rows = conn.exec_driver_sql(f"PRAGMA table_info({table})").fetchall()
-                        return any((r[1] == column) for r in rows)  # r[1] = name
+            raise RuntimeError("SQLite is no longer supported. Configure a MySQL DATABASE_URL.")
 
-                    def _sqlite_add_column_if_missing(*, table: str, column: str, ddl: str) -> None:
-                        if not _sqlite_has_column(table, column):
-                            conn.exec_driver_sql(ddl)
-
-                    # embeddings table (Module 9)
-                    conn.exec_driver_sql(
-                        """
-                        CREATE TABLE IF NOT EXISTS embeddings (
-                            id INTEGER PRIMARY KEY,
-                            entity_type VARCHAR(20) NOT NULL,
-                            entity_id INTEGER NOT NULL,
-                            model VARCHAR(120) NOT NULL,
-                            dim INTEGER NOT NULL DEFAULT 0,
-                            text_hash VARCHAR(64) NOT NULL,
-                            vector_json TEXT NOT NULL,
-                            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-                        )
-                        """
-                    )
-                    # Best-effort indexes (SQLite will ignore if already exists)
-                    try:
-                        conn.exec_driver_sql(
-                            "CREATE INDEX IF NOT EXISTS ix_embeddings_lookup ON embeddings(entity_type, entity_id, model)"
-                        )
-                    except Exception:
-                        pass
-
-                    # jobs: drafts/status support
-                    _sqlite_add_column_if_missing(
-                        table="jobs",
-                        column="status",
-                        ddl="ALTER TABLE jobs ADD COLUMN status TEXT NOT NULL DEFAULT 'active'",
-                    )
-                    _sqlite_add_column_if_missing(
-                        table="jobs",
-                        column="draft_data",
-                        ddl="ALTER TABLE jobs ADD COLUMN draft_data TEXT NULL",
-                    )
-                    _sqlite_add_column_if_missing(
-                        table="jobs",
-                        column="draft_step",
-                        ddl="ALTER TABLE jobs ADD COLUMN draft_step INTEGER NOT NULL DEFAULT 1",
-                    )
-
-                    # resumes: metadata used by upload/apply flows
-                    _sqlite_add_column_if_missing(
-                        table="resumes",
-                        column="stored_filename",
-                        ddl="ALTER TABLE resumes ADD COLUMN stored_filename VARCHAR(255) NULL",
-                    )
-                    _sqlite_add_column_if_missing(
-                        table="resumes",
-                        column="original_filename",
-                        ddl="ALTER TABLE resumes ADD COLUMN original_filename VARCHAR(255) NULL",
-                    )
-                    _sqlite_add_column_if_missing(
-                        table="resumes",
-                        column="content_type",
-                        ddl="ALTER TABLE resumes ADD COLUMN content_type VARCHAR(120) NULL",
-                    )
-                    _sqlite_add_column_if_missing(
-                        table="resumes",
-                        column="size_bytes",
-                        ddl="ALTER TABLE resumes ADD COLUMN size_bytes INTEGER NOT NULL DEFAULT 0",
-                    )
-                    _sqlite_add_column_if_missing(
-                        table="resumes",
-                        column="extracted_text",
-                        ddl="ALTER TABLE resumes ADD COLUMN extracted_text TEXT NULL",
-                    )
-                    _sqlite_add_column_if_missing(
-                        table="resumes",
-                        column="structured_json",
-                        ddl="ALTER TABLE resumes ADD COLUMN structured_json TEXT NULL",
-                    )
-                    _sqlite_add_column_if_missing(
-                        table="resumes",
-                        column="structured_version",
-                        ddl="ALTER TABLE resumes ADD COLUMN structured_version INTEGER NOT NULL DEFAULT 1",
-                    )
-                    _sqlite_add_column_if_missing(
-                        table="resumes",
-                        column="ai_structured_json",
-                        ddl="ALTER TABLE resumes ADD COLUMN ai_structured_json TEXT NULL",
-                    )
-                    _sqlite_add_column_if_missing(
-                        table="resumes",
-                        column="ai_structured_version",
-                        ddl="ALTER TABLE resumes ADD COLUMN ai_structured_version INTEGER NOT NULL DEFAULT 1",
-                    )
-                    _sqlite_add_column_if_missing(
-                        table="resumes",
-                        column="ai_model",
-                        ddl="ALTER TABLE resumes ADD COLUMN ai_model VARCHAR(120) NULL",
-                    )
-                    _sqlite_add_column_if_missing(
-                        table="resumes",
-                        column="ai_generated_at",
-                        ddl="ALTER TABLE resumes ADD COLUMN ai_generated_at DATETIME NULL",
-                    )
-                    _sqlite_add_column_if_missing(
-                        table="resumes",
-                        column="ai_warnings",
-                        ddl="ALTER TABLE resumes ADD COLUMN ai_warnings TEXT NULL",
-                    )
-
-                    # applications: fields used by apply/analyze flow
-                    _sqlite_add_column_if_missing(
-                        table="applications",
-                        column="resume_id",
-                        ddl="ALTER TABLE applications ADD COLUMN resume_id INTEGER NULL",
-                    )
-                    _sqlite_add_column_if_missing(
-                        table="applications",
-                        column="match_score",
-                        ddl="ALTER TABLE applications ADD COLUMN match_score REAL NULL",
-                    )
-                    _sqlite_add_column_if_missing(
-                        table="applications",
-                        column="ai_explanation",
-                        ddl="ALTER TABLE applications ADD COLUMN ai_explanation TEXT NULL",
-                    )
-                    _sqlite_add_column_if_missing(
-                        table="applications",
-                        column="status",
-                        ddl="ALTER TABLE applications ADD COLUMN status TEXT NULL",
-                    )
-                    _sqlite_add_column_if_missing(
-                        table="applications",
-                        column="semantic_score",
-                        ddl="ALTER TABLE applications ADD COLUMN semantic_score REAL NULL",
-                    )
-                    _sqlite_add_column_if_missing(
-                        table="applications",
-                        column="skills_score",
-                        ddl="ALTER TABLE applications ADD COLUMN skills_score REAL NULL",
-                    )
-                    _sqlite_add_column_if_missing(
-                        table="applications",
-                        column="final_score",
-                        ddl="ALTER TABLE applications ADD COLUMN final_score INTEGER NULL",
-                    )
-                    _sqlite_add_column_if_missing(
-                        table="applications",
-                        column="score_breakdown_json",
-                        ddl="ALTER TABLE applications ADD COLUMN score_breakdown_json TEXT NULL",
-                    )
-                    _sqlite_add_column_if_missing(
-                        table="applications",
-                        column="score_updated_at",
-                        ddl="ALTER TABLE applications ADD COLUMN score_updated_at DATETIME NULL",
-                    )
-
-                    # interviews: Module 11 interview engine fields
-                    _sqlite_add_column_if_missing(
-                        table="interviews",
-                        column="status",
-                        ddl="ALTER TABLE interviews ADD COLUMN status TEXT NULL",
-                    )
-                    _sqlite_add_column_if_missing(
-                        table="interviews",
-                        column="updated_at",
-                        ddl="ALTER TABLE interviews ADD COLUMN updated_at DATETIME NULL",
-                    )
-                    _sqlite_add_column_if_missing(
-                        table="interviews",
-                        column="scheduled_at",
-                        ddl="ALTER TABLE interviews ADD COLUMN scheduled_at DATETIME NULL",
-                    )
-                    _sqlite_add_column_if_missing(
-                        table="interviews",
-                        column="timezone",
-                        ddl="ALTER TABLE interviews ADD COLUMN timezone TEXT NULL",
-                    )
-                    _sqlite_add_column_if_missing(
-                        table="interviews",
-                        column="duration_minutes",
-                        ddl="ALTER TABLE interviews ADD COLUMN duration_minutes INTEGER NULL",
-                    )
-                    _sqlite_add_column_if_missing(
-                        table="interviews",
-                        column="mode",
-                        ddl="ALTER TABLE interviews ADD COLUMN mode TEXT NULL",
-                    )
-                    _sqlite_add_column_if_missing(
-                        table="interviews",
-                        column="meeting_link",
-                        ddl="ALTER TABLE interviews ADD COLUMN meeting_link TEXT NULL",
-                    )
-                    _sqlite_add_column_if_missing(
-                        table="interviews",
-                        column="location",
-                        ddl="ALTER TABLE interviews ADD COLUMN location TEXT NULL",
-                    )
-                    _sqlite_add_column_if_missing(
-                        table="interviews",
-                        column="interviewer_name",
-                        ddl="ALTER TABLE interviews ADD COLUMN interviewer_name TEXT NULL",
-                    )
-                    _sqlite_add_column_if_missing(
-                        table="interviews",
-                        column="recruiter_notes",
-                        ddl="ALTER TABLE interviews ADD COLUMN recruiter_notes TEXT NULL",
-                    )
-                    _sqlite_add_column_if_missing(
-                        table="interviews",
-                        column="feedback",
-                        ddl="ALTER TABLE interviews ADD COLUMN feedback TEXT NULL",
-                    )
-                    _sqlite_add_column_if_missing(
-                        table="interviews",
-                        column="outcome",
-                        ddl="ALTER TABLE interviews ADD COLUMN outcome TEXT NULL",
-                    )
-                    _sqlite_add_column_if_missing(
-                        table="interviews",
-                        column="completed_at",
-                        ddl="ALTER TABLE interviews ADD COLUMN completed_at DATETIME NULL",
-                    )
-                    _sqlite_add_column_if_missing(
-                        table="interviews",
-                        column="evaluated_at",
-                        ddl="ALTER TABLE interviews ADD COLUMN evaluated_at DATETIME NULL",
-                    )
-            except Exception:
-                # Best-effort only. If the SQLite file is read-only or the table doesn't exist yet,
-                # the app can still boot and the /db/health endpoint will help debug.
-                pass
+        if dialect and dialect != "mysql":
+            raise RuntimeError(f"Unsupported database dialect '{dialect}'. This backend now requires MySQL.")
 
         # Ensure the existing MySQL schema supports candidate accounts.
         # Many starter schemas define `users.role` as ENUM('admin','recruiter') only.
@@ -591,6 +358,54 @@ def on_startup() -> None:
                     exists = int(row[0]) if row else 0
                     if exists == 0:
                         conn.execute(text("ALTER TABLE resumes ADD COLUMN extracted_text TEXT NULL"))
+
+                    # resumes.raw_extracted_text
+                    row = conn.execute(
+                        text(
+                            """
+                            SELECT COUNT(*)
+                            FROM information_schema.COLUMNS
+                            WHERE TABLE_SCHEMA = DATABASE()
+                              AND TABLE_NAME = 'resumes'
+                              AND COLUMN_NAME = 'raw_extracted_text'
+                            """
+                        )
+                    ).fetchone()
+                    exists = int(row[0]) if row else 0
+                    if exists == 0:
+                        conn.execute(text("ALTER TABLE resumes ADD COLUMN raw_extracted_text TEXT NULL"))
+
+                    # resumes.extraction_status
+                    row = conn.execute(
+                        text(
+                            """
+                            SELECT COUNT(*)
+                            FROM information_schema.COLUMNS
+                            WHERE TABLE_SCHEMA = DATABASE()
+                              AND TABLE_NAME = 'resumes'
+                              AND COLUMN_NAME = 'extraction_status'
+                            """
+                        )
+                    ).fetchone()
+                    exists = int(row[0]) if row else 0
+                    if exists == 0:
+                        conn.execute(text("ALTER TABLE resumes ADD COLUMN extraction_status VARCHAR(32) NOT NULL DEFAULT 'pending'"))
+
+                    # resumes.extraction_metadata_json
+                    row = conn.execute(
+                        text(
+                            """
+                            SELECT COUNT(*)
+                            FROM information_schema.COLUMNS
+                            WHERE TABLE_SCHEMA = DATABASE()
+                              AND TABLE_NAME = 'resumes'
+                              AND COLUMN_NAME = 'extraction_metadata_json'
+                            """
+                        )
+                    ).fetchone()
+                    exists = int(row[0]) if row else 0
+                    if exists == 0:
+                        conn.execute(text("ALTER TABLE resumes ADD COLUMN extraction_metadata_json TEXT NULL"))
 
                     # resumes.structured_json
                     row = conn.execute(

@@ -8,13 +8,10 @@ from dotenv import load_dotenv
 # For automated tests (SQLite), we need to prevent backend/.env from overriding the
 # test DATABASE_URL. Set DISABLE_DOTENV=1 to skip loading .env.
 if os.getenv("DISABLE_DOTENV") != "1":
-    load_dotenv(override=True)
+    load_dotenv(Path(__file__).resolve().parent.parent / ".env", override=True)
 
 _raw_database_url = (os.getenv("DATABASE_URL") or "").strip()
-# Default to a local SQLite DB for dev so the backend can start out-of-the-box.
-# Use an absolute path so it works regardless of current working directory.
-_default_sqlite_path = (Path(__file__).resolve().parent.parent / "dev.db").as_posix()
-DATABASE_URL = _raw_database_url or f"sqlite:///{_default_sqlite_path}"
+DATABASE_URL = _raw_database_url
 
 # -------------------- Module 8: AI (Gemini) --------------------
 # Keep old AI_API_KEY for backward compatibility with any older modules, but Module 8
@@ -50,3 +47,8 @@ SECRET_KEY = os.getenv("SECRET_KEY", "dev_secret_change_me")
 EMBEDDINGS_ENABLED = (os.getenv("EMBEDDINGS_ENABLED", "1") or "1").strip() in {"1", "true", "True", "yes", "YES"}
 EMBEDDINGS_PROVIDER = os.getenv("EMBEDDINGS_PROVIDER", "local")
 EMBEDDINGS_MODEL = os.getenv("EMBEDDINGS_MODEL", "BAAI/bge-small-en-v1.5")
+
+# -------------------- Module 10: Cross-encoder reranking --------------------
+RERANKER_ENABLED = (os.getenv("RERANKER_ENABLED", "1") or "1").strip() in {"1", "true", "True", "yes", "YES"}
+RERANKER_MODEL = os.getenv("RERANKER_MODEL", "BAAI/bge-reranker-base")
+RERANKER_SHORTLIST_SIZE = int(os.getenv("RERANKER_SHORTLIST_SIZE", "8") or "8")

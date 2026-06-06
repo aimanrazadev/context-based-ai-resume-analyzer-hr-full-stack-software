@@ -6,3 +6,4 @@ from .embedding import Embedding  # noqa: F401
 from .resume import Resume  # noqa: F401
 from .user import User  # noqa: F401
 from .ai_match_cache import AIMatchCache  # noqa: F401
+from .semantic_similarity_result import SemanticSimilarityResult  # noqa: F401

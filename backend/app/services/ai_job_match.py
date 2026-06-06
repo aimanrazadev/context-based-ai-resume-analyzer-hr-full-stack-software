@@ -26,23 +26,64 @@ logger = logging.getLogger(__name__)
 
 
 def _sanitize_list(items: list[str], n: int) -> list[str]:
+    """
+    Trim and truncate a list of model-generated bullet strings.
+
+    Args:
+        items: Source list from model output.
+        n: Maximum number of items to keep.
+
+    Returns:
+        A cleaned list of non-empty strings.
+
+    Side Effects:
+        None.
+
+    Error Handling:
+        Treats falsy inputs as empty lists and skips invalid values.
+    """
     return [str(x).strip() for x in (items or []) if str(x).strip()][:n]
 
 
 def _sanitize_text(s: str, max_len: int = 1200) -> str:
+    """
+    Normalize and cap a free-form model-generated string.
+
+    Args:
+        s: Raw model text.
+        max_len: Maximum number of characters to keep.
+
+    Returns:
+        A cleaned and length-limited string.
+    """
     s = (s or "").strip()
     if len(s) > max_len:
-        return s[:max_len] + "…"
+        return s[:max_len] + "..."
     return s
 
 
 def _sanitize_summary(s: str, max_len: int = 220) -> str:
+    """
+    Compress a summary to roughly two recruiter-friendly sentences.
+
+    Args:
+        s: Raw summary text from the model.
+        max_len: Maximum number of characters to keep.
+
+    Returns:
+        A short, UI-friendly summary string.
+
+    Side Effects:
+        None.
+
+    Error Handling:
+        Falls back to a truncated raw string when sentence splitting is weak.
+    """
     s = (s or "").strip()
-    # Keep to ~2 sentences max
     parts = [p.strip() for p in re.split(r"(?<=[.!?])\s+", s) if p.strip()]
     s2 = " ".join(parts[:2]) if parts else s
     if len(s2) > max_len:
-        return s2[:max_len] + "…"
+        return s2[:max_len] + "..."
     return s2
 
 
@@ -56,28 +97,40 @@ async def ai_match_resume_to_job(
     resume_id: int | None = None,
 ) -> tuple[dict[str, Any] | None, dict[str, Any]]:
     """
-    Returns (match_dict_or_none, meta).
-    match_dict shape: {score(int 0-100), explanation(str), highlights(list), gaps(list)}
-    
+    Generate an AI-assisted job match analysis for a resume.
+
     Args:
-        job_title, job_description, resume_text: Content to match
-        db: Optional database session for caching
-        job_id, resume_id: Optional for cache lookup by ID (requires db)
-    
-    If db and both job_id/resume_id provided, checks cache first.
-    If cache hit, returns cached result immediately.
+        job_title: Job title text, if available.
+        job_description: Job description text, if available.
+        resume_text: Resume text to compare against the job.
+        db: Optional database session for cache lookup and storage.
+        job_id: Optional job identifier for cache lookup.
+        resume_id: Optional resume identifier for cache lookup.
+
+    Returns:
+        A tuple containing:
+        - AI match output or None
+        - metadata describing enablement, cache usage, warnings, and timing
+
+    Side Effects:
+        May perform a cache lookup, an outbound AI request, and cache the
+        successful result.
+
+    Error Handling:
+        Returns `(None, meta)` on parse, validation, HTTP, network, or
+        unexpected failures rather than raising into the calling flow.
     """
     meta: dict[str, Any] = {
         "enabled": bool(GEMINI_API_KEY),
         "warnings": [],
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "model": GEMINI_MODEL,
+        "validated_schema": False,
     }
     if not GEMINI_API_KEY:
         meta["warnings"].append("AI disabled: GEMINI_API_KEY not configured.")
         return None, meta
 
-    # Check cache first
     if db and job_id and resume_id:
         cached = get_cached_match(db, job_id=job_id, resume_id=resume_id)
         if cached:
@@ -85,7 +138,6 @@ async def ai_match_resume_to_job(
             meta["cached_hit"] = True
             return cached, meta
 
-    # Fallback: cache by content hash for pre-save scenarios
     if db and not (job_id and resume_id):
         cached = get_cached_match(
             db,
@@ -97,7 +149,6 @@ async def ai_match_resume_to_job(
             meta["cached_by_content"] = True
             return cached, meta
 
-    # Prefer sectioned output (better UX); fall back to legacy shape if parsing fails.
     user_prompt = job_match_sectioned_user_prompt(
         job_title=job_title,
         job_description=job_description,
@@ -121,18 +172,16 @@ async def ai_match_resume_to_job(
         )
         meta["latency_ms"] = call_meta.latency_ms
         meta["retries"] = call_meta.retries
+        meta["response_chars"] = len(raw_text or "")
 
         obj = extract_first_json_object(raw_text)
 
-        # Try new sectioned format first
         try:
             validated2 = AISectionedMatch.model_validate(obj)
             out2 = validated2.model_dump()
             out2["education_summary"]["summary"] = _sanitize_summary(out2["education_summary"].get("summary", ""))
             out2["projects_summary"]["summary"] = _sanitize_summary(out2["projects_summary"].get("summary", ""))
             out2["work_experience_summary"]["summary"] = _sanitize_summary(out2["work_experience_summary"].get("summary", ""))
-
-            # Back-compat: expose score/explanation as well.
             out2["score"] = int(out2.get("overall_match_score") or 0)
             out2["explanation"] = _sanitize_text(
                 " ".join(
@@ -147,8 +196,8 @@ async def ai_match_resume_to_job(
             out2["highlights"] = []
             out2["gaps"] = []
             meta["format"] = "sectioned_v1"
-            
-            # Cache successful result
+            meta["validated_schema"] = True
+
             if db:
                 cache_match_result(
                     db,
@@ -159,20 +208,19 @@ async def ai_match_resume_to_job(
                     resume_text=resume_text if not (job_id and resume_id) else None,
                     api_latency_ms=call_meta.latency_ms,
                 )
-            
+
             return out2, meta
         except Exception:
             pass
 
-        # Legacy fallback
         validated = AIMatchOutput.model_validate(obj)
         out = validated.model_dump()
         out["explanation"] = _sanitize_text(out.get("explanation", ""), 1500)
         out["highlights"] = _sanitize_list(out.get("highlights", []), 6)
         out["gaps"] = _sanitize_list(out.get("gaps", []), 6)
         meta["format"] = "legacy_v1"
-        
-        # Cache successful result
+        meta["validated_schema"] = True
+
         if db:
             cache_match_result(
                 db,
@@ -183,13 +231,12 @@ async def ai_match_resume_to_job(
                 resume_text=resume_text if not (job_id and resume_id) else None,
                 api_latency_ms=call_meta.latency_ms,
             )
-        
+
         return out, meta
     except (ValueError, json.JSONDecodeError) as e:
         meta["warnings"].append(f"AI response parse failed: {type(e).__name__}")
         return None, meta
     except AIClientHTTPError as e:
-        # Surface HTTP error info to callers so UI can react (e.g., quota exhausted).
         meta["error_code"] = int(getattr(e, "status_code", 0) or 0)
         meta["error_message"] = str(e)
         meta["warnings"].append(f"AI call failed: HTTP {meta['error_code']}")
@@ -203,4 +250,3 @@ async def ai_match_resume_to_job(
         logger.exception("AI match unexpected error: %s", e)
         meta["warnings"].append("AI match failed due to unexpected error.")
         return None, meta
-

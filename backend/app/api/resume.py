@@ -69,7 +69,44 @@ def _public_resume(r: Resume) -> dict:
         "size_bytes": r.size_bytes,
         "file_path": r.file_path,
         "has_structured": bool(getattr(r, "structured_json", None)),
+        "extraction_status": getattr(r, "extraction_status", None),
         "created_at": r.created_at.isoformat() if getattr(r, "created_at", None) else None,
+    }
+
+
+def _public_extraction_meta(extraction: dict | None) -> dict | None:
+    """
+    Build a safe extraction metadata payload for API responses.
+
+    Args:
+        extraction: Raw extraction result returned by the resume analysis
+            service.
+
+    Returns:
+        A sanitized metadata dictionary, or None when no extraction details are
+        available.
+
+    Side Effects:
+        None.
+
+    Error Handling:
+        Returns None when the input is missing or malformed.
+    """
+    if not isinstance(extraction, dict):
+        return None
+
+    return {
+        "raw_len": int(extraction.get("raw_len") or 0),
+        "clean_len": int(extraction.get("clean_len") or 0),
+        "word_count": int(extraction.get("word_count") or 0),
+        "char_count": int(extraction.get("char_count") or 0),
+        "extraction_method": extraction.get("extraction_method"),
+        "extraction_status": extraction.get("extraction_status"),
+        "used_ocr": bool(extraction.get("used_ocr")),
+        "is_probably_scanned_or_empty": bool(extraction.get("is_probably_scanned_or_empty")),
+        "is_low_confidence": bool(extraction.get("is_low_confidence")),
+        "quality_flags": list(extraction.get("quality_flags") or []),
+        "warnings": list(extraction.get("warnings") or []),
     }
 
 
@@ -191,10 +228,38 @@ async def upload_resume(
             pass
 
     # Extract + clean (Module 6)
+    extraction = {
+        "raw_text": "",
+        "clean_text": "",
+        "raw_len": 0,
+        "clean_len": 0,
+        "word_count": 0,
+        "char_count": 0,
+        "extraction_method": "none",
+        "used_ocr": False,
+        "is_probably_scanned_or_empty": False,
+        "is_low_confidence": True,
+        "extraction_status": "failed",
+        "quality_flags": ["extraction_not_run"],
+        "warnings": [],
+    }
     try:
         extraction = extract_and_clean_resume_text(file_path=dest.as_posix(), ext=ext)
         extracted_text = extraction.get("clean_text") or ""
-        
+
+        if extraction.get("warnings"):
+            logger.warning(
+                "Resume extraction warnings for %s: %s",
+                original_filename,
+                "; ".join(extraction.get("warnings") or []),
+            )
+        if extraction.get("quality_flags"):
+            logger.info(
+                "Resume extraction quality flags for %s: %s",
+                original_filename,
+                ", ".join(extraction.get("quality_flags") or []),
+            )
+
         if not extracted_text or len(extracted_text.strip()) < 50:
             logger.warning(f"Extracted text too short for {original_filename}")
             # Continue anyway, don't fail
@@ -202,6 +267,7 @@ async def upload_resume(
         logger.error(f"Resume extraction error: {e}")
         # Don't fail completely - use empty text
         extracted_text = ""
+        extraction["warnings"] = [f"Unexpected extraction error: {type(e).__name__}"]
 
     # Parse resume structure
     try:
@@ -229,7 +295,10 @@ async def upload_resume(
         original_filename=original_filename,
         content_type=file.content_type,
         size_bytes=size,
+        raw_extracted_text=extraction.get("raw_text"),
         extracted_text=extracted_text,
+        extraction_status=str(extraction.get("extraction_status") or "failed"),
+        extraction_metadata_json=json.dumps(_public_extraction_meta(extraction), ensure_ascii=False),
         structured_json=json.dumps(structured, ensure_ascii=False),
         structured_version=int(structured.get("version") or 1),
         ai_structured_json=json.dumps(ai_structured, ensure_ascii=False) if ai_structured else None,
@@ -264,7 +333,11 @@ async def upload_resume(
         logger.warning(f"Failed to create embedding for resume {resume.id}: {e}")
         # Don't fail upload if embedding fails
 
-    return {"success": True, "resume": _public_resume(resume)}
+    return {
+        "success": True,
+        "resume": _public_resume(resume),
+        "extraction": _public_extraction_meta(extraction),
+    }
 
 
 @router.get("/{resume_id}/download")
@@ -339,4 +412,3 @@ def get_structured_resume(
         "structured": structured,
         "version": getattr(resume, "structured_version", 1) or 1,
     }
-

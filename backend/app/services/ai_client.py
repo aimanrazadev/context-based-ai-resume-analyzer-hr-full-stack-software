@@ -14,14 +14,22 @@ _MODEL_CACHE: dict[tuple[str, str], str] = {}
 
 
 class AIClientError(RuntimeError):
+    """Base error for AI client failures."""
     pass
 
 
 class AIClientTimeout(AIClientError):
+    """Raised when the AI request exceeds the configured timeout window."""
     pass
 
 
 class AIClientHTTPError(AIClientError):
+    """
+    Raised when the AI provider returns a non-success HTTP status code.
+
+    Attributes:
+        status_code: HTTP status code returned by the provider.
+    """
     def __init__(self, *, status_code: int, message: str):
         super().__init__(message)
         self.status_code = status_code
@@ -36,6 +44,16 @@ class GeminiMeta:
 
 
 def _safe_truncate(s: str, n: int = 800) -> str:
+    """
+    Truncate log-safe text without raising on empty inputs.
+
+    Args:
+        s: Raw text to truncate.
+        n: Maximum length to keep before adding an ellipsis.
+
+    Returns:
+        The original text when already short enough, otherwise a truncated copy.
+    """
     s = s or ""
     if len(s) <= n:
         return s
@@ -49,6 +67,24 @@ async def _list_models(
     api_version: str,
     timeout_s: float,
 ) -> list[dict[str, Any]]:
+    """
+    List available Gemini models for the configured API key and version.
+
+    Args:
+        api_key: Gemini API key.
+        base_url: Base Gemini API URL.
+        api_version: API version segment.
+        timeout_s: Request timeout in seconds.
+
+    Returns:
+        A list of model dictionaries returned by the provider.
+
+    Side Effects:
+        Performs an outbound HTTP request to the Gemini API.
+
+    Error Handling:
+        Raises AIClientHTTPError when the provider responds with an error.
+    """
     base = (base_url or "").rstrip("/")
     api_v = (api_version or "v1").strip().lstrip("/")
     url = f"{base}/{api_v}/models"
@@ -65,6 +101,19 @@ def _pick_best_model(models: list[dict[str, Any]]) -> str | None:
     """
     Prefer a 'flash' model that supports generateContent. Fallback to the first model
     that supports generateContent.
+
+    Args:
+        models: Raw model descriptors from the Gemini model listing endpoint.
+
+    Returns:
+        The preferred model name, or None when no compatible model is found.
+
+    Side Effects:
+        None.
+
+    Error Handling:
+        Uses defensive checks and returns None instead of raising when the model
+        list is unusable.
     """
     def supports_generate(m: dict[str, Any]) -> bool:
         methods = m.get("supportedGenerationMethods") or m.get("supported_generation_methods") or []
@@ -104,12 +153,33 @@ async def gemini_generate_content(
     log_payloads: bool = False,
 ) -> tuple[str, GeminiMeta]:
     """
-    Calls Gemini Generative Language API (API key auth) and returns the model text.
+    Call Gemini's `generateContent` endpoint and return the model text plus metadata.
 
-    Endpoint:
-      POST {base_url}/v1beta/models/{model}:generateContent
-    Auth:
-      x-goog-api-key: {api_key}
+    Args:
+        api_key: Gemini API key.
+        base_url: Base Gemini API URL.
+        api_version: API version segment.
+        model: Preferred model name.
+        user_text: User prompt text.
+        system_text: Optional system instruction text to inline into the prompt.
+        response_mime_type: Requested response MIME type hint.
+        temperature: Sampling temperature.
+        timeout_s: Per-request timeout.
+        max_retries: Number of retry attempts for transient failures.
+        log_payloads: Whether to log request payloads for debugging.
+
+    Returns:
+        A tuple containing:
+        - model text response
+        - GeminiMeta with latency, status, and retry count
+
+    Side Effects:
+        Performs outbound HTTP requests and logs request/response metadata.
+
+    Error Handling:
+        Raises AIClientError subclasses for missing config, timeouts, HTTP
+        failures, and unrecoverable network errors. Retries transient failures
+        before raising.
     """
     if not api_key:
         raise AIClientError("Missing GEMINI_API_KEY")
@@ -124,10 +194,18 @@ async def gemini_generate_content(
 
     def _build_body() -> dict[str, Any]:
         """
-        Keep payload compatible with Generative Language API v1:
-        - Do NOT send systemInstruction (some deployments reject it)
-        - Do NOT send responseMimeType (some deployments reject it)
-        Instead, inline the system prompt into the user prompt and request JSON in-text.
+        Build a provider-compatible Gemini request body.
+
+        Returns:
+            A request payload compatible with conservative Generative Language
+            API deployments.
+
+        Side Effects:
+            None.
+
+        Error Handling:
+            Uses prompt inlining instead of optional fields that are known to be
+            rejected by some deployments.
         """
         effective_user = user_text or ""
         if system_text:
@@ -200,6 +278,12 @@ async def gemini_generate_content(
                                             .get("parts", [{}])[0]
                                             .get("text", "")
                                         )
+                                        if log_payloads:
+                                            logger.info(
+                                                "Gemini response model=%s text=%s",
+                                                discovered,
+                                                _safe_truncate(text, 1200),
+                                            )
                                         meta = GeminiMeta(
                                             model=discovered,
                                             latency_ms=int((time.perf_counter() - start) * 1000),
@@ -234,6 +318,12 @@ async def gemini_generate_content(
                     .get("parts", [{}])[0]
                     .get("text", "")
                 )
+                if log_payloads:
+                    logger.info(
+                        "Gemini response model=%s text=%s",
+                        model,
+                        _safe_truncate(text, 1200),
+                    )
                 meta = GeminiMeta(
                     model=model,
                     latency_ms=int((time.perf_counter() - start) * 1000),
@@ -266,4 +356,3 @@ async def gemini_generate_content(
     # Should be unreachable
     meta = GeminiMeta(model=model, latency_ms=int((time.perf_counter() - start) * 1000), status_code=last_status, retries=max_retries)
     return "", meta
-

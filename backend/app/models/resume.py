@@ -16,7 +16,10 @@ class Resume(Base):
     original_filename = Column(String(255), nullable=True)
     content_type = Column(String(120), nullable=True)
     size_bytes = Column(Integer, nullable=False, default=0)
+    raw_extracted_text = Column(Text, nullable=True)
     extracted_text = Column(Text, nullable=True)
+    extraction_status = Column(String(32), nullable=False, default="pending")
+    extraction_metadata_json = Column(Text, nullable=True)
     # Module 7: structured data extracted from extracted_text (JSON string)
     structured_json = Column(Text, nullable=True)
     # Schema version for structured_json (allows evolving format)
@@ -31,4 +34,3 @@ class Resume(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     candidate = relationship("Candidate", back_populates="resumes")
-

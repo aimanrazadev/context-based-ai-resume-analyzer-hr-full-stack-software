@@ -1,3 +1,14 @@
+"""
+Embedding generation and persistence utilities.
+
+This module is responsible for:
+- normalizing text before embedding
+- generating local transformer embeddings
+- caching embeddings in the database
+- reusing embeddings when the source text has not changed
+- exposing lightweight diagnostics for downstream semantic matching
+"""
+
 import hashlib
 import json
 import logging
@@ -14,66 +25,118 @@ logger = logging.getLogger(__name__)
 
 _WS_RE = re.compile(r"\s+")
 _EMBEDDER = None
+_MAX_EMBED_TEXT_CHARS = 12000
 
 
 def normalize_text(text: str) -> str:
+    """
+    Normalize free-form text before hashing or embedding.
+    """
     t = (text or "").strip()
     t = _WS_RE.sub(" ", t)
     return t
 
 
+def truncate_for_embedding(*, text: str, max_chars: int = _MAX_EMBED_TEXT_CHARS) -> str:
+    """
+    Limit input text length before embedding to keep local inference practical.
+    """
+    t = normalize_text(text)
+    if len(t) <= max_chars:
+        return t
+    return t[:max_chars].strip()
+
+
 def text_hash(*, text: str, model: str) -> str:
+    """
+    Compute a stable content hash for an embedding input.
+    """
     blob = f"{model}\n{text}".encode("utf-8", errors="ignore")
     return hashlib.sha256(blob).hexdigest()
 
 
 def _get_embedder():
+    """
+    Lazily initialize the local embedding model instance.
+
+    Uses `sentence-transformers` as the primary local transformer embedding
+    stack and keeps the same external interface for the rest of the backend.
+    """
     global _EMBEDDER
     if _EMBEDDER is not None:
         return _EMBEDDER
     if EMBEDDINGS_PROVIDER != "local":
         raise RuntimeError("Only local embeddings are supported in this build.")
     try:
-        from fastembed import TextEmbedding  # type: ignore
+        from sentence_transformers import SentenceTransformer  # type: ignore
     except Exception as e:
-        raise RuntimeError("fastembed is not installed. Install backend requirements.") from e
-    _EMBEDDER = TextEmbedding(model_name=EMBEDDINGS_MODEL)
+        raise RuntimeError(
+            "sentence-transformers is not installed. Install backend requirements."
+        ) from e
+    _EMBEDDER = SentenceTransformer(EMBEDDINGS_MODEL)
     return _EMBEDDER
 
 
 def embed_text(text: str) -> list[float]:
+    """
+    Generate a local transformer embedding vector for the given text.
+
+    Uses the Sentence Transformers stack with the configured embedding model.
+    """
     if not EMBEDDINGS_ENABLED:
         return []
-    t = normalize_text(text)
+    t = truncate_for_embedding(text=text)
     if not t:
         return []
     embedder = _get_embedder()
-    # fastembed returns an iterator of numpy arrays
-    vec = next(embedder.embed([t]))
+    try:
+        vec = embedder.encode(t, convert_to_numpy=True, normalize_embeddings=True)
+    except TypeError:
+        # Some versions may not support all kwargs in the exact same way.
+        vec = embedder.encode(t)
     return [float(x) for x in vec.tolist()]
 
 
-def get_or_create_embedding(
+def get_or_create_embedding_details(
     db: Session,
     *,
     entity_type: str,
     entity_id: int,
     text: str,
     model: str | None = None,
-) -> Embedding | None:
+) -> tuple[Embedding | None, dict[str, Any]]:
     """
-    Cache embeddings in DB. If the current text hash already exists, reuse it.
-    If an embedding exists for the entity but the text changed, update the row.
+    Fetch or create an embedding row with lightweight diagnostics.
     """
+    meta: dict[str, Any] = {
+        "enabled": bool(EMBEDDINGS_ENABLED),
+        "provider": EMBEDDINGS_PROVIDER,
+        "model": model or EMBEDDINGS_MODEL,
+        "entity_type": entity_type,
+        "entity_id": int(entity_id),
+        "embedding_library": "sentence-transformers",
+        "cache_hit": False,
+        "updated_existing": False,
+        "created_new": False,
+        "text_was_truncated": False,
+        "failure_reason": None,
+    }
     if not EMBEDDINGS_ENABLED:
-        return None
+        meta["failure_reason"] = "embeddings_disabled"
+        return None, meta
 
     model_name = model or EMBEDDINGS_MODEL
     norm = normalize_text(text)
-    if not norm:
-        return None
+    truncated = truncate_for_embedding(text=norm)
+    meta["normalized_text_chars"] = len(norm)
+    meta["embedded_text_chars"] = len(truncated)
+    meta["text_was_truncated"] = len(truncated) < len(norm)
+    if not truncated:
+        meta["failure_reason"] = "empty_text"
+        return None, meta
 
-    h = text_hash(text=norm, model=model_name)
+    h = text_hash(text=truncated, model=model_name)
+    meta["text_hash"] = h
 
     row = (
         db.query(Embedding)
@@ -87,14 +150,23 @@ def get_or_create_embedding(
     )
 
     if row and row.text_hash == h and row.vector_json:
-        return row
+        meta["cache_hit"] = True
+        meta["vector_dim"] = int(row.dim or 0)
+        return row, meta
 
-    vector = embed_text(norm)
+    try:
+        vector = embed_text(truncated)
+    except Exception as e:
+        meta["failure_reason"] = f"embedder_error:{type(e).__name__}"
+        raise
+
     if not vector:
-        return None
+        meta["failure_reason"] = "empty_vector"
+        return None, meta
 
     payload = json.dumps(vector, ensure_ascii=False)
     dim = len(vector)
+    meta["vector_dim"] = dim
 
     if row:
         row.text_hash = h
@@ -103,7 +175,8 @@ def get_or_create_embedding(
         db.add(row)
         db.commit()
         db.refresh(row)
-        return row
+        meta["updated_existing"] = True
+        return row, meta
 
     row = Embedding(
         entity_type=entity_type,
@@ -116,10 +189,35 @@ def get_or_create_embedding(
     db.add(row)
     db.commit()
     db.refresh(row)
+    meta["created_new"] = True
+    return row, meta
+
+
+def get_or_create_embedding(
+    db: Session,
+    *,
+    entity_type: str,
+    entity_id: int,
+    text: str,
+    model: str | None = None,
+) -> Embedding | None:
+    """
+    Fetch or create an embedding row while preserving the legacy return shape.
+    """
+    row, _meta = get_or_create_embedding_details(
+        db,
+        entity_type=entity_type,
+        entity_id=entity_id,
+        text=text,
+        model=model,
+    )
     return row
 
 
 def vector_from_row(row: Embedding) -> list[float]:
+    """
+    Deserialize an embedding vector from a database row.
+    """
     try:
         data: Any = json.loads(row.vector_json or "[]")
         if isinstance(data, list):
@@ -127,4 +225,3 @@ def vector_from_row(row: Embedding) -> list[float]:
     except Exception:
         pass
     return []
-

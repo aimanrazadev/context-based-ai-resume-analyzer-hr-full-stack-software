@@ -36,6 +36,19 @@ jobs:
   backend:
     name: Backend
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: ai_resume_analyzer_ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
 
     steps:
       - name: Checkout
@@ -51,9 +64,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt
 
-      - name: Verify backend imports
+      - name: Verify backend imports and MySQL schema
         env:
-          DATABASE_URL: sqlite:///./backend/dev.db
+          DATABASE_URL: mysql+pymysql://root:root@127.0.0.1:3306/ai_resume_analyzer_ci
           SECRET_KEY: ci-secret-key
         run: |
-          python -c "from backend.app.main import app; print(app.title)"
+          python -c "from backend.app.database import init_db; init_db(); from backend.app.main import app; print(app.title)"

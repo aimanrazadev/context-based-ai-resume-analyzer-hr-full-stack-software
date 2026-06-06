@@ -1,80 +1,128 @@
-import json
-import os
+"""
+Resume parsing and lightweight structuring utilities.
+
+This module is responsible for:
+- detecting common resume section boundaries
+- extracting structured text for skills, experience, education, projects, and certifications
+- normalizing and deduplicating skill items
+- extracting lightweight job title and company name hints
+- categorizing skills into technical and soft groups
+- validating deterministic parsed output before storage
+"""
+
 import re
 from typing import Any
 
+from ..schemas.resume_structured import ParsedResumeStructured
+
 
 _HEADING_ALIASES: dict[str, list[str]] = {
-    "skills": [
-        "skills",
-        "technical skills",
-        "key skills",
-        "core skills",
-        "skills & tools",
-        "tools",
-        "technologies",
-        "tech stack",
-    ],
-    "experience": [
-        "experience",
-        "work experience",
-        "professional experience",
-        "employment",
-        "employment history",
-        "work history",
-        "internships",
-        "projects",
-        "project experience",
-    ],
-    "education": [
-        "education",
-        "academic",
-        "academic background",
-        "education & certifications",
-        "certifications",
-        "certification",
-    ],
+    "skills": ["skills", "technical skills", "key skills", "core skills", "skills & tools", "tools", "technologies", "tech stack"],
+    "experience": ["experience", "work experience", "professional experience", "employment", "employment history", "work history", "internships"],
+    "projects": ["projects", "personal projects", "academic projects", "key projects", "project experience", "relevant projects"],
+    "education": ["education", "academic", "academic background", "education details"],
+    "certifications": ["certifications", "certification", "licenses", "licenses & certifications", "education & certifications"],
 }
 
 _LINE_CLEAN_RE = re.compile(r"[\t ]{2,}")
-_BULLET_LINE_RE = re.compile(r"^\s*[-•\u2022]\s+")
+_BULLET_LINE_RE = re.compile(r"^\s*[-•\u2022*]\s+")
 _SKILL_SPLIT_RE = re.compile(r"[,/|•\u2022;\n]+")
 _WORD_SKILL_RE = re.compile(r"[A-Za-z0-9+#.]{2,}")
+_DATE_HINT_RE = re.compile(
+    r"\b("
+    r"\d{4}\s*[-–]\s*(?:\d{4}|present|current|now)"
+    r"|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+\d{4}"
+    r"|present|current"
+    r")\b",
+    re.IGNORECASE,
+)
+_DEGREE_HINT_RE = re.compile(
+    r"\b("
+    r"b\.?tech|m\.?tech|b\.?e|m\.?e|bachelor|master|phd|bsc|msc|diploma|degree|"
+    r"certification|certificate|cgpa|gpa|university|college|school"
+    r")\b",
+    re.IGNORECASE,
+)
+_PROJECT_HINT_RE = re.compile(
+    r"\b(project|developed|built|created|designed|implemented|deployed|github|app|system|platform)\b",
+    re.IGNORECASE,
+)
+_CERT_HINT_RE = re.compile(
+    r"\b(certification|certificate|certified|aws|azure|gcp|oracle|scrum|pmp|coursera|udemy|nptel)\b",
+    re.IGNORECASE,
+)
+_SOFT_SKILLS = {
+    "communication", "leadership", "teamwork", "collaboration", "problem solving",
+    "adaptability", "time management", "critical thinking", "presentation", "mentoring",
+}
+_TECHNICAL_KEYWORDS = {
+    "python", "java", "javascript", "typescript", "react", "next.js", "node.js",
+    "sql", "mysql", "postgresql", "mongodb", "aws", "gcp", "docker", "kubernetes",
+    "fastapi", "flask", "django", "api", "html", "css", "git", "linux", "nlp", "ml", "ai",
+}
+_SKILL_ALIASES = {
+    "js": "JavaScript",
+    "javascript": "JavaScript",
+    "ts": "TypeScript",
+    "typescript": "TypeScript",
+    "py": "Python",
+    "python": "Python",
+    "node": "Node.js",
+    "nodejs": "Node.js",
+    "node.js": "Node.js",
+    "reactjs": "React",
+    "react.js": "React",
+    "react": "React",
+    "nextjs": "Next.js",
+    "next.js": "Next.js",
+    "expressjs": "Express.js",
+    "express": "Express.js",
+    "mongo": "MongoDB",
+    "mongodb": "MongoDB",
+    "postgres": "PostgreSQL",
+    "postgresql": "PostgreSQL",
+    "sql": "SQL",
+    "mysql": "MySQL",
+    "api": "API",
+    "apis": "APIs",
+    "ml": "ML",
+    "ai": "AI",
+    "aws": "AWS",
+    "gcp": "GCP",
+    "ci": "CI",
+    "cd": "CD",
+    "html": "HTML",
+    "css": "CSS",
+    "nlp": "NLP",
+}
 
 
 def _normalize_line(s: str) -> str:
+    """Normalize a single extracted line."""
     s = s.replace("\r\n", "\n").replace("\r", "\n")
     s = _LINE_CLEAN_RE.sub(" ", s).strip()
     return s
 
 
 def _canonical_heading(line: str) -> str | None:
-    """
-    Returns canonical section key if the line looks like a heading.
-    """
+    """Map a heading line to a canonical section key."""
     raw = _normalize_line(line)
     if not raw:
         return None
 
-    # Drop trailing punctuation like ":" or "-"
     key = raw.strip().strip(":").strip("-").strip().lower()
     key = re.sub(r"[^a-z0-9 &]+", "", key).strip()
     if not key:
         return None
 
     for canonical, aliases in _HEADING_ALIASES.items():
-        if key == canonical:
-            return canonical
-        if key in aliases:
+        if key == canonical or key in aliases:
             return canonical
     return None
 
 
 def detect_sections(*, text: str) -> dict[str, dict[str, Any]]:
-    """
-    Find section boundaries by scanning headings line-by-line.
-    Returns mapping canonical section -> {start, end, heading_line}.
-    """
+    """Detect section spans by scanning known headings line by line."""
     lines = (text or "").replace("\r\n", "\n").replace("\r", "\n").split("\n")
     hits: list[tuple[int, str, str]] = []
     for i, line in enumerate(lines):
@@ -82,49 +130,43 @@ def detect_sections(*, text: str) -> dict[str, dict[str, Any]]:
         if canon:
             hits.append((i, canon, _normalize_line(line)))
 
-    # De-dup consecutive duplicates (e.g. repeated headings)
     dedup: list[tuple[int, str, str]] = []
     for i, canon, hline in hits:
         if dedup and dedup[-1][1] == canon and (i - dedup[-1][0]) <= 2:
             continue
         dedup.append((i, canon, hline))
 
-    # Compute spans
     spans: dict[str, dict[str, Any]] = {}
     for idx, (line_idx, canon, hline) in enumerate(dedup):
         end = len(lines)
         if idx + 1 < len(dedup):
             end = dedup[idx + 1][0]
         spans[canon] = {"start": line_idx + 1, "end": end, "heading_line": hline}
-
     return spans
 
 
 def _slice_text(lines: list[str], start: int, end: int) -> str:
-    chunk = "\n".join(lines[start:end]).strip()
-    return chunk
+    """Slice a line range into a stripped block of text."""
+    return "\n".join(lines[start:end]).strip()
 
 
 def extract_section_texts(*, text: str) -> dict[str, str]:
+    """Extract text for the main resume sections."""
     lines = (text or "").replace("\r\n", "\n").replace("\r", "\n").split("\n")
     spans = detect_sections(text=text)
     out: dict[str, str] = {}
-    for sec in ("skills", "experience", "education"):
+    for sec in ("skills", "experience", "projects", "education", "certifications"):
         meta = spans.get(sec)
         out[sec] = _slice_text(lines, meta["start"], meta["end"]) if meta else ""
     return out
 
 
 def extract_skill_items(*, skills_text: str, full_text: str) -> list[str]:
-    """
-    Extract skill tokens primarily from skills section; fallback to full text.
-    Keeps multi-token items only when present as known patterns (e.g. 'machine learning' often becomes two tokens).
-    """
+    """Extract raw skill phrases from the skills section or full text."""
     base = skills_text.strip() or full_text.strip()
     if not base:
         return []
 
-    # Prefer bullet lines and comma-separated lists
     cleaned = []
     for line in base.split("\n"):
         l = _normalize_line(line)
@@ -137,7 +179,6 @@ def extract_skill_items(*, skills_text: str, full_text: str) -> list[str]:
     parts = [p.strip() for p in _SKILL_SPLIT_RE.split(blob) if p.strip()]
     tokens: list[str] = []
     for p in parts:
-        # If it's a short phrase (<= 3 words) keep as phrase, else tokenize
         words = _WORD_SKILL_RE.findall(p)
         if not words:
             continue
@@ -149,32 +190,29 @@ def extract_skill_items(*, skills_text: str, full_text: str) -> list[str]:
 
 
 def normalize_skills(*, items: list[str]) -> list[str]:
-    """
-    Normalize + deduplicate skills while preserving common casing for acronyms.
-    """
+    """Normalize, alias-map, and deduplicate parsed skill items."""
     out: list[str] = []
     seen: set[str] = set()
-
     for raw in items:
         s = _normalize_line(raw)
         s = s.strip(" -•\u2022").strip()
         if not s:
             continue
-        # Normalize common noise
         s = re.sub(r"[^A-Za-z0-9+#. ]+", " ", s).strip()
         s = _LINE_CLEAN_RE.sub(" ", s)
         if len(s) < 2 or len(s) > 40:
             continue
 
-        # Title-case words unless looks like acronym / version / camel-case token
-        if s.isupper():
+        alias_key = s.lower().replace(" ", "")
+        if alias_key in _SKILL_ALIASES:
+            norm = _SKILL_ALIASES[alias_key]
+        elif s.isupper():
             norm = s
         elif re.match(r"^[A-Za-z]{1,6}\d+(\.\d+)?$", s):
             norm = s
         elif re.match(r"^[A-Za-z0-9+#.]+$", s):
-            # Single token: preserve as-is but uppercase common acronyms
             norm = s
-            if s.lower() in {"api", "apis", "sql", "aws", "gcp", "ml", "ai", "ci", "cd"}:
+            if s.lower() in {"api", "apis", "sql", "aws", "gcp", "ml", "ai", "ci", "cd", "html", "css", "nlp"}:
                 norm = s.upper()
         else:
             norm = " ".join(w.capitalize() if w.isalpha() else w for w in s.split(" "))
@@ -184,16 +222,24 @@ def normalize_skills(*, items: list[str]) -> list[str]:
             continue
         seen.add(key)
         out.append(norm)
-
     return out
 
 
+def categorize_skills(*, skills: list[str]) -> tuple[list[str], list[str]]:
+    """Split normalized skills into technical and soft skill groups."""
+    technical: list[str] = []
+    soft: list[str] = []
+    for skill in skills:
+        key = skill.lower()
+        if key in _SOFT_SKILLS or any(soft_term in key for soft_term in _SOFT_SKILLS):
+            soft.append(skill)
+        else:
+            technical.append(skill)
+    return technical, soft
+
+
 def split_primary_secondary(*, skills: list[str], skills_text: str) -> tuple[list[str], list[str]]:
-    """
-    Simple heuristic:
-    - if skills section exists: first N become primary, rest secondary
-    - else: all are secondary (we don't know emphasis)
-    """
+    """Split normalized skills into primary and secondary groups."""
     if not skills:
         return [], []
     if skills_text.strip():
@@ -202,99 +248,223 @@ def split_primary_secondary(*, skills: list[str], skills_text: str) -> tuple[lis
     return [], skills
 
 
-def _maybe_refine_with_llm(*, payload: dict) -> tuple[dict, list[str]]:
-    """
-    Optional LLM refinement hook (best-effort).\n+\n+    This will only run when AI_API_KEY is set AND LLM_ENDPOINT + LLM_MODEL are provided.\n+    If not configured, returns payload unchanged.\n+    """
-    warnings: list[str] = []
-    if not os.getenv("AI_API_KEY"):
-        return payload, warnings
+def _clean_structured_line(line: str) -> str:
+    """Clean a raw section line before structuring it."""
+    line = _normalize_line(line)
+    line = _BULLET_LINE_RE.sub("", line).strip()
+    line = re.sub(r"\s+", " ", line)
+    return line
 
-    endpoint = os.getenv("LLM_ENDPOINT")
-    model = os.getenv("LLM_MODEL")
-    if not endpoint or not model:
-        warnings.append("LLM refinement skipped: set LLM_ENDPOINT and LLM_MODEL to enable.")
-        return payload, warnings
 
-    # Best-effort, no hard failure: we don't want parsing to break uploads
-    try:
-        import httpx
+def _chunk_section_lines(*, section_text: str) -> list[str]:
+    """Convert a section block into clean non-empty lines."""
+    return [line for line in (_clean_structured_line(line) for line in section_text.split("\n")) if line]
 
-        prompt = (
-            "You are a resume parser. Given extracted skills, return JSON with two arrays: "
-            "primary and secondary skills. Keep items short and deduplicated.\n\n"
-            f"Skills: {payload.get('sections', {}).get('skills', {}).get('items', [])}"
+
+def _extract_job_title_and_company(line: str) -> tuple[str, str]:
+    """Best-effort extraction of job title and company name from one experience line."""
+    normalized = line.strip()
+    if " at " in normalized.lower():
+        parts = re.split(r"\bat\b", normalized, maxsplit=1, flags=re.IGNORECASE)
+        if len(parts) == 2:
+            return parts[0].strip(" |-,"), parts[1].strip(" |-,")
+    for sep in (" | ", " - ", " — ", " @ "):
+        if sep in normalized:
+            left, right = normalized.split(sep, 1)
+            if 1 <= len(left.split()) <= 6 and 1 <= len(right.split()) <= 8:
+                return left.strip(" |-,"), right.strip(" |-,")
+    return "", ""
+
+
+def extract_experience_items(*, experience_text: str) -> list[dict[str, str]]:
+    """Build lightweight structured experience entries from the experience section."""
+    lines = _chunk_section_lines(section_text=experience_text)
+    items: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for line in lines:
+        if len(line) < 8 or line.lower() in seen:
+            continue
+        seen.add(line.lower())
+        entry_type = "bullet" if len(line.split()) <= 18 else "summary"
+        date_match = _DATE_HINT_RE.search(line)
+        job_title, company_name = _extract_job_title_and_company(line)
+        items.append(
+            {
+                "summary": line,
+                "date_hint": date_match.group(0) if date_match else "",
+                "entry_type": entry_type,
+                "job_title": job_title,
+                "company_name": company_name,
+            }
         )
-        body = {
-            "model": model,
-            "messages": [
-                {"role": "system", "content": "Return only JSON."},
-                {"role": "user", "content": prompt},
-            ],
-            "temperature": 0.0,
-        }
-        headers = {"Authorization": f"Bearer {os.getenv('AI_API_KEY')}"}
-        with httpx.Client(timeout=20.0) as client:
-            r = client.post(endpoint, json=body, headers=headers)
-        if r.status_code >= 400:
-            warnings.append(f"LLM refinement failed: HTTP {r.status_code}.")
-            return payload, warnings
+    return items[:20]
 
-        data = r.json()
-        # Support OpenAI-style response
-        content = (
-            data.get("choices", [{}])[0]
-            .get("message", {})
-            .get("content", "")
+
+def extract_education_items(*, education_text: str) -> list[dict[str, str]]:
+    """Build lightweight structured education entries from the education section."""
+    lines = _chunk_section_lines(section_text=education_text)
+    items: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for line in lines:
+        if len(line) < 6 or line.lower() in seen:
+            continue
+        if not _DEGREE_HINT_RE.search(line) and len(line.split()) < 3:
+            continue
+        seen.add(line.lower())
+        degree_hint = _DEGREE_HINT_RE.search(line)
+        date_match = _DATE_HINT_RE.search(line)
+        institution = ""
+        for token in ("University", "College", "School", "Institute"):
+            if token.lower() in line.lower():
+                institution = line
+                break
+        items.append(
+            {
+                "summary": line,
+                "category_hint": degree_hint.group(0) if degree_hint else "",
+                "institution": institution,
+                "date_hint": date_match.group(0) if date_match else "",
+            }
         )
-        parsed = json.loads(content)
-        primary = parsed.get("primary") or []
-        secondary = parsed.get("secondary") or []
-        payload["sections"]["skills"]["primary"] = primary
-        payload["sections"]["skills"]["secondary"] = secondary
-        payload["sections"]["skills"]["llm_refined"] = True
-        return payload, warnings
-    except Exception:
-        warnings.append("LLM refinement failed due to an unexpected error.")
-        return payload, warnings
+    return items[:15]
+
+
+def extract_certification_items(*, certifications_text: str, education_text: str) -> list[dict[str, str]]:
+    """Extract certification rows from certifications text or education fallback text."""
+    source = certifications_text.strip() or education_text.strip()
+    lines = _chunk_section_lines(section_text=source)
+    items: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for line in lines:
+        if len(line) < 5 or line.lower() in seen:
+            continue
+        if not _CERT_HINT_RE.search(line):
+            continue
+        seen.add(line.lower())
+        date_match = _DATE_HINT_RE.search(line)
+        issuer = ""
+        for vendor in ("AWS", "Azure", "Google", "Oracle", "Coursera", "Udemy", "NPTEL", "Microsoft"):
+            if vendor.lower() in line.lower():
+                issuer = vendor
+                break
+        items.append({"summary": line, "issuer": issuer, "date_hint": date_match.group(0) if date_match else ""})
+    return items[:15]
+
+
+def extract_project_items(*, projects_text: str) -> list[dict[str, str]]:
+    """Build lightweight structured project entries from the projects section."""
+    lines = _chunk_section_lines(section_text=projects_text)
+    items: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for line in lines:
+        if len(line) < 8 or line.lower() in seen:
+            continue
+        if not _PROJECT_HINT_RE.search(line) and len(line.split()) < 3:
+            continue
+        seen.add(line.lower())
+        items.append({"summary": line, "project_hint": "project" if _PROJECT_HINT_RE.search(line) else ""})
+    return items[:20]
+
+
+def build_parse_quality_meta(*, raw_text: str, sections: dict[str, str], skills: list[str], technical: list[str], soft: list[str]) -> dict[str, Any]:
+    """Build lightweight quality metadata for the deterministic parser output."""
+    sections_found = [name for name, value in sections.items() if value.strip()]
+    missing_sections = [name for name in ("skills", "experience", "projects", "education", "certifications") if not sections.get(name, "").strip()]
+    quality_flags: list[str] = []
+    if not raw_text.strip():
+        quality_flags.append("missing_raw_text")
+    if not sections.get("skills", "").strip():
+        quality_flags.append("missing_skills_section")
+    if not sections.get("experience", "").strip():
+        quality_flags.append("missing_experience_section")
+    if not sections.get("projects", "").strip():
+        quality_flags.append("missing_projects_section")
+    if not sections.get("education", "").strip():
+        quality_flags.append("missing_education_section")
+    if len(skills) < 3:
+        quality_flags.append("low_skill_coverage")
+    if not technical:
+        quality_flags.append("missing_technical_skills")
+    if not soft:
+        quality_flags.append("missing_soft_skills")
+    return {
+        "sections_found": sections_found,
+        "missing_sections": missing_sections,
+        "quality_flags": quality_flags,
+        "is_low_confidence": bool("missing_raw_text" in quality_flags or "low_skill_coverage" in quality_flags or len(sections_found) < 2),
+    }
 
 
 def parse_resume_text(*, text: str) -> dict[str, Any]:
     """
-    Parse resume text into structured sections and normalized skills.
-    Returns a JSON-serializable dict suitable for storing in resumes.structured_json.
+    Parse resume text into validated deterministic structured JSON for storage.
     """
     raw_text = (text or "").strip()
     sections = extract_section_texts(text=raw_text)
 
     skill_items = extract_skill_items(skills_text=sections.get("skills", ""), full_text=raw_text)
     skills = normalize_skills(items=skill_items)
+    technical, soft = categorize_skills(skills=skills)
     primary, secondary = split_primary_secondary(skills=skills, skills_text=sections.get("skills", ""))
+    experience_items = extract_experience_items(experience_text=sections.get("experience", ""))
+    education_items = extract_education_items(education_text=sections.get("education", ""))
+    certification_items = extract_certification_items(
+        certifications_text=sections.get("certifications", ""),
+        education_text=sections.get("education", ""),
+    )
+    project_items = extract_project_items(projects_text=sections.get("projects", ""))
+    quality_meta = build_parse_quality_meta(
+        raw_text=raw_text,
+        sections=sections,
+        skills=skills,
+        technical=technical,
+        soft=soft,
+    )
+
+    warnings: list[str] = []
+    if not raw_text:
+        warnings.append("No extracted_text available to parse.")
+    if not project_items and sections.get("projects", "").strip():
+        warnings.append("Projects section detected but no structured project items were extracted.")
+    if sections.get("certifications", "").strip() and not certification_items:
+        warnings.append("Certifications section detected but no certification items were extracted.")
 
     payload: dict[str, Any] = {
-        "version": 1,
+        "version": 3,
         "sections": {
             "skills": {
                 "text": sections.get("skills", ""),
                 "items": skills,
                 "primary": primary,
                 "secondary": secondary,
-                "llm_refined": False,
+                "technical": technical,
+                "soft": soft,
             },
-            "experience": {"text": sections.get("experience", ""), "items": []},
-            "education": {"text": sections.get("education", ""), "items": []},
+            "experience": {
+                "text": sections.get("experience", ""),
+                "items": experience_items,
+            },
+            "projects": {
+                "text": sections.get("projects", ""),
+                "items": project_items,
+            },
+            "education": {
+                "text": sections.get("education", ""),
+                "items": education_items,
+            },
+            "certifications": {
+                "text": sections.get("certifications", ""),
+                "items": certification_items,
+            },
         },
         "raw": {
-            "headings_found": [k for k, v in detect_sections(text=raw_text).items() if v],
-            "warnings": [],
+            "headings_found": quality_meta.get("sections_found", []),
+            "warnings": warnings,
+            "missing_sections": quality_meta.get("missing_sections", []),
+            "quality_flags": quality_meta.get("quality_flags", []),
+            "is_low_confidence": quality_meta.get("is_low_confidence", False),
         },
     }
 
-    payload, llm_warnings = _maybe_refine_with_llm(payload=payload)
-    if llm_warnings:
-        payload["raw"]["warnings"].extend(llm_warnings)
-
-    if not raw_text:
-        payload["raw"]["warnings"].append("No extracted_text available to parse.")
-
-    return payload
-
+    validated = ParsedResumeStructured.model_validate(payload)
+    return validated.model_dump()
