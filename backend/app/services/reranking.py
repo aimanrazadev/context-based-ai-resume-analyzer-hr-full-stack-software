@@ -12,6 +12,8 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
 import math
+import os
+from pathlib import Path
 from typing import Any
 
 from ..config import (
@@ -23,6 +25,12 @@ from ..config import (
 
 
 _RERANKER = None
+_WEIGHT_FILES = (
+    "model.safetensors",
+    "pytorch_model.bin",
+    "model.safetensors.index.json",
+    "pytorch_model.bin.index.json",
+)
 
 
 def _sigmoid(value: float) -> float:
@@ -74,6 +82,95 @@ def _ensure_reranker_cached_locally() -> str | None:
     return str(path) if path else None
 
 
+def _has_reranker_weights(path: str | None) -> bool:
+    """
+    Check whether a cached reranker directory contains actual model weights.
+
+    Args:
+        path: Local snapshot directory returned by Hugging Face cache helpers.
+
+    Returns:
+        True when at least one expected weight file exists.
+
+    Side Effects:
+        None.
+
+    Error Handling:
+        Returns False when the path is missing or unreadable.
+    """
+    if not path:
+        return False
+    try:
+        root = Path(path)
+        return any((root / filename).exists() for filename in _WEIGHT_FILES)
+    except Exception:
+        return False
+
+
+def warm_reranker_cache(*, force_download: bool = False) -> str:
+    """
+    Ensure the reranker model exists locally with real weight files.
+
+    Args:
+        force_download: When True, allow an online Hugging Face download to
+            repair a missing or partial cache.
+
+    Returns:
+        A local model directory path ready for `CrossEncoder`.
+
+    Side Effects:
+        May download model files into the Hugging Face cache.
+
+    Error Handling:
+        Raises `RuntimeError` with a clear message when the model is missing,
+        partially cached, or cannot be downloaded.
+    """
+    cached_path = _ensure_reranker_cached_locally()
+    if _has_reranker_weights(cached_path):
+        return str(cached_path)
+
+    if not force_download:
+        if cached_path:
+            raise RuntimeError(
+                "Reranker cache exists but is incomplete. Run the warm-reranker script once to download full weights."
+            )
+        raise RuntimeError(
+            "Reranker model is not cached locally yet. Run the warm-reranker script once before enabling request-time reranking."
+        )
+
+    try:
+        from huggingface_hub import snapshot_download  # type: ignore
+    except Exception as exc:
+        raise RuntimeError("huggingface_hub is not installed.") from exc
+
+    token = (os.getenv("HF_TOKEN") or "").strip() or None
+    try:
+        downloaded_path = snapshot_download(
+            repo_id=RERANKER_MODEL,
+            token=token,
+            resume_download=True,
+            allow_patterns=[
+                "*.json",
+                "*.safetensors",
+                "*.bin",
+                "*.model",
+                "tokenizer*",
+                "vocab*",
+                "merges.txt",
+                "special_tokens_map.json",
+                "sentence_*.json",
+                "modules.json",
+                "README.md",
+            ],
+        )
+    except Exception as exc:
+        raise RuntimeError(f"Failed to download reranker model: {type(exc).__name__}") from exc
+
+    if not _has_reranker_weights(downloaded_path):
+        raise RuntimeError("Reranker download finished but model weights are still missing.")
+    return str(downloaded_path)
+
+
 def _get_reranker():
     """
     Lazily initialize the local cross-encoder reranker.
@@ -93,11 +190,7 @@ def _get_reranker():
         return _RERANKER
     if not RERANKER_ENABLED:
         raise RuntimeError("Reranking is disabled.")
-    cached_path = _ensure_reranker_cached_locally()
-    if not cached_path:
-        raise RuntimeError(
-            "Reranker model is not cached locally yet. Warm it once before enabling request-time reranking."
-        )
+    cached_path = warm_reranker_cache(force_download=False)
     try:
         from sentence_transformers import CrossEncoder  # type: ignore
     except Exception as exc:
@@ -269,6 +362,8 @@ def rerank_candidate_shortlist(
             msg = str(exc).lower()
             if "not cached locally" in msg:
                 result["reason"] = "reranker_model_not_cached"
+            elif "incomplete" in msg:
+                result["reason"] = "reranker_cache_incomplete"
             elif err_type == "OSError":
                 result["reason"] = "reranker_unavailable"
             else:
