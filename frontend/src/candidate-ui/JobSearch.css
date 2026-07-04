@@ -199,31 +199,6 @@
   margin: 0 0 6px 0;
 }
 
-.job-company {
-  font-size: 15px;
-  color: #6c757d;
-}
-
-.job-match-score {
-  text-align: center;
-  padding: 8px 12px;
-  background: #e8f5e9;
-  border-radius: 8px;
-  min-width: 70px;
-}
-
-.match-score-value {
-  font-size: 21px;
-  font-weight: 700;
-  color: #2e7d32;
-}
-
-.match-score-label {
-  font-size: 12px;
-  color: #2e7d32;
-  text-transform: uppercase;
-}
-
 .job-details {
   display: flex;
   flex-wrap: wrap;
@@ -233,23 +208,6 @@
 
 .job-type-row {
   margin: 4px 0 12px;
-}
-
-.job-openings {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.job-chip {
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  color: #495057;
-  border-radius: 999px;
-  padding: 6px 10px;
-  font-size: 13px;
-  white-space: nowrap;
 }
 
 .job-type-pill {
@@ -347,22 +305,6 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-}
-
-.job-skills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.job-skill-tag {
-  padding: 4px 12px;
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 16px;
-  font-size: 13px;
-  color: #495057;
 }
 
 .job-description {

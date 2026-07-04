@@ -299,4 +299,3 @@ export const ALL_SKILLS = Object.values(TECH_SKILLS)
 /**
  * Get all categories as an array
  */
-export const SKILL_CATEGORIES = Object.keys(TECH_SKILLS);

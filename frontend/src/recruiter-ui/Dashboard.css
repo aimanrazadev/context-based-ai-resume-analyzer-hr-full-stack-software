@@ -159,10 +159,6 @@
   gap: 8px;
 }
 
-.card-icon {
-  font-size: 18px;
-}
-
 .card-link {
   font-size: 13px;
   color: #007bff;
@@ -172,60 +168,6 @@
 
 .card-link:hover {
   text-decoration: underline;
-}
-
-
-/* Applicants List */
-.applicants-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.applicant-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  border-radius: 8px;
-  background: #f8f9fa;
-  transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
-}
-
-.applicant-item:hover {
-  background: #f1f3f5;
-  box-shadow: var(--shadow-card-hover);
-  transform: translateY(-1px);
-}
-
-.applicant-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 600;
-  flex-shrink: 0;
-}
-
-.applicant-info {
-  flex: 1;
-}
-
-.applicant-name {
-  font-size: 14px;
-  font-weight: 500;
-  color: #212529;
-  margin-bottom: 2px;
-}
-
-.applicant-role {
-  font-size: 12px;
-  color: #6c757d;
 }
 
 

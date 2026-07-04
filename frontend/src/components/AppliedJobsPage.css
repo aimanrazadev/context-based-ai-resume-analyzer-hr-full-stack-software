@@ -32,13 +32,6 @@
   transform: translateY(-1px);
 }
 
-.applied-job-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 16px;
-}
-
 .applied-job-info {
   flex: 1;
 }
@@ -101,19 +94,6 @@
   text-align: center;
 }
 
-.applied-job-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-top: 16px;
-  border-top: 1px solid #e9ecef;
-}
-
-.applied-date {
-  font-size: 13px;
-  color: #6c757d;
-}
-
 .applied-job-actions {
   display: flex;
   gap: 12px;
@@ -135,11 +115,6 @@
 .btn-view-details:hover {
   background: #007bff;
   color: white;
-}
-
-/* (deprecated) kept for compatibility; use .btn-withdraw */
-.btn-remove-application {
-  display: none;
 }
 
 .btn-withdraw {

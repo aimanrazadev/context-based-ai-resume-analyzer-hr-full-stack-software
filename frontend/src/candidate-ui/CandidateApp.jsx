@@ -248,7 +248,7 @@ export default function CandidateApp({ onLogout }) {
           <div className="candidate-content-grid">
             <Routes>
               <Route path="/" element={<Navigate to="jobs" replace />} />
-              <Route path="jobs" element={<JobSearch onGoAppliedJobs={() => navigate("/candidate/applied")} />} />
+              <Route path="jobs" element={<JobSearch />} />
               <Route path="saved" element={<JobSearch savedOnly />} />
               <Route path="jobs/:jobId" element={<CandidateJobDetailPage />} />
               <Route

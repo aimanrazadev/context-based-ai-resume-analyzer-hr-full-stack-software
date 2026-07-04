@@ -347,13 +347,6 @@
   font-weight: 500;
 }
 
-.jd-tags-row {
-  margin-top: 14px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
 .jd-detail-grid {
   margin-top: 16px;
   display: grid;
@@ -436,12 +429,6 @@
   border-color: rgba(34, 197, 94, 0.22);
   background: rgba(34, 197, 94, 0.10);
   color: #166534;
-}
-
-.jd-chip.muted {
-  background: #f3f4f6;
-  border-color: rgba(17, 24, 39, 0.06);
-  color: #6b7280;
 }
 
 .jd-actions-row {

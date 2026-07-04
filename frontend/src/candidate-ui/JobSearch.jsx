@@ -217,7 +217,6 @@ export default function JobSearch({ savedOnly = false }) {
           const jobSalary = extractSalaryNumbers(job);
           
           // DEBUG: Uncomment to see salary parsing in console
-          // console.log('Job:', job.title, '| Job salary:', jobSalary, '| Filter:', filterRange);
           
           // If job has NO salary data at all, exclude it (unless filter is "Any")
           if (jobSalary.min == null && jobSalary.max == null) {
@@ -253,7 +252,6 @@ export default function JobSearch({ savedOnly = false }) {
           const jobMinExp = extractExperienceYears(job);
           
           // DEBUG: Uncomment to see experience parsing in console
-          // console.log('Job:', job.title, '| Requires:', jobMinExp, 'years | Candidate has:', filterRange);
           
           // If job has no experience data, include it (assume entry-level)
           if (jobMinExp == null) {

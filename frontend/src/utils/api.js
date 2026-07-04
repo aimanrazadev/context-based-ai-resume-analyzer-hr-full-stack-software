@@ -166,10 +166,9 @@ async function apiFetch(path, options = {}) {
 }
 
 /**
- * Auth API calls (kept for compatibility; UI currently uses local mock login)
+ * Authentication API calls.
  */
 export const authAPI = {
-  health: async () => apiFetch("/health"),
   signup: async ({ email, password, role, name }) =>
     apiFetch("/auth/signup", {
       method: "POST",
@@ -179,8 +178,7 @@ export const authAPI = {
     apiFetch("/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password, role })
-    }),
-  logout: async () => ({ success: true })
+    })
 };
 
 /**
@@ -230,8 +228,6 @@ export const jobAPI = {
     return apiFetch(`/jobs?mine=${mine}${status}`);
   },
 
-  getById: async (id) => apiFetch(`/jobs/${id}`),
-
   update: async (id, data) =>
     apiFetch(`/jobs/${id}`, {
       method: "PATCH",
@@ -272,22 +268,6 @@ export const jobAPI = {
       method: "DELETE"
     }),
 
-  // Candidate: upload resume for a specific job and get match score + explanation
-  applyWithResume: async (jobId, file) => {
-    const form = new FormData();
-    form.append("file", file);
-    // Resume analysis can take longer (OCR, embeddings first-time init, AI retries).
-    // Keep UI responsive by allowing a longer request window.
-    return apiFetch(`/jobs/${jobId}/apply`, { method: "POST", body: form, timeoutMs: 120000 });
-  },
-
-  // Candidate (preferred): start analysis in background and poll progress.
-  applyWithResumeAsync: async (jobId, file) => {
-    const form = new FormData();
-    form.append("file", file);
-    return apiFetch(`/jobs/${jobId}/apply_async`, { method: "POST", body: form, timeoutMs: 120000 });
-  },
-
   // Candidate: save application (no scoring). Optionally include a resume file.
   applySaveOnly: async (jobId, file) => {
     const form = new FormData();
@@ -306,9 +286,6 @@ export const jobAPI = {
 
   // Candidate: list applied jobs (applications)
   myApplications: async () => apiFetch("/jobs/applied"),
-
-  // Candidate: check whether already applied to a specific job
-  myApplicationForJob: async (jobId) => apiFetch(`/jobs/${jobId}/my_application`),
 
   // Candidate: application details
   applicationDetails: async (applicationId) => apiFetch(`/jobs/applications/${applicationId}`),
@@ -348,31 +325,12 @@ export const jobAPI = {
 };
 
 /**
- * Resume API calls (candidate resume upload & listing)
- */
-export const resumeAPI = {
-  listMine: async () => apiFetch("/resumes/mine"),
-  upload: async (file) => {
-    const form = new FormData();
-    form.append("file", file);
-    return apiFetch("/resumes/upload", { method: "POST", body: form });
-  },
-  // NOTE: direct URL downloads won't include Authorization header in most browsers.
-  // Prefer jobAPI.downloadApplicationResume for application-specific resume downloads.
-  downloadUrl: (id) => `${API_BASE_URL}/resumes/${id}/download`,
-};
-
-/**
  * Interview API calls (Module 11)
  */
 export const interviewAPI = {
   // Recruiter: schedule interview for an application (invite)
   scheduleInterview: async (payload) =>
     apiFetch("/interviews/schedule", { method: "POST", body: JSON.stringify(payload || {}) }),
-
-  // Recruiter: update schedule / notes
-  updateInterview: async (interviewId, payload) =>
-    apiFetch(`/interviews/${interviewId}`, { method: "PATCH", body: JSON.stringify(payload || {}) }),
 
   // Recruiter: mark completed + feedback
   completeInterview: async (interviewId, payload) =>
