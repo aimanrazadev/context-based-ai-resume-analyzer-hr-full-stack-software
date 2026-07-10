@@ -1,7 +1,7 @@
 import "./Dashboard.css";
 import { useEffect, useState } from "react";
-import { jobAPI, interviewAPI } from "../utils/api";
-import { getRingMetrics, normalizeMatchScore } from "../utils/matchScore";
+import { jobAPI } from "../utils/api";
+import { getRingMetrics } from "../utils/matchScore";
 
 const ringSize = 60;
 const ringRadius = 26;
@@ -33,7 +33,7 @@ const pctChange = (current, previous) => {
   return ((cur - prev) / prev) * 100;
 };
 
-const clampPct = (n) => normalizeMatchScore(Math.abs(Number(n) || 0));
+const clampPct = (n) => Math.max(0, Math.min(100, Math.round(Math.abs(Number(n) || 0))));
 
 // Fetch live counts for dashboard cards
 const useDashboardCounts = () => {
@@ -43,20 +43,15 @@ const useDashboardCounts = () => {
     shortlisted: { current: 0, previous: 0, change: 0, rangeLabel: "vs last month" },
     onHold: { current: 0, previous: 0, change: 0, rangeLabel: "vs last month" }
   });
-  const [upcoming, setUpcoming] = useState([]);
   const [recent, setRecent] = useState([]);
 
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
-        const [allRes, activeRes] = await Promise.all([
-          jobAPI.getAll({}),
-          jobAPI.getAll({ status: "active" })
-        ]);
+        const allRes = await jobAPI.getAll({});
         if (!alive) return;
         const jobs = allRes?.jobs || [];
-        const activeJobs = activeRes?.jobs || [];
 
         const allCandidates = await Promise.all(
           jobs.map(async (job) => {
@@ -95,8 +90,7 @@ const useDashboardCounts = () => {
 
         const isShortlisted = (app) => {
           const status = String(app?.status || "").toLowerCase();
-          if (status.includes("shortlist")) return true;
-          return Number(app?.final_score || 0) >= 70;
+          return status.includes("shortlist");
         };
 
         const isOnHold = (app) => {
@@ -146,17 +140,11 @@ const useDashboardCounts = () => {
           }
         });
 
-        // Try to show upcoming interviews for the first active job (best-effort)
-        const firstActive = activeJobs[0];
-        if (firstActive) {
-          const iv = await interviewAPI.jobInterviews(firstActive.id);
-          if (!alive) return;
-          setUpcoming((iv?.interviews || []).slice(0, 6));
-
-          const rc = await jobAPI.rankedCandidates(firstActive.id);
-          if (!alive) return;
-          setRecent((rc?.candidates || []).slice(0, 6));
-        }
+        setRecent(
+          [...applications]
+            .sort((a, b) => new Date(b?.created_at || 0).getTime() - new Date(a?.created_at || 0).getTime())
+            .slice(0, 6)
+        );
       } catch {
         // ignore — dashboard is non-critical
       }
@@ -166,7 +154,7 @@ const useDashboardCounts = () => {
     };
   }, []);
 
-  return { metrics, upcoming, recent };
+  return { metrics, recent };
 };
 
 export default function Dashboard({ onNavigate }) {
@@ -176,7 +164,7 @@ export default function Dashboard({ onNavigate }) {
     }
   };
 
-  const { metrics, upcoming, recent } = useDashboardCounts();
+  const { metrics, recent } = useDashboardCounts();
 
   const renderChange = (change, rangeLabel) => {
     const value = Math.round(change || 0);
@@ -261,7 +249,7 @@ export default function Dashboard({ onNavigate }) {
         </div>
       </div>
 
-      {/* Recent Candidates and Upcoming Interviews */}
+      {/* Recent candidates */}
       <div className="dashboard-main-grid">
         <div 
           className="dashboard-card clickable-card"
@@ -276,7 +264,7 @@ export default function Dashboard({ onNavigate }) {
               recent.map((c) => {
                 const name = c?.candidate?.name || "Candidate";
                 const avatar = name.trim().slice(0, 1).toUpperCase();
-                const score = `${normalizeMatchScore(c?.final_score)}%`;
+                const score = `${Number(c?.final_score ?? 0)}%`;
                 return (
                   <div key={c.application_id} className="recent-candidate-item">
                     <div className="recent-candidate-avatar">{avatar}</div>
@@ -297,30 +285,6 @@ export default function Dashboard({ onNavigate }) {
                   <div className="recent-candidate-name">No recent candidates</div>
                 </div>
               </div>
-            )}
-          </div>
-        </div>
-
-        <div 
-          className="dashboard-card clickable-card"
-          onClick={() => handleCardClick("interviews")}
-          title="View upcoming interviews"
-        >
-          <div className="card-header">
-            <div className="card-title">Upcoming Interviews</div>
-          </div>
-          <div className="upcoming-interviews-list">
-            {upcoming && upcoming.length > 0 ? (
-              upcoming.map((it) => (
-                <div key={it.id} className="upcoming-interview-item">
-                  <div className="interview-info">
-                    <div className="interview-candidate">{it.candidate?.name || "Candidate"} - {it.job?.title || "Job"}</div>
-                    <div className="interview-date">{it.scheduled_at ? new Date(it.scheduled_at).toLocaleString() : "TBD"}</div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="upcoming-interview-item"><div className="interview-info"><div className="interview-candidate">No upcoming interviews</div></div></div>
             )}
           </div>
         </div>

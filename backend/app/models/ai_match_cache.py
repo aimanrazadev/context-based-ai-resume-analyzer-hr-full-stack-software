@@ -20,8 +20,6 @@ class AIMatchCache(Base):
     
     # Cached match result
     match_result_json = Column(Text, nullable=False)  # Full match dict as JSON
-    match_score = Column(Integer, nullable=True)  # 0-100
-    
     # Metadata
     api_latency_ms = Column(Integer, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)

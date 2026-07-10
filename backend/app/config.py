@@ -5,8 +5,7 @@ from dotenv import load_dotenv
 # Override=True so changes in backend/.env take effect on process reload (and not get
 # stuck on old environment variables).
 #
-# For automated tests (SQLite), we need to prevent backend/.env from overriding the
-# test DATABASE_URL. Set DISABLE_DOTENV=1 to skip loading .env.
+# Set DISABLE_DOTENV=1 when a caller provides its own MySQL environment.
 if os.getenv("DISABLE_DOTENV") != "1":
     load_dotenv(Path(__file__).resolve().parent.parent / ".env", override=True)
 
@@ -33,12 +32,6 @@ AI_LOG_PAYLOADS = (os.getenv("AI_LOG_PAYLOADS", "0") or "0").strip() in {"1", "t
 # Absolute path; override with UPLOAD_DIR in env (useful for tests).
 UPLOAD_DIR = os.getenv("UPLOAD_DIR") or (Path(__file__).resolve().parent.parent / "uploads").as_posix()
 
-# OCR (optional, for scanned PDFs)
-# - TESSERACT_CMD: path to tesseract executable (Windows often needs this)
-# - POPPLER_PATH: path to Poppler bin folder for pdf2image (Windows often needs this)
-TESSERACT_CMD = os.getenv("TESSERACT_CMD")  # e.g. C:\\Program Files\\Tesseract-OCR\\tesseract.exe
-POPPLER_PATH = os.getenv("POPPLER_PATH")  # e.g. C:\\poppler\\Library\\bin
-
 # Auth / JWT
 # NOTE: keep a default for local dev so the server can boot even if SECRET_KEY isn't set.
 SECRET_KEY = os.getenv("SECRET_KEY", "dev_secret_change_me")
@@ -48,8 +41,3 @@ EMBEDDINGS_ENABLED = (os.getenv("EMBEDDINGS_ENABLED", "1") or "1").strip() in {"
 EMBEDDINGS_PROVIDER = os.getenv("EMBEDDINGS_PROVIDER", "local")
 EMBEDDINGS_MODEL = os.getenv("EMBEDDINGS_MODEL", "BAAI/bge-small-en-v1.5")
 
-# -------------------- Module 10: Cross-encoder reranking --------------------
-RERANKER_ENABLED = (os.getenv("RERANKER_ENABLED", "1") or "1").strip() in {"1", "true", "True", "yes", "YES"}
-RERANKER_MODEL = os.getenv("RERANKER_MODEL", "BAAI/bge-reranker-base")
-RERANKER_SHORTLIST_SIZE = int(os.getenv("RERANKER_SHORTLIST_SIZE", "8") or "8")
-RERANKER_TIMEOUT_S = float(os.getenv("RERANKER_TIMEOUT_S", "20") or "20")

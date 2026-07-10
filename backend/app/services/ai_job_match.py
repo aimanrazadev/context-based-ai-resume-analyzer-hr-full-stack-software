@@ -182,7 +182,6 @@ async def ai_match_resume_to_job(
             out2["education_summary"]["summary"] = _sanitize_summary(out2["education_summary"].get("summary", ""))
             out2["projects_summary"]["summary"] = _sanitize_summary(out2["projects_summary"].get("summary", ""))
             out2["work_experience_summary"]["summary"] = _sanitize_summary(out2["work_experience_summary"].get("summary", ""))
-            out2["score"] = int(out2.get("overall_match_score") or 0)
             out2["explanation"] = _sanitize_text(
                 " ".join(
                     [

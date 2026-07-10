@@ -5,20 +5,89 @@ AI Resume Analyzer is a full-stack project with:
 - a FastAPI backend in `backend/`
 - a React + Vite frontend in `frontend/`
 
-## Local Development
+## Scope and System Flow
 
-Backend only:
+The MVP supports two roles:
 
-```bash
-python -m uvicorn --app-dir . backend.app.main:app --reload
+- recruiters create and manage jobs, define required skills, and review ranked applicants
+- candidates browse jobs and apply once per job with a PDF or DOCX resume
+
+The primary flow is:
+
+```text
+Recruiter creates job
+  -> Candidate applies with resume
+  -> Text extraction and structured parsing
+  -> AI analysis and local embeddings
+  -> Semantic and context-based scoring
+  -> Explainable candidate ranking
+  -> Recruiter dashboard
 ```
 
-Frontend only:
+Required skills are always supplied explicitly by the recruiter. They are never
+inferred from arbitrary job-description keywords.
+
+## MVP Boundaries
+
+Included:
+
+- recruiter and candidate authentication with JWT role enforcement
+- job CRUD and lifecycle management
+- job-specific PDF/DOCX applications
+- resume extraction, parsing, AI analysis, scoring, and ranking
+- candidate and recruiter dashboards
+
+Optional integrations:
+
+- Gemini is the configured hosted AI provider
+- local Sentence Transformers provide embeddings
+- additional hosted AI providers may be added later, but are not required by the MVP
+
+Explicitly excluded:
+
+- profile-level resume uploads or matching
+- interview scheduling, meeting links, calendars, and interview automation
+- chatbots and recruiter assistants
+- vector databases and cross-encoder reranking
+
+## Non-functional Requirements
+
+- Security: passwords are hashed, private APIs require JWT authentication, and
+  recruiter/candidate permissions are enforced server-side.
+- Reliability: upload and AI failures return controlled errors without corrupting
+  application records.
+- Data integrity: MySQL foreign keys and a unique candidate/job constraint prevent
+  duplicate applications.
+- Performance: common recruiter ranking and candidate history queries use compound
+  indexes; generated embeddings and AI responses are cached.
+- Maintainability: frontend API calls are centralized and backend responsibilities
+  are separated into API, model, service, schema, and utility modules.
+- Portability: uploaded-file paths are stored relative to the configured upload
+  directory and frontend/backend URLs are configured through environment variables.
+- Supported files: PDF and DOCX resumes up to 5 MB.
+
+## Technology
+
+- Frontend: React and Vite
+- Backend: Python and FastAPI
+- Database: MySQL with SQLAlchemy and PyMySQL
+- AI: Gemini plus local Sentence Transformers
+
+## Local Development
+
+Backend only (port 8002):
+
+```bash
+python -m uvicorn --app-dir . backend.app.main:app --reload --host 127.0.0.1 --port 8002
+```
+
+Frontend only (port 5190):
 
 ```bash
 cd frontend
 npm install
-npm run dev
+$env:VITE_API_BASE_URL="http://127.0.0.1:8002"
+npm run dev -- --host 127.0.0.1 --port 5190 --strictPort
 ```
 
 Start backend and frontend together from the repo root:
@@ -63,5 +132,5 @@ FRONTEND_ORIGINS=
 Frontend:
 
 ```env
-VITE_API_BASE_URL=http://127.0.0.1:8000
+VITE_API_BASE_URL=http://127.0.0.1:8002
 ```

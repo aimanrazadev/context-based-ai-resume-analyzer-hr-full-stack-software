@@ -1,0 +1,1 @@
+export default function EmptyState({ title = "Nothing here yet", description = "New items will appear here." }) { return <div style={{ textAlign: "center", color: "#64748b", padding: 28 }}><strong style={{ display: "block", color: "#334155" }}>{title}</strong><span>{description}</span></div>; }

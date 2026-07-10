@@ -1,11 +1,12 @@
 /**
  * API Layer
  *
- * - Auth uses the FastAPI backend (default: http://127.0.0.1:8000)
+ * - Auth and jobs use the configured FastAPI backend.
  * - Jobs use the FastAPI backend
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
+const DEFAULT_API_BASE_URL = import.meta.env.DEV ? "http://127.0.0.1:8002" : "";
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/$/, "");
 
 function getStoredUser() {
   try {
@@ -169,6 +170,7 @@ async function apiFetch(path, options = {}) {
  * Authentication API calls.
  */
 export const authAPI = {
+  health: async () => apiFetch("/health", { timeoutMs: 10000 }),
   signup: async ({ email, password, role, name }) =>
     apiFetch("/auth/signup", {
       method: "POST",
@@ -203,16 +205,9 @@ export const jobAPI = {
         min_experience_years: data?.minExperienceYears ?? data?.min_experience_years ?? null,
         job_type: data?.jobType ?? data?.job_type ?? null,
         job_site: data?.jobSite ?? data?.job_site ?? null,
-        openings: data?.openings ?? null,
-        perks: data?.perks ?? null,
         non_negotiables: data?.nonNegotiables ?? data?.non_negotiables ?? null,
         additional_preferences: data?.additionalPreferences ?? data?.additional_preferences ?? null,
-        screening_availability: data?.screeningAvailability ?? data?.screening_availability ?? null,
-        screening_phone: data?.screeningPhone ?? data?.screening_phone ?? null,
-        start_date: data?.start_date ?? data?.startDate ?? null,
-        duration: data?.duration ?? null,
         apply_by: data?.apply_by ?? data?.applyBy ?? null,
-        job_link: data?.jobPostingLink ?? data?.job_link ?? null,
         required_skills: data?.required_skills ?? data?.requiredSkills ?? null,
         status: data?.status ?? "active",
         draft_data: data?.draft_data ?? null,
@@ -227,6 +222,8 @@ export const jobAPI = {
     const status = filters?.status ? `&status=${encodeURIComponent(filters.status)}` : "";
     return apiFetch(`/jobs?mine=${mine}${status}`);
   },
+
+  getById: async (id) => apiFetch(`/jobs/${id}`),
 
   update: async (id, data) =>
     apiFetch(`/jobs/${id}`, {
@@ -246,16 +243,9 @@ export const jobAPI = {
         min_experience_years: data?.minExperienceYears ?? data?.min_experience_years,
         job_type: data?.jobType ?? data?.job_type,
         job_site: data?.jobSite ?? data?.job_site,
-        openings: data?.openings,
-        perks: data?.perks,
         non_negotiables: data?.nonNegotiables ?? data?.non_negotiables,
         additional_preferences: data?.additionalPreferences ?? data?.additional_preferences,
-        screening_availability: data?.screeningAvailability ?? data?.screening_availability,
-        screening_phone: data?.screeningPhone ?? data?.screening_phone,
-        start_date: data?.start_date ?? data?.startDate ?? null,
-        duration: data?.duration ?? null,
         apply_by: data?.apply_by ?? data?.applyBy ?? null,
-        job_link: data?.jobPostingLink ?? data?.job_link,
         required_skills: data?.required_skills ?? data?.requiredSkills ?? null,
         status: data?.status,
         draft_data: data?.draft_data,
@@ -287,11 +277,18 @@ export const jobAPI = {
   // Candidate: list applied jobs (applications)
   myApplications: async () => apiFetch("/jobs/applied"),
 
-  // Candidate: application details
+  // Candidate: check whether current candidate already applied to one job
+  myApplicationForJob: async (jobId) => apiFetch(`/jobs/${jobId}/my_application`),
+
+  // Candidate + recruiter: one shared application detail flow
   applicationDetails: async (applicationId) => apiFetch(`/jobs/applications/${applicationId}`),
 
-  // Candidate + Recruiter: shared application details
-  applicationDetailsShared: async (applicationId) => apiFetch(`/jobs/applications/${applicationId}/shared`),
+  // Recruiter: update candidate application status without recalculating scores
+  updateApplicationStatus: async (applicationId, status) =>
+    apiFetch(`/jobs/applications/${applicationId}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status })
+    }),
 
   // Candidate + Recruiter: download resume for an application (JWT-auth via fetch -> blob)
   downloadApplicationResume: async (applicationId) => {
@@ -320,29 +317,6 @@ export const jobAPI = {
   deleteApplication: async (applicationId) =>
     apiFetch(`/jobs/applications/${applicationId}`, { method: "DELETE" }),
 
-  // Recruiter: ranked candidates per job (Module 10)
+  // Recruiter: ranked candidates per job
   rankedCandidates: async (jobId) => apiFetch(`/jobs/${jobId}/ranked_candidates`)
-};
-
-/**
- * Interview API calls (Module 11)
- */
-export const interviewAPI = {
-  // Recruiter: schedule interview for an application (invite)
-  scheduleInterview: async (payload) =>
-    apiFetch("/interviews/schedule", { method: "POST", body: JSON.stringify(payload || {}) }),
-
-  // Recruiter: mark completed + feedback
-  completeInterview: async (interviewId, payload) =>
-    apiFetch(`/interviews/${interviewId}/complete`, { method: "POST", body: JSON.stringify(payload || {}) }),
-
-  // Recruiter: evaluate outcome + remarks
-  evaluateInterview: async (interviewId, payload) =>
-    apiFetch(`/interviews/${interviewId}/evaluate`, { method: "POST", body: JSON.stringify(payload || {}) }),
-
-  myInterviews: async () => apiFetch("/interviews/mine"),
-
-  jobInterviews: async (jobId) => apiFetch(`/interviews/job/${jobId}`),
-
-  interviewDetails: async (interviewId) => apiFetch(`/interviews/${interviewId}`),
 };

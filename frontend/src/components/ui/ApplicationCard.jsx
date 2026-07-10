@@ -1,0 +1,1 @@
+export default function ApplicationCard({ title, children, score }) { return <article style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, padding: 18 }}><div style={{ display: "flex", justifyContent: "space-between" }}><h3>{title}</h3>{score}</div>{children}</article>; }

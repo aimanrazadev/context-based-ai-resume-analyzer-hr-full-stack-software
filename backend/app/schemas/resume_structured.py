@@ -50,6 +50,7 @@ class ParsedResumeRaw(BaseModel):
     missing_sections: list[str] = Field(default_factory=list)
     quality_flags: list[str] = Field(default_factory=list)
     is_low_confidence: bool = False
+    parser_layers: dict = Field(default_factory=dict)
 
 
 class ParsedResumeStructured(BaseModel):

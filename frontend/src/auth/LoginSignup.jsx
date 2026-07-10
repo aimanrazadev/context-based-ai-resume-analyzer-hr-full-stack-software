@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import "./LoginSignup.css";
 import { authAPI } from "../utils/api";
-import { toast, handleApiError, handleApiSuccess } from "../utils/toast";
 
 export default function LoginSignup({ onLoginSuccess }) {
   const [isLogin, setIsLogin] = useState(false);
@@ -14,7 +13,7 @@ export default function LoginSignup({ onLoginSuccess }) {
     agreeToTerms: false,
     isAccredited: false
   });
-  const [error, setError] = useState("");
+  const [message, setMessage] = useState(null);
   const [loading, setLoading] = useState(false);
   const [backendStatus, setBackendStatus] = useState("Checking...");
 
@@ -37,51 +36,49 @@ export default function LoginSignup({ onLoginSuccess }) {
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    setError("");
+    setMessage(null);
+  };
+
+  const setAuthMessage = (type, text) => {
+    setMessage(text ? { type, text } : null);
+  };
+
+  const getApiMessage = (err) => {
+    return err?.message || err?.data?.detail || "Something went wrong. Please try again.";
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
+    setMessage(null);
     setLoading(true);
 
     // Validation
     if (!formData.email || !formData.password) {
-      const msg = "Please fill in all required fields";
-      setError(msg);
-      toast.error(msg);
+      setAuthMessage("warning", "Please fill in all required fields");
       setLoading(false);
       return;
     }
 
     if (!isLogin && !formData.name) {
-      const msg = "Please enter your name";
-      setError(msg);
-      toast.error(msg);
+      setAuthMessage("warning", "Please enter your name");
       setLoading(false);
       return;
     }
 
     if (!isLogin && formData.password !== formData.confirmPassword) {
-      const msg = "Passwords do not match";
-      setError(msg);
-      toast.error(msg);
+      setAuthMessage("error", "Passwords do not match");
       setLoading(false);
       return;
     }
 
     if (!isLogin && formData.password.length < 6) {
-      const msg = "Password must be at least 6 characters";
-      setError(msg);
-      toast.error(msg);
+      setAuthMessage("warning", "Password must be at least 6 characters");
       setLoading(false);
       return;
     }
 
     if (!isLogin && !formData.agreeToTerms) {
-      const msg = "Please agree to the Privacy Policy & Terms and Conditions";
-      setError(msg);
-      toast.error(msg);
+      setAuthMessage("warning", "Please agree to the Privacy Policy & Terms and Conditions");
       setLoading(false);
       return;
     }
@@ -110,19 +107,23 @@ export default function LoginSignup({ onLoginSuccess }) {
       };
 
       localStorage.setItem("user", JSON.stringify(user));
-      
-      // Show success message
-      handleApiSuccess(isLogin ? "Login successful!" : "Account created successfully!", {
-        position: "bottom-right"
-      });
-      
+
+      setAuthMessage("success", isLogin ? "Login successful!" : "Account created successfully!");
       onLoginSuccess(user);
     } catch (err) {
-      const msg = handleApiError(err);
-      setError(msg);
+      setAuthMessage("error", getApiMessage(err));
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleModeSwitch = (nextIsLogin) => {
+    setIsLogin(nextIsLogin);
+    setMessage(null);
+  };
+
+  const showComingSoon = (provider) => {
+    setAuthMessage("warning", `${provider} login is coming soon.`);
   };
 
   return (
@@ -146,7 +147,10 @@ export default function LoginSignup({ onLoginSuccess }) {
                 name="userType"
                 value="recruiter"
                 checked={userType === "recruiter"}
-                onChange={(e) => setUserType(e.target.value)}
+                onChange={(e) => {
+                  setUserType(e.target.value);
+                  setMessage(null);
+                }}
               />
               <span>I'm a Recruiter</span>
             </label>
@@ -156,7 +160,10 @@ export default function LoginSignup({ onLoginSuccess }) {
                 name="userType"
                 value="candidate"
                 checked={userType === "candidate"}
-                onChange={(e) => setUserType(e.target.value)}
+                onChange={(e) => {
+                  setUserType(e.target.value);
+                  setMessage(null);
+                }}
               />
               <span>I'm a Candidate</span>
             </label>
@@ -228,7 +235,11 @@ export default function LoginSignup({ onLoginSuccess }) {
               </>
             )}
 
-            {error && <div className="auth-error">{error}</div>}
+            {message && (
+              <div className={`auth-message auth-message-${message.type}`} role="status" aria-live="polite">
+                {message.text}
+              </div>
+            )}
 
             <button type="submit" className="auth-submit-btn" disabled={loading}>
               {loading ? "Processing..." : isLogin ? "Sign In" : "Sign Up"}
@@ -243,7 +254,7 @@ export default function LoginSignup({ onLoginSuccess }) {
                   href="#" 
                   onClick={(e) => { 
                     e.preventDefault(); 
-                    setIsLogin(false); 
+                    handleModeSwitch(false); 
                   }} 
                   className="auth-link"
                 >
@@ -257,7 +268,7 @@ export default function LoginSignup({ onLoginSuccess }) {
                   href="#" 
                   onClick={(e) => { 
                     e.preventDefault(); 
-                    setIsLogin(true); 
+                    handleModeSwitch(true); 
                   }} 
                   className="auth-link"
                 >
@@ -275,21 +286,21 @@ export default function LoginSignup({ onLoginSuccess }) {
             <button 
               type="button"
               className="social-btn google"
-              onClick={() => alert("Google login coming soon!")}
+              onClick={() => showComingSoon("Google")}
             >
               G
             </button>
             <button 
               type="button"
               className="social-btn facebook"
-              onClick={() => alert("Facebook login coming soon!")}
+              onClick={() => showComingSoon("Facebook")}
             >
               f
             </button>
             <button 
               type="button"
               className="social-btn slack"
-              onClick={() => alert("Social login coming soon!")}
+              onClick={() => showComingSoon("Social")}
             >
               #
             </button>

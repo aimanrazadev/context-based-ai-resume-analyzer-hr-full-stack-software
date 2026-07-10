@@ -1,117 +1,17 @@
 """
-Resume extraction and lightweight scoring utilities.
+Resume extraction and cleaning utilities.
 
 This module is responsible for:
 - extracting text from uploaded PDF and DOCX resumes
 - cleaning and normalizing noisy extraction output
-- using OCR as a best-effort fallback for scanned PDFs
+- detecting scanned PDFs and rejecting them with actionable diagnostics
 - returning extraction diagnostics for downstream parsing and AI stages
-- providing a deterministic keyword-overlap scoring fallback
 """
 
 import re
 
 
 _WORD_RE = re.compile(r"[a-zA-Z0-9+#.]{2,}")
-
-_STOP = {
-    "a",
-    "an",
-    "and",
-    "are",
-    "as",
-    "at",
-    "be",
-    "by",
-    "for",
-    "from",
-    "in",
-    "is",
-    "it",
-    "of",
-    "on",
-    "or",
-    "that",
-    "the",
-    "this",
-    "to",
-    "with",
-    "you",
-    "your",
-}
-
-
-def _tokens(text: str) -> set[str]:
-    """
-    Convert free-form text into a normalized token set.
-
-    Args:
-        text: Raw input text from a resume or job description.
-
-    Returns:
-        A set of lowercase tokens with common stopwords removed.
-
-    Side Effects:
-        None.
-
-    Error Handling:
-        Returns an empty set when the input is empty or falsy.
-    """
-    if not text:
-        return set()
-    out: set[str] = set()
-    for m in _WORD_RE.finditer(text.lower()):
-        w = m.group(0).strip(".")
-        if w and w not in _STOP:
-            out.add(w)
-    return out
-
-
-def score_resume_against_job(*, job_title: str | None, job_description: str | None, resume_text: str | None) -> tuple[float, str]:
-    """
-    Score a resume against a job using deterministic keyword overlap.
-
-    Args:
-        job_title: Job title text, if available.
-        job_description: Full job description text, if available.
-        resume_text: Extracted resume text used for comparison.
-
-    Returns:
-        A tuple containing:
-        - match_score: Float in the range [0, 1].
-        - ai_explanation: Human-readable explanation of the score.
-
-    Side Effects:
-        None.
-
-    Error Handling:
-        Returns a zero score with an explanation when either the job text or
-        resume text is missing or unreadable.
-    """
-    job_text = f"{job_title or ''}\n{job_description or ''}".strip()
-    jt = _tokens(job_text)
-    rt = _tokens(resume_text or "")
-
-    if not jt:
-        return 0.0, "No job description available to score against."
-    if not rt:
-        return 0.0, "Could not extract readable text from the uploaded resume, so a match score cannot be computed."
-
-    overlap = jt.intersection(rt)
-    score = len(overlap) / max(1, len(jt))
-    score = max(0.0, min(1.0, score))
-
-    top = sorted(overlap)[:12]
-    missing = sorted(jt.difference(rt))[:8]
-
-    explanation_parts = [f"Matched {len(overlap)} / {len(jt)} job keywords from your resume text."]
-    if top:
-        explanation_parts.append("Matched keywords: " + ", ".join(top))
-    if missing:
-        explanation_parts.append("Consider adding evidence for: " + ", ".join(missing))
-
-    return score, " ".join(explanation_parts)
-
 
 _CONTROL_CHARS_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
 _MULTISPACE_RE = re.compile(r"[ \t]{2,}")
@@ -145,12 +45,12 @@ _ARTIFACT_REPLACEMENTS = {
 
 def extract_text_from_file(*, file_path: str, ext: str | None) -> str:
     """
-    Extract text from a supported file using a best-effort fallback chain.
+    Extract text from a supported resume format.
 
     Extraction order:
     - PDF: use `PyMuPDF`
     - DOCX: use `python-docx`
-    - fallback: decode raw bytes as lossy UTF-8
+    Unsupported or corrupt files return an empty string.
     """
     ext_norm = (ext or "").lower()
 
@@ -166,12 +66,7 @@ def extract_text_from_file(*, file_path: str, ext: str | None) -> str:
         except Exception:
             pass
 
-    try:
-        with open(file_path, "rb") as f:
-            raw = f.read()
-        return raw.decode("utf-8", errors="ignore").strip()
-    except Exception:
-        return ""
+    return ""
 
 
 def extract_text_from_pdf_pages(*, file_path: str) -> list[str]:
@@ -210,51 +105,13 @@ def extract_text_from_docx(*, file_path: str) -> str:
     import docx  # type: ignore
 
     d = docx.Document(file_path)
-    return "\n".join(p.text for p in d.paragraphs if p.text).strip()
-
-
-def _ocr_pdf_with_tesseract(*, file_path: str) -> tuple[str, list[str]]:
-    """
-    Extract text from a scanned PDF using OCR.
-    """
-    warnings: list[str] = []
-    try:
-        from pdf2image import convert_from_path  # type: ignore
-    except Exception:
-        return "", ["OCR unavailable: missing python dependency pdf2image."]
-
-    try:
-        import pytesseract  # type: ignore
-    except Exception:
-        return "", ["OCR unavailable: missing python dependency pytesseract."]
-
-    try:
-        from ..config import POPPLER_PATH, TESSERACT_CMD  # type: ignore
-
-        if TESSERACT_CMD:
-            pytesseract.pytesseract.tesseract_cmd = TESSERACT_CMD
-    except Exception:
-        POPPLER_PATH = None  # type: ignore
-
-    try:
-        images = convert_from_path(
-            file_path,
-            dpi=300,
-            fmt="png",
-            poppler_path=(POPPLER_PATH or None),  # type: ignore[arg-type]
-        )
-    except Exception:
-        return "", ["OCR failed: could not rasterize PDF pages (Poppler may be missing)."]
-
-    parts: list[str] = []
-    for img in images[:12]:
-        try:
-            parts.append(pytesseract.image_to_string(img) or "")
-        except Exception:
-            warnings.append("OCR warning: failed to OCR a page.")
-            continue
-
-    return "\n\n".join(parts).strip(), warnings
+    parts = [p.text.strip() for p in d.paragraphs if p.text.strip()]
+    for table in d.tables:
+        for row in table.rows:
+            line = " | ".join(cell.text.strip() for cell in row.cells if cell.text.strip())
+            if line:
+                parts.append(line)
+    return "\n".join(parts).strip()
 
 
 def _normalize_newlines(text: str) -> str:
@@ -366,23 +223,36 @@ def extract_and_clean_resume_text(*, file_path: str, ext: str | None) -> dict:
     raw_text = ""
     page_texts: list[str] | None = None
     extraction_method = "unknown"
-    used_ocr = False
+    page_count = 0
+    error_code: str | None = None
+    error_message: str | None = None
 
     try:
         if ext_norm == ".pdf":
             try:
                 page_texts = extract_text_from_pdf_pages(file_path=file_path)
-                raw_text = "\n\n".join(page_texts).strip()
-                extraction_method = "pymupdf_pdf_text"
-            except Exception:
+                page_count = len(page_texts)
+                if page_count != 1:
+                    error_code = "invalid_page_count"
+                    error_message = "Resume should be exactly 1 page."
+                    raw_text = "\n\n".join(page_texts).strip()
+                    extraction_method = "pymupdf_pdf_text"
+                else:
+                    raw_text = "\n\n".join(page_texts).strip()
+                    extraction_method = "pymupdf_pdf_text"
+            except Exception as exc:
                 warnings.append("Failed to parse PDF text with PyMuPDF.")
+                error_code = "corrupt_file"
+                error_message = "Could not read resume. Please upload a valid PDF or DOCX."
                 raw_text = ""
         elif ext_norm == ".docx":
             try:
                 raw_text = extract_text_from_docx(file_path=file_path)
                 extraction_method = "docx_text"
-            except Exception:
+            except Exception as exc:
                 warnings.append("Failed to parse DOCX text with python-docx.")
+                error_code = "corrupt_file"
+                error_message = "Could not read resume. Please upload a valid PDF or DOCX."
                 raw_text = ""
         else:
             raw_text = extract_text_from_file(file_path=file_path, ext=ext_norm)
@@ -391,34 +261,15 @@ def extract_and_clean_resume_text(*, file_path: str, ext: str | None) -> dict:
         warnings.append("Unexpected error during extraction.")
         raw_text = ""
 
-    if not raw_text:
-        try:
-            with open(file_path, "rb") as f:
-                raw = f.read()
-            decoded = raw.decode("utf-8", errors="ignore").strip()
-            if decoded:
-                warnings.append("Used UTF-8 fallback decode due to empty extraction.")
-                raw_text = decoded
-                extraction_method = "utf8_fallback"
-        except Exception:
-            pass
-
     clean = clean_extracted_text(raw_text=raw_text, page_texts=page_texts)
 
     non_ws = re.sub(r"\s+", "", clean)
     is_emptyish = len(non_ws) < _MIN_NONWS_CHARS
     if is_emptyish:
         if ext_norm == ".pdf":
-            ocr_text, ocr_warnings = _ocr_pdf_with_tesseract(file_path=file_path)
-            warnings.extend(ocr_warnings)
-            if ocr_text:
-                clean = clean_extracted_text(raw_text=ocr_text, page_texts=None)
-                extraction_method = "pdf_ocr"
-                used_ocr = True
-                non_ws2 = re.sub(r"\s+", "", clean)
-                is_emptyish = len(non_ws2) < _MIN_NONWS_CHARS
-            if is_emptyish:
-                warnings.append("PDF appears scanned or has no extractable text (OCR did not yield usable text).")
+            warnings.append("PDF appears scanned or has no extractable text.")
+            error_code = error_code or "scanned_pdf"
+            error_message = error_message or "This resume appears to be scanned. Please upload a text-based PDF or DOCX."
         elif ext_norm == ".docx":
             warnings.append("DOCX appears empty or has no extractable text.")
         else:
@@ -441,8 +292,6 @@ def extract_and_clean_resume_text(*, file_path: str, ext: str | None) -> dict:
         quality_flags.append("high_digit_ratio")
     if clean and len(clean.splitlines()) <= 2 and word_count < 40:
         quality_flags.append("weak_document_structure")
-    if used_ocr:
-        quality_flags.append("ocr_used")
     if is_emptyish:
         quality_flags.append("empty_or_scanned")
 
@@ -452,7 +301,7 @@ def extract_and_clean_resume_text(*, file_path: str, ext: str | None) -> dict:
         or "low_alpha_ratio" in quality_flags
     )
     extraction_status = "success"
-    if not clean:
+    if not clean or error_code:
         extraction_status = "failed"
     elif is_low_confidence:
         extraction_status = "low_confidence"
@@ -465,10 +314,13 @@ def extract_and_clean_resume_text(*, file_path: str, ext: str | None) -> dict:
         "word_count": word_count,
         "char_count": char_count,
         "extraction_method": extraction_method,
-        "used_ocr": used_ocr,
+        "page_count": page_count,
+        "is_scanned": error_code == "scanned_pdf",
         "is_probably_scanned_or_empty": bool(is_emptyish),
         "is_low_confidence": is_low_confidence,
         "extraction_status": extraction_status,
         "quality_flags": quality_flags,
         "warnings": warnings,
+        "error_code": error_code,
+        "error_message": error_message,
     }

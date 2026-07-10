@@ -1,4 +1,4 @@
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -7,6 +7,9 @@ from ..database import Base
 
 class Resume(Base):
     __tablename__ = "resumes"
+    __table_args__ = (
+        Index("ix_resumes_candidate_created", "candidate_id", "created_at"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     # Relative path under UPLOAD_DIR (portable across machines)

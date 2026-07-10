@@ -127,43 +127,6 @@ def job_match_system_prompt() -> str:
     )
 
 
-def job_match_user_prompt(*, job_title: str | None, job_description: str | None, resume_text: str) -> str:
-    """
-    Build the legacy job-match prompt.
-
-    Args:
-        job_title: Job title text, if available.
-        job_description: Job description text, if available.
-        resume_text: Resume text to compare against the job.
-
-    Returns:
-        A schema-constrained prompt for a legacy score/explanation response.
-    """
-    return (
-        "Score how well this resume matches the job.\n\n"
-        "Return JSON in this exact shape:\n"
-        "{\n"
-        '  "score": 0-100,\n'
-        '  "explanation": string,\n'
-        '  "highlights": string[],\n'
-        '  "gaps": string[]\n'
-        "}\n\n"
-        "Rules:\n"
-        "- score is an integer 0-100.\n"
-        "- explanation is 1-3 sentences.\n"
-        "- highlights: up to 6 short bullets referencing evidence.\n"
-        "- gaps: up to 6 short bullets for missing/weak areas.\n\n"
-        "Job title:\n"
-        f"{job_title or ''}\n\n"
-        "Job description:\n"
-        f"{job_description or ''}\n\n"
-        "Resume text:\n"
-        "-----\n"
-        f"{resume_text or ''}\n"
-        "-----\n"
-    )
-
-
 def job_match_sectioned_user_prompt(*, job_title: str | None, job_description: str | None, resume_text: str) -> str:
     """
     Build the sectioned job-match prompt used by the newer match flow.

@@ -3,15 +3,12 @@ Semantic similarity utilities for resume-job matching.
 
 This module is responsible for:
 - computing cosine similarity between embedding vectors
-- providing a deterministic fallback similarity path
 - retrieving or creating cached embeddings for resumes and jobs
-- exposing semantic matching diagnostics without breaking legacy callers
+- exposing semantic matching diagnostics
 """
 
 import math
 import json
-import re
-from collections import Counter
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -54,112 +51,6 @@ def cosine_similarity(a: list[float], b: list[float]) -> float:
     if na <= 0.0 or nb <= 0.0:
         return 0.0
     return float(dot / (math.sqrt(na) * math.sqrt(nb)))
-
-
-_TOK_RE = re.compile(r"[a-z0-9+#.]{2,}")
-_STOP = {
-    "a",
-    "an",
-    "and",
-    "are",
-    "as",
-    "at",
-    "be",
-    "by",
-    "for",
-    "from",
-    "in",
-    "is",
-    "it",
-    "of",
-    "on",
-    "or",
-    "that",
-    "the",
-    "this",
-    "to",
-    "with",
-    "you",
-    "your",
-}
-
-
-def fallback_semantic_similarity(*, resume_text: str, job_text: str) -> float:
-    """
-    Compute a lightweight deterministic semantic score without embeddings.
-
-    Args:
-        resume_text: Resume text to compare.
-        job_text: Job text to compare against.
-
-    Returns:
-        A fallback cosine similarity score in the range [0, 1].
-
-    Side Effects:
-        None.
-
-    Error Handling:
-        Returns 0.0 when either text is empty or tokenization produces no
-        usable signal.
-    """
-    rt = (resume_text or "").lower()
-    jt = (job_text or "").lower()
-    if not rt.strip() or not jt.strip():
-        return 0.0
-
-    def toks(s: str) -> list[str]:
-        out: list[str] = []
-        for m in _TOK_RE.finditer(s):
-            w = m.group(0)
-            if w in _STOP:
-                continue
-            out.append(w)
-        return out[:1200]
-
-    ra = toks(rt)
-    ja = toks(jt)
-    if not ra or not ja:
-        return 0.0
-
-    dim = 256
-    rv = [0.0] * dim
-    jv = [0.0] * dim
-    for w, c in Counter(ra).items():
-        rv[hash(w) % dim] += float(c)
-    for w, c in Counter(ja).items():
-        jv[hash(w) % dim] += float(c)
-    return cosine_similarity(rv, jv)
-
-
-def compare_transformer_vs_keyword_matching(*, resume_text: str, job_text: str, semantic_score: float) -> dict[str, float | str]:
-    """
-    Compare transformer-based semantic matching against a deterministic keyword baseline.
-
-    Args:
-        resume_text: Resume text to compare.
-        job_text: Job text to compare against.
-        semantic_score: Already-computed transformer semantic similarity score.
-
-    Returns:
-        A small diagnostic dictionary that contrasts semantic and keyword-style
-        similarity signals.
-
-    Side Effects:
-        None.
-
-    Error Handling:
-        Uses the deterministic fallback scorer as the keyword baseline and
-        safely clamps the returned values.
-    """
-    keyword_score = fallback_semantic_similarity(resume_text=resume_text, job_text=job_text)
-    semantic_clamped = max(0.0, min(1.0, float(semantic_score or 0.0)))
-    keyword_clamped = max(0.0, min(1.0, float(keyword_score or 0.0)))
-    return {
-        "embedding_model": EMBEDDINGS_MODEL,
-        "semantic_score": semantic_clamped,
-        "keyword_baseline_score": keyword_clamped,
-        "score_gap": round(semantic_clamped - keyword_clamped, 6),
-    }
 
 
 def _get_latest_embedding(db: Session, *, entity_type: str, entity_id: int, model: str) -> Embedding | None:
@@ -222,7 +113,6 @@ def _store_similarity_result(
         because result storage could not be updated.
     """
     try:
-        comparison = details.get("comparison") if isinstance(details, dict) else {}
         row = (
             db.query(SemanticSimilarityResult)
             .filter(
@@ -235,10 +125,6 @@ def _store_similarity_result(
         payload = json.dumps(details, ensure_ascii=False)
         if row:
             row.semantic_score = float(details.get("score") or 0.0)
-            row.keyword_baseline_score = float(comparison.get("keyword_baseline_score") or 0.0)
-            row.score_gap = float(comparison.get("score_gap") or 0.0)
-            row.used_fallback = bool(details.get("used_fallback"))
-            row.fallback_reason = str(details.get("fallback_reason") or "") or None
             row.metadata_json = payload
             db.add(row)
             db.commit()
@@ -249,10 +135,6 @@ def _store_similarity_result(
             job_id=int(job_id),
             model=model,
             semantic_score=float(details.get("score") or 0.0),
-            keyword_baseline_score=float(comparison.get("keyword_baseline_score") or 0.0),
-            score_gap=float(comparison.get("score_gap") or 0.0),
-            used_fallback=bool(details.get("used_fallback")),
-            fallback_reason=str(details.get("fallback_reason") or "") or None,
             metadata_json=payload,
         )
         db.add(row)
@@ -286,15 +168,13 @@ def resume_job_similarity_details(
 
     Returns:
         A dictionary containing the final similarity score plus diagnostics such
-        as embedding availability, cache behavior, and fallback usage.
+        as embedding availability and cache behavior.
 
     Side Effects:
         May create or update cached embeddings in the database.
 
     Error Handling:
-        Falls back to deterministic token-based similarity when embeddings are
-        unavailable or unusable. Propagates unexpected database or embedder
-        errors from the underlying embedding layer.
+        Returns zero when embeddings are unavailable or unusable.
     """
     model_name = model or EMBEDDINGS_MODEL
 
@@ -322,7 +202,6 @@ def resume_job_similarity_details(
         "score": 0.0,
         "model": model_name,
         "used_embeddings": False,
-        "used_fallback": False,
         "resume_embedding_found": bool(r_row),
         "job_embedding_found": bool(j_row),
         "resume_embedding_meta": r_meta,
@@ -330,16 +209,7 @@ def resume_job_similarity_details(
     }
 
     if not r_row or not j_row:
-        score = fallback_semantic_similarity(resume_text=resume_text, job_text=job_text)
-        score = max(0.0, min(1.0, float(score)))
-        meta["score"] = score
-        meta["used_fallback"] = True
-        meta["fallback_reason"] = "missing_embedding_row"
-        meta["comparison"] = compare_transformer_vs_keyword_matching(
-            resume_text=resume_text,
-            job_text=job_text,
-            semantic_score=score,
-        )
+        meta["failure_reason"] = "missing_embedding_row"
         _store_similarity_result(
             db,
             resume_id=resume_id,
@@ -352,16 +222,7 @@ def resume_job_similarity_details(
     rv = vector_from_row(r_row)
     jv = vector_from_row(j_row)
     if not rv or not jv:
-        score = fallback_semantic_similarity(resume_text=resume_text, job_text=job_text)
-        score = max(0.0, min(1.0, float(score)))
-        meta["score"] = score
-        meta["used_fallback"] = True
-        meta["fallback_reason"] = "invalid_stored_vector"
-        meta["comparison"] = compare_transformer_vs_keyword_matching(
-            resume_text=resume_text,
-            job_text=job_text,
-            semantic_score=score,
-        )
+        meta["failure_reason"] = "invalid_stored_vector"
         _store_similarity_result(
             db,
             resume_id=resume_id,
@@ -377,11 +238,6 @@ def resume_job_similarity_details(
     meta["used_embeddings"] = True
     meta["resume_vector_dim"] = len(rv)
     meta["job_vector_dim"] = len(jv)
-    meta["comparison"] = compare_transformer_vs_keyword_matching(
-        resume_text=resume_text,
-        job_text=job_text,
-        semantic_score=score,
-    )
     _store_similarity_result(
         db,
         resume_id=resume_id,

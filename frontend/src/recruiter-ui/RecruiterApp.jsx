@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import "./RecruiterApp.css";
 import {
   Briefcase,
-  CalendarClock,
   LayoutDashboard,
   LogOut,
   Plus,
@@ -14,7 +13,6 @@ import CreateJob from "./CreateJob";
 import Dashboard from "./Dashboard";
 import Jobs from "./Jobs";
 import Candidates from "./Candidates";
-import Interviews from "./Interviews";
 
 export default function RecruiterApp({ onLogout }) {
   const [activeView, setActiveView] = useState("dashboard");
@@ -77,13 +75,6 @@ export default function RecruiterApp({ onLogout }) {
               <Users className="nav-icon" aria-hidden="true" />
               <span>Candidates</span>
             </div>
-            <div
-              className={`nav-item ${activeView === "interviews" ? "active" : ""}`}
-              onClick={() => setActiveView("interviews")}
-            >
-              <CalendarClock className="nav-icon" aria-hidden="true" />
-              <span>Interviews</span>
-            </div>
           </nav>
 
           <div className="sidebar-footer">
@@ -116,7 +107,6 @@ export default function RecruiterApp({ onLogout }) {
               {activeView === "dashboard" && "Dashboard"}
               {activeView === "jobs" && "Jobs"}
               {activeView === "candidates" && "Candidates"}
-              {activeView === "interviews" && "Interviews"}
               {activeView === "create-job" && "Create Job"}
             </h1>
 
@@ -151,7 +141,6 @@ export default function RecruiterApp({ onLogout }) {
               />
             )}
             {activeView === "candidates" && <Candidates />}
-            {activeView === "interviews" && <Interviews />}
           </div>
         </div>
       </div>

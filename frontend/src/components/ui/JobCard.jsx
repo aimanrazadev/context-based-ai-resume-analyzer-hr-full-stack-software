@@ -1,0 +1,1 @@
+export default function JobCard({ title, company, meta, children }) { return <article style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, padding: 18 }}><h3>{title}</h3>{company && <p>{company}</p>}{meta && <small>{meta}</small>}{children}</article>; }

@@ -1,42 +1,32 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import "./CandidateApp.css";
-import { Bell, Bookmark, CalendarClock, ClipboardCheck, LogOut, Search } from "lucide-react";
+import { Camera, ClipboardCheck, LogOut, Search, X } from "lucide-react";
 import JobSearch from "./JobSearch";
-import MyProfile from "./MyProfile";
-import Interviews from "./Interviews";
-import AppliedJobDetailsPage from "../components/AppliedJobDetailsPage";
 import AppliedJobsPage from "../components/AppliedJobsPage";
 import CandidateJobDetailPage from "../components/CandidateJobDetailPage";
-import { interviewAPI } from "../utils/api";
 
 export default function CandidateApp({ onLogout }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const [notifCount, setNotifCount] = useState(0);
-  const [notifOpen, setNotifOpen] = useState(false);
-  const [notifItems, setNotifItems] = useState([]);
-  const notifRef = useRef(null);
-  const seenRef = useRef(0);
-
   const activeKey = useMemo(() => {
     const p = location?.pathname || "";
-    if (p.startsWith("/candidate/applied/")) return "applied-job-details";
     if (p.startsWith("/candidate/applied")) return "applied-jobs";
-    if (p.startsWith("/candidate/saved")) return "saved-jobs";
-    if (p.startsWith("/candidate/interviews")) return "interviews";
-    if (p.startsWith("/candidate/profile")) return "profile";
     return "job-search";
   }, [location?.pathname]);
 
-  const user = useMemo(() => {
+  const [user, setUser] = useState(() => {
     try {
       const raw = localStorage.getItem("user");
       return raw ? JSON.parse(raw) : null;
     } catch {
       return null;
     }
-  }, []);
+  });
+  const [profilePhoto, setProfilePhoto] = useState(() => localStorage.getItem("profilePhoto") || "");
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [accountName, setAccountName] = useState(user?.name || "");
+  const photoInputRef = useRef(null);
 
   const displayName = user?.name || "Candidate";
   const displayRole = (user?.role || user?.userType || "candidate").replace(/(^|\s)\S/g, (m) => m.toUpperCase());
@@ -47,59 +37,36 @@ export default function CandidateApp({ onLogout }) {
     return (a + b).toUpperCase();
   }, [displayName]);
 
-  useEffect(() => {
-    let alive = true;
-    const loadNotifications = async () => {
-      try {
-        const lastSeen = Number(localStorage.getItem("notifLastSeen") || 0);
-        seenRef.current = lastSeen;
-        const res = await interviewAPI.myInterviews();
-        if (!alive) return;
-        const items = Array.isArray(res?.interviews) ? res.interviews : [];
-        const scheduled = items
-          .filter((it) => String(it?.status || "").toLowerCase() === "scheduled")
-          .sort((a, b) => {
-            const ta = a?.scheduled_at ? new Date(a.scheduled_at).getTime() : 0;
-            const tb = b?.scheduled_at ? new Date(b.scheduled_at).getTime() : 0;
-            return tb - ta;
-          });
-        const unread = scheduled.filter((it) => {
-          if (!it?.scheduled_at) return true;
-          const ts = new Date(it.scheduled_at).getTime();
-          return Number.isFinite(ts) ? ts > lastSeen : true;
-        });
-        setNotifCount(unread.length);
-        setNotifItems(scheduled.slice(0, 5));
-      } catch {
-        if (!alive) return;
-        setNotifCount(0);
-        setNotifItems([]);
-      }
-    };
-    loadNotifications();
-    return () => {
-      alive = false;
-    };
-  }, [activeKey]);
+  const openAccountEditor = () => {
+    setAccountName(user?.name || "");
+    setAccountOpen(true);
+  };
 
-  useEffect(() => {
-    if (notifOpen) {
-      const now = Date.now();
-      localStorage.setItem("notifLastSeen", String(now));
-      seenRef.current = now;
-      setNotifCount(0);
-    }
-    const handleClickOutside = (event) => {
-      if (!notifRef.current) return;
-      if (!notifRef.current.contains(event.target)) {
-        setNotifOpen(false);
-      }
+  const saveAccount = () => {
+    const cleanName = accountName.trim() || "Candidate";
+    const updated = { ...(user || {}), name: cleanName };
+    localStorage.setItem("user", JSON.stringify(updated));
+    setUser(updated);
+    setAccountOpen(false);
+  };
+
+  const handlePhotoChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const value = String(reader.result || "");
+      setProfilePhoto(value);
+      localStorage.setItem("profilePhoto", value);
     };
-    if (notifOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [notifOpen]);
+    reader.readAsDataURL(file);
+    event.target.value = "";
+  };
+
+  const removePhoto = () => {
+    setProfilePhoto("");
+    localStorage.removeItem("profilePhoto");
+  };
 
   return (
     <div className="candidate-viewport">
@@ -128,30 +95,18 @@ export default function CandidateApp({ onLogout }) {
               <ClipboardCheck className="candidate-nav-icon" aria-hidden="true" />
               <span>Applied Jobs</span>
             </div>
-            <div
-              className={`candidate-nav-item ${activeKey === "interviews" ? "active" : ""}`}
-              onClick={() => navigate("/candidate/interviews")}
-            >
-              <CalendarClock className="candidate-nav-icon" aria-hidden="true" />
-              <span>Interviews</span>
-            </div>
-            <div
-              className={`candidate-nav-item ${activeKey === "saved-jobs" ? "active" : ""}`}
-              onClick={() => navigate("/candidate/saved")}
-            >
-              <Bookmark className="candidate-nav-icon" aria-hidden="true" />
-              <span>Saved Jobs</span>
-            </div>
           </nav>
 
           <div className="candidate-sidebar-footer">
             <button
               type="button"
               className="candidate-sidebar-profile"
-              onClick={() => navigate("/candidate/profile")}
-              title="My Profile"
+              onClick={openAccountEditor}
+              title="Edit account"
             >
-              <div className="candidate-sidebar-avatar">{initials}</div>
+              <div className="candidate-sidebar-avatar">
+                {profilePhoto ? <img src={profilePhoto} alt="" /> : initials}
+              </div>
               <div className="candidate-sidebar-meta">
                 <div className="candidate-sidebar-name">{displayName}</div>
                 <div className="candidate-sidebar-role">{displayRole}</div>
@@ -171,14 +126,10 @@ export default function CandidateApp({ onLogout }) {
           <div className="candidate-topbar">
             <h1 className="candidate-page-title">
               {activeKey === "job-search" && "Find Your Dream Job"}
-              {activeKey === "saved-jobs" && "Saved Jobs"}
               {activeKey === "applied-jobs" && "Applied Jobs"}
-              {activeKey === "applied-job-details" && "Application Details"}
-              {activeKey === "interviews" && "My Interviews"}
-              {activeKey === "profile" && "My Profile"}
             </h1>
             
-            <div className="candidate-topbar-right" ref={notifRef}>
+            <div className="candidate-topbar-right">
               <div className="candidate-search-container">
                 <Search className="candidate-search-icon" aria-hidden="true" />
                 <input
@@ -187,60 +138,6 @@ export default function CandidateApp({ onLogout }) {
                   placeholder="Search jobs, companies, skills..."
                 />
               </div>
-              <button
-                type="button"
-                className="candidate-notification-button"
-                onClick={() => setNotifOpen((prev) => !prev)}
-                aria-label="Interview notifications"
-              >
-                <Bell className="candidate-notification-icon" aria-hidden="true" />
-                {notifCount > 0 && <span className="candidate-notification-badge">{notifCount}</span>}
-              </button>
-              {notifOpen && (
-                <div className="candidate-notification-popover">
-                  <div className="candidate-notification-title">
-                    <span>Notifications</span>
-                    <span className="candidate-notification-count">{notifCount || 0}</span>
-                  </div>
-                  <div className="candidate-notification-sub">Interviews</div>
-                  {notifItems.length === 0 ? (
-                    <div className="candidate-notification-empty">No new interview notifications.</div>
-                  ) : (
-                    <div className="candidate-notification-list">
-                      {notifItems.map((it) => (
-                        <button
-                          key={it.id}
-                          type="button"
-                          className="candidate-notification-item"
-                          onClick={() => {
-                            setNotifOpen(false);
-                            navigate("/candidate/interviews");
-                          }}
-                        >
-                          <div className="candidate-notification-iconwrap" aria-hidden="true">IN</div>
-                          <div className="candidate-notification-body">
-                            <div className="candidate-notification-message">Interview scheduled</div>
-                            <div className="candidate-notification-detail">{it?.job?.title || "Your application"}</div>
-                          </div>
-                          <div className="candidate-notification-meta">
-                            {it?.scheduled_at ? new Date(it.scheduled_at).toLocaleDateString() : "Pending"}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  <button
-                    type="button"
-                    className="candidate-notification-footer"
-                    onClick={() => {
-                      setNotifOpen(false);
-                      navigate("/candidate/interviews");
-                    }}
-                  >
-                    View all
-                  </button>
-                </div>
-              )}
             </div>
           </div>
 
@@ -249,20 +146,80 @@ export default function CandidateApp({ onLogout }) {
             <Routes>
               <Route path="/" element={<Navigate to="jobs" replace />} />
               <Route path="jobs" element={<JobSearch />} />
-              <Route path="saved" element={<JobSearch savedOnly />} />
               <Route path="jobs/:jobId" element={<CandidateJobDetailPage />} />
               <Route
                 path="applied"
                 element={<AppliedJobsPage onViewDetails={(id) => navigate(`/applications/${id}`)} />}
               />
-              <Route path="applied/:applicationId" element={<AppliedJobDetailsPage />} />
-              <Route path="interviews" element={<Interviews />} />
-              <Route path="profile" element={<MyProfile />} />
+              <Route path="profile" element={<Navigate to="../jobs" replace />} />
               <Route path="*" element={<Navigate to="jobs" replace />} />
             </Routes>
           </div>
         </div>
       </div>
+
+      {accountOpen && (
+        <div className="candidate-account-overlay" onClick={() => setAccountOpen(false)}>
+          <div className="candidate-account-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="candidate-account-header">
+              <h2>Edit account</h2>
+              <button type="button" className="candidate-account-close" onClick={() => setAccountOpen(false)}>
+                <X aria-hidden="true" />
+              </button>
+            </div>
+
+            <div className="candidate-account-photo-row">
+              <button
+                type="button"
+                className="candidate-account-avatar"
+                onClick={() => photoInputRef.current?.click()}
+                title="Change profile photo"
+              >
+                {profilePhoto ? <img src={profilePhoto} alt="Profile" /> : <span>{initials}</span>}
+                <span className="candidate-account-camera">
+                  <Camera aria-hidden="true" />
+                </span>
+              </button>
+              <div className="candidate-account-photo-actions">
+                <button type="button" onClick={() => photoInputRef.current?.click()}>
+                  Change photo
+                </button>
+                {profilePhoto && (
+                  <button type="button" className="danger" onClick={removePhoto}>
+                    Remove
+                  </button>
+                )}
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoChange}
+                  hidden
+                />
+              </div>
+            </div>
+
+            <label className="candidate-account-field">
+              Name
+              <input
+                type="text"
+                value={accountName}
+                onChange={(e) => setAccountName(e.target.value)}
+                placeholder="Candidate name"
+              />
+            </label>
+
+            <div className="candidate-account-actions">
+              <button type="button" className="secondary" onClick={() => setAccountOpen(false)}>
+                Cancel
+              </button>
+              <button type="button" className="primary" onClick={saveAccount}>
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

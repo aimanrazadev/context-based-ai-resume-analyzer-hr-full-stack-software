@@ -1,0 +1,1 @@
+export default function PageHeader({ title, description, actions }) { return <header style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "start", marginBottom: 20 }}><div><h1 style={{ margin: 0 }}>{title}</h1>{description && <p style={{ color: "#64748b" }}>{description}</p>}</div>{actions}</header>; }

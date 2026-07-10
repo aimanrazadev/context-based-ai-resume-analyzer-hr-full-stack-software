@@ -2,7 +2,7 @@
 AI Match Cache Service
 
 Provides deterministic caching for AI match results.
-Ensures the same resume/job combination always returns the same score.
+Ensures the same resume/job combination reuses the same AI result.
 """
 
 import hashlib
@@ -97,7 +97,7 @@ def get_cached_match(
         # Parse and return cached result
         try:
             match_result = json.loads(cache_entry.match_result_json)
-            logger.debug(f"Cache HIT: score={match_result.get('score')}")
+            logger.debug("AI match cache hit")
             return match_result
         except json.JSONDecodeError:
             logger.warning(f"Cache corruption for key {cache_key}: invalid JSON")
@@ -161,109 +161,15 @@ def cache_match_result(
             resume_id=resume_id,
             model_version=model_version,
             match_result_json=json.dumps(match_result, ensure_ascii=False),
-            match_score=int(match_result.get("score", 0)) if isinstance(match_result.get("score"), (int, float)) else None,
             api_latency_ms=api_latency_ms,
         )
         
         db.add(cache_entry)
         db.commit()
-        logger.debug(f"Cache stored: score={match_result.get('score')}")
+        logger.debug("AI match cache stored")
         return True
         
     except Exception as e:
         logger.warning(f"Cache storage error: {e}")
         db.rollback()
         return False
-
-
-def invalidate_job_cache(db: Session, job_id: int) -> int:
-    """
-    Invalidate all cached matches for a specific job.
-    Use when job details are updated.
-    
-    Returns:
-        Number of cache entries deleted.
-    """
-    try:
-        count = db.query(AIMatchCache).filter(AIMatchCache.job_id == job_id).delete()
-        db.commit()
-        logger.info(f"Invalidated {count} cache entries for job={job_id}")
-        return count
-    except Exception as e:
-        logger.warning(f"Cache invalidation error: {e}")
-        db.rollback()
-        return 0
-
-
-def invalidate_resume_cache(db: Session, resume_id: int) -> int:
-    """
-    Invalidate all cached matches for a specific resume.
-    Use when resume is updated.
-    
-    Returns:
-        Number of cache entries deleted.
-    """
-    try:
-        count = db.query(AIMatchCache).filter(AIMatchCache.resume_id == resume_id).delete()
-        db.commit()
-        logger.info(f"Invalidated {count} cache entries for resume={resume_id}")
-        return count
-    except Exception as e:
-        logger.warning(f"Cache invalidation error: {e}")
-        db.rollback()
-        return 0
-
-
-def get_cache_stats(db: Session) -> dict[str, Any]:
-    """
-    Get cache statistics.
-    """
-    try:
-        total_entries = db.query(AIMatchCache).count()
-        
-        # Count by job
-        by_job = (
-            db.query(AIMatchCache.job_id)
-            .distinct()
-            .count()
-        )
-        
-        # Average score
-        avg_query = db.query(AIMatchCache).filter(AIMatchCache.match_score.isnot(None))
-        if avg_query.count() > 0:
-            avg_score = (
-                sum(e.match_score for e in avg_query.all()) / avg_query.count()
-            )
-        else:
-            avg_score = 0
-        
-        return {
-            "total_cached_matches": total_entries,
-            "unique_jobs": by_job,
-            "average_cached_score": round(avg_score, 2),
-        }
-    except Exception as e:
-        logger.warning(f"Cache stats error: {e}")
-        return {}
-
-
-def clear_old_cache(db: Session, days: int = 30) -> int:
-    """
-    Clear cache entries older than specified days.
-    
-    Returns:
-        Number of entries deleted.
-    """
-    try:
-        cutoff = datetime.now(timezone.utc)
-        from datetime import timedelta
-        cutoff = cutoff - timedelta(days=days)
-        
-        count = db.query(AIMatchCache).filter(AIMatchCache.created_at < cutoff).delete()
-        db.commit()
-        logger.info(f"Cleared {count} old cache entries")
-        return count
-    except Exception as e:
-        logger.warning(f"Cache cleanup error: {e}")
-        db.rollback()
-        return 0

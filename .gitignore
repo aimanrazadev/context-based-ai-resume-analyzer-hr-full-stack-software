@@ -7,6 +7,7 @@ frontend/node_modules/
 frontend/dist/
 frontend/.vite/
 frontend/dist-ssr/
+.tmp_module6_validation/
 *.local/
 npm-debug.log*
 yarn-debug.log*
@@ -20,6 +21,7 @@ venv/
 backend/venv/
 backend/.venv/
 .pycache/
+.pycache-verify/
 __pycache__/
 *.py[cod]
 *.pyd

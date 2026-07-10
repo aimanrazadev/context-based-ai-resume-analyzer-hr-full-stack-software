@@ -22,22 +22,12 @@ const DEFAULT_FORM_DATA = {
   opportunityType: "job",
   jobTitle: "",
   shortDescription: "",
-  jobPostingLink: "",
-  startDate: "",
-  duration: "",
   applyBy: "",
   minExperienceYears: "",
   jobType: "full-time",
   jobSite: "remote",
-  openings: "",
   salaryCurrency: "Rs",
   salaryRange: "",
-  perks: {
-    joinerBonus: false,
-    relocation: false,
-    insurance: false,
-    pf: false
-  },
   location: "",
   jobDescription: "",
   requiredSkills: [],
@@ -48,6 +38,25 @@ const DEFAULT_FORM_DATA = {
   ]
 };
 
+const normalizeSkill = (skill) => String(skill || "").replace(/\s+/g, " ").trim();
+
+const skillKey = (skill) =>
+  normalizeSkill(skill)
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, "")
+    .replace(/[^a-z0-9+#.]+/g, " ")
+    .trim();
+
+const uniqueSkills = (skills) => {
+  const seen = new Set();
+  return skills.filter((skill) => {
+    const key = skillKey(skill);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
 export default function CreateJob({ onClose, onCreated, draftJobId = null, initialDraft = null }) {
   const isEditingDraft = useMemo(() => Boolean(draftJobId), [draftJobId]);
   const [isPublishing, setIsPublishing] = useState(false);
@@ -56,24 +65,7 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
   const [error, setError] = useState("");
   const [formData, setFormData] = useState(DEFAULT_FORM_DATA);
   const [skillsDropdown, setSkillsDropdown] = useState(false);
-  const [showSkillsForm, setShowSkillsForm] = useState(false);
   const [skillSearch, setSkillSearch] = useState("");
-
-  // Helper function to convert ISO date to datetime-local format
-  const toDateTimeLocal = (isoString) => {
-    if (!isoString) return "";
-    try {
-      const date = new Date(isoString);
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      const hours = String(date.getHours()).padStart(2, '0');
-      const minutes = String(date.getMinutes()).padStart(2, '0');
-      return `${year}-${month}-${day}T${hours}:${minutes}`;
-    } catch {
-      return "";
-    }
-  };
 
   // Helper function to convert datetime-local to ISO string
   const toISOString = (dateTimeLocal) => {
@@ -93,48 +85,40 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
       const converted = {
         ...fd,
         shortDescription: fd.shortDescription ?? fd.short_description ?? "",
-        startDate: fd.startDate ? toDateTimeLocal(fd.startDate) : "",
-        applyBy: fd.applyBy ? toDateTimeLocal(fd.applyBy) : ""
       };
       setFormData((prev) => ({ ...prev, ...converted }));
     }
   }, [initialDraft]);
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      const dropdown = document.querySelector(".skills-dropdown-wrapper");
-      if (dropdown && !dropdown.contains(event.target)) {
-        setSkillsDropdown(false);
-        setShowSkillsForm(false);
-      }
-    };
-
-    if (showSkillsForm) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
-    }
-  }, [showSkillsForm]);
+  const selectedSkillKeys = useMemo(
+    () => new Set(formData.requiredSkills.map(skillKey)),
+    [formData.requiredSkills]
+  );
 
   const filteredSkills = useMemo(() => {
     if (!skillSearch.trim()) return [];
-    return ALL_SKILLS.filter(
-      (s) =>
-        !formData.requiredSkills.includes(s) &&
-        s.toLowerCase().includes(skillSearch.toLowerCase())
-    ).slice(0, 15);
-  }, [skillSearch, formData.requiredSkills]);
+    const query = skillSearch.toLowerCase();
+    return uniqueSkills(ALL_SKILLS)
+      .filter((s) => !selectedSkillKeys.has(skillKey(s)) && s.toLowerCase().includes(query))
+      .slice(0, 15);
+  }, [skillSearch, selectedSkillKeys]);
 
-  const handleAddSkill = (skill) => {
-    if (!formData.requiredSkills.includes(skill)) {
+  const hasSkill = (skill) => {
+    return selectedSkillKeys.has(skillKey(skill));
+  };
+
+  const handleAddSkill = (skill, { keepInputOpen = true } = {}) => {
+    const normalized = normalizeSkill(skill);
+    if (!normalized) return;
+
+    if (!hasSkill(normalized)) {
       setFormData((prev) => ({
         ...prev,
-        requiredSkills: [...prev.requiredSkills, skill]
+        requiredSkills: [...prev.requiredSkills, normalized]
       }));
     }
     setSkillSearch("");
-    setSkillsDropdown(false);
-    setShowSkillsForm(false);
+    setSkillsDropdown(keepInputOpen);
   };
 
   const handleRemoveSkill = (skill) => {
@@ -145,9 +129,64 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
   };
 
   const commonSkills = useMemo(
-    () => COMMON_SKILLS.filter((s) => !formData.requiredSkills.includes(s)),
-    [formData.requiredSkills]
+    () => uniqueSkills(COMMON_SKILLS).filter((s) => !selectedSkillKeys.has(skillKey(s))),
+    [selectedSkillKeys]
   );
+
+  const jdSuggestedSkills = useMemo(() => {
+    const sourceText = [
+      formData.jobTitle,
+      formData.shortDescription,
+      formData.jobDescription,
+      ...(formData.nonNegotiables || [])
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+
+    if (!sourceText.trim()) return [];
+
+    const compactSource = sourceText.replace(/[^a-z0-9+#.]+/g, " ");
+    return uniqueSkills(ALL_SKILLS).filter((skill) => {
+      if (selectedSkillKeys.has(skillKey(skill))) return false;
+      const normalizedSkill = skill
+        .toLowerCase()
+        .replace(/\([^)]*\)/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (!normalizedSkill) return false;
+      const escaped = normalizedSkill.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      return new RegExp(`(^|[^a-z0-9+#.])${escaped}([^a-z0-9+#.]|$)`, "i").test(compactSource);
+    }).slice(0, 12);
+  }, [formData.jobTitle, formData.shortDescription, formData.jobDescription, formData.nonNegotiables, selectedSkillKeys]);
+
+  const addSkillsFromText = (value) => {
+    const pieces = String(value || "")
+      .split(/[,;\n\t]+/)
+      .map(normalizeSkill)
+      .filter(Boolean);
+    pieces.forEach((skill) => handleAddSkill(skill));
+  };
+
+  const handleSkillKeyDown = (e) => {
+    if (["Enter", ",", "Tab"].includes(e.key) && skillSearch.trim()) {
+      e.preventDefault();
+      addSkillsFromText(skillSearch);
+    }
+    if (e.key === "Backspace" && !skillSearch && formData.requiredSkills.length > 0) {
+      handleRemoveSkill(formData.requiredSkills[formData.requiredSkills.length - 1]);
+    }
+    if (e.key === "Escape") {
+      setSkillsDropdown(false);
+    }
+  };
+
+  const handleSkillPaste = (e) => {
+    const text = e.clipboardData?.getData("text") || "";
+    if (!/[,\n;\t]/.test(text)) return;
+    e.preventDefault();
+    addSkillsFromText(text);
+  };
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -227,11 +266,6 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
         minExperienceYears: formData.minExperienceYears || null,
         jobType: formData.jobType || null,
         jobSite: formData.jobSite || null,
-        openings: formData.openings || null,
-        perks: formData.perks || null,
-        jobPostingLink: formData.jobPostingLink || null,
-        start_date: toISOString(formData.startDate),
-        duration: formData.duration || null,
         apply_by: toISOString(formData.applyBy),
         status: "active",
         required_skills: formData.requiredSkills || [],
@@ -247,10 +281,10 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
           })
         : await jobAPI.create(jobData);
 
-      if (response.success) {
+      if (response?.success || response?.job?.id || response?.id) {
         // After successful creation, redirect recruiter back to Jobs page.
         if (onCreated) {
-          onCreated(response.job);
+          onCreated(response?.job || response);
           return;
         }
         // Reset form
@@ -258,19 +292,11 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
           opportunityType: "job",
           jobTitle: "",
           shortDescription: "",
-          jobPostingLink: "",
           minExperienceYears: "",
           jobType: "full-time",
           jobSite: "remote",
-          openings: "",
           salaryCurrency: "Rs",
           salaryRange: "",
-          perks: {
-            joinerBonus: false,
-            relocation: false,
-            insurance: false,
-            pf: false
-          },
           location: "",
           jobDescription: "",
           nonNegotiables: []
@@ -309,11 +335,6 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
         minExperienceYears: formData.minExperienceYears || null,
         jobType: formData.jobType || null,
         jobSite: formData.jobSite || null,
-        openings: formData.openings || null,
-        perks: formData.perks || null,
-        jobPostingLink: formData.jobPostingLink || null,
-        start_date: toISOString(formData.startDate),
-        duration: formData.duration || null,
         apply_by: toISOString(formData.applyBy),
         required_skills: formData.requiredSkills || [],
         status: "draft",
@@ -322,9 +343,9 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
       };
 
       const response = isEditingDraft ? await jobAPI.update(draftJobId, jobData) : await jobAPI.create(jobData);
-      if (response.success) {
+      if (response?.success || response?.job?.id || response?.id) {
         // Redirect immediately (avoid blocking `alert()` which pauses navigation).
-        onCreated?.(response.job, { to: "drafts" });
+        onCreated?.(response?.job || response, { to: "drafts" });
         return;
       }
     } catch (err) {
@@ -377,34 +398,7 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
             />
           </div>
 
-          <div className="form-group">
-            <label>Job Posting Link (optional)</label>
-            <input
-              type="url"
-              value={formData.jobPostingLink}
-              onChange={(e) => handleInputChange("jobPostingLink", e.target.value)}
-              placeholder="https://www.linkedin.com/jobs/view/4273598104"
-            />
-          </div>
-
           <div className="form-row">
-            <div className="form-group">
-              <label>Start Date</label>
-              <input
-                type="datetime-local"
-                value={formData.startDate}
-                onChange={(e) => handleInputChange("startDate", e.target.value)}
-              />
-            </div>
-            <div className="form-group">
-              <label>Duration</label>
-              <input
-                type="text"
-                value={formData.duration}
-                onChange={(e) => handleInputChange("duration", e.target.value)}
-                placeholder="e.g., 6 months, 1 year, Permanent"
-              />
-            </div>
             <div className="form-group">
               <label>Apply By</label>
               <input
@@ -425,17 +419,6 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
                 value={formData.minExperienceYears}
                 onChange={(e) => handleInputChange("minExperienceYears", e.target.value)}
                 placeholder="0"
-              />
-            </div>
-            <div className="form-group">
-              <label>Number of Openings</label>
-              <input
-                type="number"
-                min="1"
-                step="1"
-                value={formData.openings}
-                onChange={(e) => handleInputChange("openings", e.target.value)}
-                placeholder="1"
               />
             </div>
           </div>
@@ -601,23 +584,65 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
           </div>
 
           <div className="form-group">
-            <label>
-              Required Skills <span className="optional">(Optional)</span>
-              {formData.requiredSkills.length > 0 && (
-                <button 
-                  type="button"
-                  className="btn-add"
-                  onClick={() => setShowSkillsForm(!showSkillsForm)}
-                  style={{ marginLeft: "auto" }}
-                >
-                  + Add Skills
-                </button>
-              )}
-            </label>
+            <label>Required Skills <span className="optional">(Optional)</span></label>
             
             <div className="skills-field">
+              <div className="skills-combobox">
+                <div className="skills-dropdown-wrapper">
+                  <input
+                    type="text"
+                    placeholder={
+                      formData.requiredSkills.length
+                        ? "Type another skill..."
+                        : "Type skills, press Enter or comma..."
+                    }
+                    value={skillSearch}
+                    onChange={(e) => {
+                      setSkillSearch(e.target.value);
+                      setSkillsDropdown(true);
+                    }}
+                    onFocus={() => setSkillsDropdown(true)}
+                    onBlur={() => setTimeout(() => setSkillsDropdown(false), 120)}
+                    onKeyDown={handleSkillKeyDown}
+                    onPaste={handleSkillPaste}
+                    className="skills-search-box"
+                  />
+
+                  {skillsDropdown && skillSearch.trim() && (
+                    <div className="skills-dropdown">
+                      {filteredSkills.length === 0 ? (
+                        <button
+                          type="button"
+                          className="dropdown-item create-skill"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            handleAddSkill(skillSearch);
+                          }}
+                        >
+                          Add "{skillSearch.trim()}"
+                        </button>
+                      ) : (
+                        filteredSkills.map((skill) => (
+                          <button
+                            key={skill}
+                            className="dropdown-item"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleAddSkill(skill);
+                            }}
+                            type="button"
+                          >
+                            {skill}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {formData.requiredSkills.length > 0 && (
-                <div className="skills-display">
+                <div className="skills-display" aria-label="Selected required skills">
                   {formData.requiredSkills.map((skill) => (
                     <div key={skill} className="skill-tag">
                       {skill}
@@ -634,14 +659,26 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
                 </div>
               )}
 
-              {formData.requiredSkills.length === 0 && !showSkillsForm && (
-                <button 
-                  type="button"
-                  className="btn-add"
-                  onClick={() => setShowSkillsForm(true)}
-                >
-                  + Add Skills
-                </button>
+              <div className="skills-help-text">
+                Add quickly like LinkedIn: type, press Enter/comma, paste a list, or click suggestions below.
+              </div>
+
+              {jdSuggestedSkills.length > 0 && (
+                <div className="skills-suggested">
+                  <div className="skills-suggested-title">Suggested from job description</div>
+                  <div className="skills-suggested-list">
+                    {jdSuggestedSkills.map((skill) => (
+                      <button
+                        key={`jd-${skill}`}
+                        type="button"
+                        className="skill-suggestion-btn detected"
+                        onClick={() => handleAddSkill(skill)}
+                      >
+                        {skill} <span>+</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               )}
 
               <div className="skills-suggested">
@@ -664,87 +701,6 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
                 </div>
               </div>
 
-              {showSkillsForm && (
-                <div className="skills-dropdown-wrapper">
-                  <input
-                    type="text"
-                    placeholder="Search and add skills..."
-                    value={skillSearch}
-                    onChange={(e) => setSkillSearch(e.target.value)}
-                    onFocus={() => setSkillsDropdown(true)}
-                    className="skills-search-box"
-                    autoFocus
-                  />
-
-                  {skillsDropdown && (
-                    <div className="skills-dropdown">
-                      {skillSearch.trim() === "" ? (
-                        <div className="dropdown-empty">
-                          Type to search skills...
-                        </div>
-                      ) : filteredSkills.length === 0 ? (
-                        <div className="dropdown-empty">
-                          No skills found
-                        </div>
-                      ) : (
-                        filteredSkills.map((skill) => (
-                          <button
-                            key={skill}
-                            className="dropdown-item"
-                            onClick={() => {
-                              handleAddSkill(skill);
-                            }}
-                            type="button"
-                          >
-                            {skill}
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="form-step">
-          <h3 className="section-title">Salary & Perks</h3>
-          <div className="form-group">
-            <label>Perks (optional)</label>
-            <div className="option-row">
-              <label className="checkbox-option">
-                <input
-                  type="checkbox"
-                  checked={formData.perks.joinerBonus}
-                  onChange={(e) => handleInputChange("perks", { ...formData.perks, joinerBonus: e.target.checked })}
-                />
-                Joining Bonus
-              </label>
-              <label className="checkbox-option">
-                <input
-                  type="checkbox"
-                  checked={formData.perks.relocation}
-                  onChange={(e) => handleInputChange("perks", { ...formData.perks, relocation: e.target.checked })}
-                />
-                Relocation Bonus
-              </label>
-              <label className="checkbox-option">
-                <input
-                  type="checkbox"
-                  checked={formData.perks.insurance}
-                  onChange={(e) => handleInputChange("perks", { ...formData.perks, insurance: e.target.checked })}
-                />
-                Health Insurance
-              </label>
-              <label className="checkbox-option">
-                <input
-                  type="checkbox"
-                  checked={formData.perks.pf}
-                  onChange={(e) => handleInputChange("perks", { ...formData.perks, pf: e.target.checked })}
-                />
-                PF
-              </label>
             </div>
           </div>
         </div>

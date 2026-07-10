@@ -22,6 +22,7 @@ _HEADING_ALIASES: dict[str, list[str]] = {
     "projects": ["projects", "personal projects", "academic projects", "key projects", "project experience", "relevant projects"],
     "education": ["education", "academic", "academic background", "education details"],
     "certifications": ["certifications", "certification", "licenses", "licenses & certifications", "education & certifications"],
+    "achievements": ["achievements", "achievement", "awards", "honors", "accomplishments"],
 }
 
 _LINE_CLEAN_RE = re.compile(r"[\t ]{2,}")
@@ -96,6 +97,32 @@ _SKILL_ALIASES = {
     "nlp": "NLP",
 }
 
+_NLP = None
+
+
+def extract_nlp_signals(*, text: str) -> dict[str, list[str] | str]:
+    """Use spaCy's EntityRuler as the second parser layer."""
+    global _NLP
+    try:
+        if _NLP is None:
+            import spacy  # type: ignore
+
+            nlp = spacy.blank("en")
+            ruler = nlp.add_pipe("entity_ruler")
+            skill_values = sorted(set(_TECHNICAL_KEYWORDS) | set(_SOFT_SKILLS) | set(_SKILL_ALIASES) | set(_SKILL_ALIASES.values()))
+            job_titles = ["software engineer", "backend developer", "frontend developer", "full stack developer", "data analyst", "data scientist", "project manager", "intern"]
+            ruler.add_patterns(
+                [{"label": "SKILL", "pattern": value} for value in skill_values]
+                + [{"label": "JOB_TITLE", "pattern": value} for value in job_titles]
+            )
+            _NLP = nlp
+        doc = _NLP((text or "")[:100_000])
+        skills = list(dict.fromkeys(ent.text for ent in doc.ents if ent.label_ == "SKILL"))
+        job_titles = list(dict.fromkeys(ent.text for ent in doc.ents if ent.label_ == "JOB_TITLE"))
+        return {"status": "success", "skills": skills, "job_titles": job_titles}
+    except Exception as exc:
+        return {"status": "unavailable", "skills": [], "job_titles": [], "error": type(exc).__name__}
+
 
 def _normalize_line(s: str) -> str:
     """Normalize a single extracted line."""
@@ -155,7 +182,7 @@ def extract_section_texts(*, text: str) -> dict[str, str]:
     lines = (text or "").replace("\r\n", "\n").replace("\r", "\n").split("\n")
     spans = detect_sections(text=text)
     out: dict[str, str] = {}
-    for sec in ("skills", "experience", "projects", "education", "certifications"):
+    for sec in ("skills", "experience", "projects", "education", "certifications", "achievements"):
         meta = spans.get(sec)
         out[sec] = _slice_text(lines, meta["start"], meta["end"]) if meta else ""
     return out
@@ -366,6 +393,18 @@ def extract_project_items(*, projects_text: str) -> list[dict[str, str]]:
     return items[:20]
 
 
+def extract_achievement_items(*, achievements_text: str) -> list[str]:
+    """Extract and deduplicate achievement or award lines."""
+    items: list[str] = []
+    seen: set[str] = set()
+    for line in _chunk_section_lines(section_text=achievements_text):
+        key = line.casefold()
+        if len(line) >= 4 and key not in seen:
+            seen.add(key)
+            items.append(line)
+    return items[:30]
+
+
 def build_parse_quality_meta(*, raw_text: str, sections: dict[str, str], skills: list[str], technical: list[str], soft: list[str]) -> dict[str, Any]:
     """Build lightweight quality metadata for the deterministic parser output."""
     sections_found = [name for name, value in sections.items() if value.strip()]
@@ -403,6 +442,8 @@ def parse_resume_text(*, text: str) -> dict[str, Any]:
     sections = extract_section_texts(text=raw_text)
 
     skill_items = extract_skill_items(skills_text=sections.get("skills", ""), full_text=raw_text)
+    nlp_signals = extract_nlp_signals(text=raw_text)
+    skill_items.extend(str(item) for item in nlp_signals.get("skills", []) if item)
     skills = normalize_skills(items=skill_items)
     technical, soft = categorize_skills(skills=skills)
     primary, secondary = split_primary_secondary(skills=skills, skills_text=sections.get("skills", ""))
@@ -413,6 +454,7 @@ def parse_resume_text(*, text: str) -> dict[str, Any]:
         education_text=sections.get("education", ""),
     )
     project_items = extract_project_items(projects_text=sections.get("projects", ""))
+    achievement_items = extract_achievement_items(achievements_text=sections.get("achievements", ""))
     quality_meta = build_parse_quality_meta(
         raw_text=raw_text,
         sections=sections,
@@ -456,6 +498,10 @@ def parse_resume_text(*, text: str) -> dict[str, Any]:
                 "text": sections.get("certifications", ""),
                 "items": certification_items,
             },
+            "achievements": {
+                "text": sections.get("achievements", ""),
+                "items": achievement_items,
+            },
         },
         "raw": {
             "headings_found": quality_meta.get("sections_found", []),
@@ -463,6 +509,11 @@ def parse_resume_text(*, text: str) -> dict[str, Any]:
             "missing_sections": quality_meta.get("missing_sections", []),
             "quality_flags": quality_meta.get("quality_flags", []),
             "is_low_confidence": quality_meta.get("is_low_confidence", False),
+            "parser_layers": {
+                "rule_based": "success",
+                "nlp": nlp_signals.get("status", "unavailable"),
+                "llm_fallback_required": quality_meta.get("is_low_confidence", False),
+            },
         },
     }
 

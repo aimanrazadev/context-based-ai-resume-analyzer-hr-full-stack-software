@@ -143,26 +143,6 @@ def validate_job_status(status: str | None) -> str:
     return status
 
 
-def validate_interview_outcome(outcome: str | None) -> str | None:
-    """Validate interview outcome."""
-    if not outcome:
-        return None
-    
-    outcome = outcome.strip().lower()
-    valid_outcomes = {
-        "scheduled", "completed", "cancelled",
-        "passed", "failed", "on_hold", "no_show"
-    }
-    
-    if outcome not in valid_outcomes:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid outcome. Must be one of: {', '.join(valid_outcomes)}"
-        )
-    
-    return outcome
-
-
 def sanitize_filename(filename: str) -> str:
     """Sanitize filename to prevent directory traversal and other attacks."""
     if not filename:

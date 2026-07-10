@@ -242,44 +242,6 @@
   color: #6c757d;
   text-transform: uppercase;
 }
-
-/* Upcoming Interviews List */
-.upcoming-interviews-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.upcoming-interview-item {
-  padding: 16px;
-  border-radius: 8px;
-  background: #f8f9fa;
-  transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
-}
-
-.upcoming-interview-item:hover {
-  background: #f1f3f5;
-  box-shadow: var(--shadow-card-hover);
-  transform: translateY(-1px);
-}
-
-.interview-info {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.interview-candidate {
-  font-size: 15px;
-  font-weight: 500;
-  color: #212529;
-}
-
-.interview-date {
-  font-size: 13px;
-  color: #6c757d;
-}
-
 /* Responsive */
 @media (max-width: 1400px) {
   .summary-cards {

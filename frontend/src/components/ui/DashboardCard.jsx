@@ -1,0 +1,1 @@
+export default function DashboardCard({ title, children }) { return <section style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, padding: 18 }}><h2 style={{ marginTop: 0, fontSize: 16 }}>{title}</h2>{children}</section>; }

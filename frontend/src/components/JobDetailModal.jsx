@@ -1,24 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Bookmark,
-  BookmarkCheck,
   Briefcase,
   Calendar,
-  CalendarClock,
   DollarSign,
   GraduationCap,
-  Link2,
   MapPin,
-  Phone,
-  Users,
-  Wrench
 } from "lucide-react";
 import { jobAPI } from "../utils/api";
-import { getRingMetrics, resolveApplicationMatchScore } from "../utils/matchScore";
+import { getRingMetrics } from "../utils/matchScore";
+import { ScoreRing, SkillPill } from "./ui";
 import "./JobDetailModal.css";
-
-const SAVED_JOBS_KEY = "savedJobs";
 
 function getStoredRole() {
   try {
@@ -36,8 +28,6 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
   const canEdit = role === "recruiter";
   const isCandidate = role === "candidate";
 
-  const [isSaved, setIsSaved] = useState(false);
-
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -49,8 +39,7 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
     title: "",
     description: "",
     location: "",
-    salary_range: "",
-    job_link: ""
+    salary_range: ""
   });
 
   // Candidate: resume upload & analysis (per job application)
@@ -67,6 +56,7 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
   const rafRef = useRef(null);
   const [displayPct, setDisplayPct] = useState(0);
   const alreadyApplied = Boolean(existingApplication?.id);
+  const canApplyAfterScan = Boolean(applyResult && cachedFileRef.current && !progress.active && !applying && !checkingApplication);
 
   const jobTags = useMemo(() => {
     // Use required_skills from job data if available
@@ -92,31 +82,6 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
       .slice(0, 18);
   }, [job?.description]);
 
-  const perkLabels = {
-    joinerBonus: "Joining bonus",
-    relocation: "Relocation bonus",
-    insurance: "Health insurance",
-    pf: "PF",
-  };
-
-  const perksList = useMemo(() => {
-    const perks = job?.perks && typeof job.perks === "object" ? job.perks : null;
-    if (!perks) return [];
-    return Object.entries(perks)
-      .filter(([, v]) => Boolean(v))
-      .map(([k]) => perkLabels[k] || k);
-  }, [job?.perks]);
-
-  const scoreVisualFromPct = (pct) => {
-    const p = Math.max(0, Math.min(100, Number.isFinite(pct) ? Math.round(pct) : 0));
-    // 5-band palette with a slight "gradient-ish" feel via two close tones.
-    if (p >= 90) return { pct: p, a: "#22c55e", b: "#16a34a" }; // green
-    if (p >= 70) return { pct: p, a: "#7ddc6f", b: "#34d399" }; // light green
-    if (p >= 50) return { pct: p, a: "#facc15", b: "#fde047" }; // yellow
-    if (p >= 30) return { pct: p, a: "#fb923c", b: "#f97316" }; // orange
-    return { pct: p, a: "#fb7185", b: "#ef4444" }; // red/pink-ish
-  };
-
   const briefify = (text) => {
     const t = String(text || "").trim();
     if (!t) return "—";
@@ -125,15 +90,6 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
     const short = parts.slice(0, 2).join(" ");
     const out = short || t;
     return out.length > 320 ? `${out.slice(0, 320).trim()}…` : out;
-  };
-
-  const toneFromPct = (pct) => {
-    const p = Math.max(0, Math.min(100, Number.isFinite(pct) ? Math.round(pct) : 0));
-    if (p >= 90) return "tone-green";
-    if (p >= 70) return "tone-lgreen";
-    if (p >= 50) return "tone-yellow";
-    if (p >= 30) return "tone-orange";
-    return "tone-red";
   };
 
   useEffect(() => {
@@ -160,8 +116,7 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
           title: j?.title ?? "",
           description: j?.description ?? "",
           location: j?.location ?? "",
-          salary_range: j?.salary_range ?? "",
-          job_link: j?.job_link ?? ""
+          salary_range: j?.salary_range ?? ""
         });
 
         if (isCandidate) {
@@ -207,7 +162,7 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
       }
       cachedFileRef.current = null;
     };
-  }, [jobId]);
+  }, [jobId, isCandidate]);
 
   // Animate ring fill + number counting whenever we receive a new result.
   useEffect(() => {
@@ -215,7 +170,7 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
-    const t = resolveApplicationMatchScore(applyResult);
+    const t = Number(applyResult?.final_score ?? 0);
     const start = performance.now();
     const duration = 900; // ms
     const from = 0;
@@ -346,8 +301,7 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
         title: form.title,
         description: form.description,
         location: form.location,
-        salary_range: form.salary_range,
-        job_link: form.job_link
+        salary_range: form.salary_range
       });
       setJob(res?.job || null);
       setIsEditing(false);
@@ -387,33 +341,6 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
 
     // Last resort: route to role home.
     navigate(role === "candidate" ? "/candidate" : "/recruiter", { replace: true });
-  };
-
-  useEffect(() => {
-    if (!jobId) return;
-    try {
-      const raw = localStorage.getItem(SAVED_JOBS_KEY);
-      const ids = raw ? JSON.parse(raw) : [];
-      setIsSaved(Array.isArray(ids) && ids.includes(jobId));
-    } catch {
-      setIsSaved(false);
-    }
-  }, [jobId]);
-
-  const toggleSaved = () => {
-    if (!jobId) return;
-    try {
-      const raw = localStorage.getItem(SAVED_JOBS_KEY);
-      const ids = raw ? JSON.parse(raw) : [];
-      const list = Array.isArray(ids) ? ids : [];
-      const next = list.includes(jobId)
-        ? list.filter((id) => id !== jobId)
-        : [...list, jobId];
-      localStorage.setItem(SAVED_JOBS_KEY, JSON.stringify(next));
-      setIsSaved(next.includes(jobId));
-    } catch {
-      setIsSaved((prev) => !prev);
-    }
   };
 
   return (
@@ -479,22 +406,6 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
 
                   <div className="jd-facts">
                     <div className="jd-fact">
-                      <div className="jd-fact-k">START DATE</div>
-                      <div className="jd-fact-v">
-                        {job?.start_date 
-                          ? new Date(job.start_date).toLocaleDateString('en-US', { 
-                              year: 'numeric', 
-                              month: 'short', 
-                              day: 'numeric' 
-                            })
-                          : "Immediately"}
-                      </div>
-                    </div>
-                    <div className="jd-fact">
-                      <div className="jd-fact-k">DURATION</div>
-                      <div className="jd-fact-v">{job?.duration || "—"}</div>
-                    </div>
-                    <div className="jd-fact">
                       <div className="jd-fact-k">{stipendLabel}</div>
                       <div className="jd-fact-v">{job?.salary_range || "—"}</div>
                     </div>
@@ -512,16 +423,6 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
                           : "—"}
                       </div>
                     </div>
-                    {job?.job_link ? (
-                      <div className="jd-fact">
-                        <div className="jd-fact-k">JOB LINK</div>
-                        <div className="jd-fact-v">
-                          <a href={job.job_link} target="_blank" rel="noreferrer">
-                            View posting
-                          </a>
-                        </div>
-                      </div>
-                    ) : null}
                   </div>
 
                   <div className="jd-detail-grid">
@@ -534,10 +435,6 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
                       <div className="jd-detail-v">{job?.job_site || "—"}</div>
                     </div>
                     <div className="jd-detail-item">
-                      <div className="jd-detail-k">Openings</div>
-                      <div className="jd-detail-v">{job?.openings ?? "—"}</div>
-                    </div>
-                    <div className="jd-detail-item">
                       <div className="jd-detail-k">Min experience</div>
                       <div className="jd-detail-v">
                         {job?.min_experience_years != null ? `${job.min_experience_years} years` : "—"}
@@ -548,29 +445,7 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
                     );
                   })()}
 
-                  {perksList.length > 0 && (
-                    <div className="jd-perks">
-                      <div className="jd-section-h">Perks</div>
-                      <div className="jd-perks-list">
-                        {perksList.map((p) => (
-                          <span key={p} className="jd-perk-chip">{p}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
                   <div className="jd-actions-row">
-                    <div className="jd-actions-left">
-                      <button
-                        type="button"
-                        className={`jd-action-icon ${isSaved ? "saved" : ""}`}
-                        aria-label={isSaved ? "Unsave job" : "Save job"}
-                        onClick={toggleSaved}
-                      >
-                        {isSaved ? <BookmarkCheck size={18} /> : <Bookmark size={18} />}
-                      </button>
-                    </div>
-
                     <div className="jd-actions-right">
                       <input
                         ref={resumeInputRef}
@@ -604,7 +479,7 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
                           <button
                             type="button"
                             className="jd-scan"
-                            onClick={() => navigate(`/candidate/applied/${existingApplication.id}`)}
+                            onClick={() => navigate(`/applications/${existingApplication.id}`)}
                           >
                             View Application
                           </button>
@@ -627,17 +502,20 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
                             type="button"
                             className="jd-apply"
                             onClick={async () => {
-                              // Apply now: save application only (no scoring).
-                              // If a resume was already scanned in this modal, reuse it. Otherwise prompt upload.
-                              if (cachedFileRef.current) {
-                                uploadModeRef.current = "apply";
-                                await runApply(cachedFileRef.current);
+                              if (!canApplyAfterScan) {
+                                setApplyError("Please scan your resume first. You can apply after the match score is generated.");
                                 return;
                               }
+                              // Apply now: save application only (no scoring).
                               uploadModeRef.current = "apply";
-                              resumeInputRef.current?.click();
+                              await runApply(cachedFileRef.current);
                             }}
-                            disabled={applying || checkingApplication}
+                            disabled={!canApplyAfterScan}
+                            title={
+                              canApplyAfterScan
+                                ? "Apply with the scanned resume"
+                                : "Scan your resume first to generate a match score"
+                            }
                           >
                             {applying ? "Working..." : "Apply now"}
                           </button>
@@ -671,56 +549,11 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
                   {applyResult && (
                     (() => {
                       const ring = getRingMetrics(displayPct || 0, 46);
-                      const v = scoreVisualFromPct(ring.score);
-                      const gradId = `jdScoreGrad-${jobId || "x"}`;
-                      const cx = 56;
-                      const cy = 56;
-                      const sections = applyResult?.ai_sections || null;
-                      const hasSections =
-                        sections &&
-                        typeof sections === "object" &&
-                        (sections.education_summary || sections.projects_summary || sections.work_experience_summary);
                       return (
                         <div className={`jd-result ${applyResult.ai_error ? "error" : ""}`}>
                           <div className="jd-result-label">Match Score</div>
 
-                          <div className="jd-score-ring" aria-label={`Match score ${ring.score}%`}>
-                            <svg className="jd-score-ring-svg" viewBox="0 0 112 112" role="img" aria-hidden="true">
-                              <defs>
-                                <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
-                                  <stop offset="0%" stopColor={v.a} />
-                                  <stop offset="100%" stopColor={v.b} />
-                                </linearGradient>
-                              </defs>
-                              <circle
-                                className="jd-score-ring-track"
-                                cx={cx}
-                                cy={cy}
-                                r={ring.radius}
-                                fill="none"
-                                stroke="rgba(15, 23, 42, 0.12)"
-                                strokeWidth="10"
-                              />
-                              {/* Start at 12 o'clock (90° anchor) */}
-                              <circle
-                                className="jd-score-ring-arc"
-                                cx={cx}
-                                cy={cy}
-                                r={ring.radius}
-                                fill="none"
-                                stroke={`url(#${gradId})`}
-                                strokeWidth="10"
-                                strokeLinecap="round"
-                                strokeDasharray={ring.strokeDasharray}
-                                strokeDashoffset={ring.strokeDashoffset}
-                                transform={`rotate(-90 ${cx} ${cy})`}
-                              />
-                            </svg>
-                            <div className="jd-score-ring-inner" aria-hidden="true">
-                              <div className="jd-score-ring-num">{ring.score}</div>
-                              <div className="jd-score-ring-unit">%</div>
-                            </div>
-                          </div>
+                          <ScoreRing score={ring.score} size={112} />
 
                           <div className="jd-score-ring-sub">Overall Match</div>
 
@@ -728,29 +561,18 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
                             <div className="jd-result-text jd-result-text-error">
                               {applyResult.ai_error?.message || "Token exhausted. Please try again later."}
                             </div>
-                          ) : hasSections ? (
-                            <div className="jd-summary-cards">
-                              {[
-                                { key: "education_summary", title: "Education Match", Icon: GraduationCap },
-                                { key: "projects_summary", title: "Projects Match", Icon: Wrench },
-                                { key: "work_experience_summary", title: "Work Experience Match", Icon: Briefcase }
-                              ].map((c) => {
-                                const s = sections?.[c.key] || {};
-                                const sc = typeof s.score === "number" ? s.score : 0;
-                                const sum = (s.summary || "").trim();
-                                const Icon = c.Icon;
-                                return (
-                                  <div key={c.key} className={`jd-summary-card ${toneFromPct(sc)}`}>
-                                    <div className="jd-summary-card-top">
-                                      <div className="jd-summary-card-title">
-                                        <Icon className="jd-summary-icon" aria-hidden="true" />
-                                        {c.title}
-                                      </div>
-                                    </div>
-                                    <div className="jd-summary-text">{briefify(sum)}</div>
+                          ) : applyResult.ai_analysis ? (
+                            <div className="jd-summary-cards" style={{ gridTemplateColumns: "1fr" }}>
+                              <div className="jd-summary-card">
+                                <div className="jd-summary-card-title">{applyResult.ai_analysis.recommendation || "Review Manually"}</div>
+                                <div className="jd-summary-text">{applyResult.ai_analysis.candidate_summary || "—"}</div>
+                                <div className="jd-summary-text"><strong>Reasoning:</strong> {applyResult.ai_analysis.reasoning || "—"}</div>
+                                {Array.isArray(applyResult.ai_analysis.strengths) && applyResult.ai_analysis.strengths.length > 0 && (
+                                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
+                                    {applyResult.ai_analysis.strengths.map((item) => <SkillPill key={item} tone="positive">{item}</SkillPill>)}
                                   </div>
-                                );
-                              })}
+                                )}
+                              </div>
                             </div>
                           ) : (
                             <div className="jd-result-text">{briefify(applyResult.ai_explanation)}</div>
@@ -788,25 +610,6 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
                     )}
                   </div>
 
-                  {(job?.screening_availability || job?.screening_phone) && (
-                    <div className="jd-section">
-                      <div className="jd-section-h">Screening Information</div>
-                      <div className="jd-qa-container">
-                        {job?.screening_availability && (
-                          <div className="jd-qa-item">
-                            <div className="jd-question">When are you available for screening?</div>
-                            <div className="jd-answer">{job.screening_availability}</div>
-                          </div>
-                        )}
-                        {job?.screening_phone && (
-                          <div className="jd-qa-item">
-                            <div className="jd-question">What is the best contact number?</div>
-                            <div className="jd-answer">{job.screening_phone}</div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
                 </div>
               </>
             )}
@@ -845,8 +648,7 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
                                 title: job?.title ?? "",
                                 description: job?.description ?? "",
                                 location: job?.location ?? "",
-                                salary_range: job?.salary_range ?? "",
-                                job_link: job?.job_link ?? ""
+                                salary_range: job?.salary_range ?? ""
                               });
                             }}
                             disabled={saving}
@@ -921,23 +723,6 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
                     )}
                   </div>
 
-                  <div className="job-detail-meta-item">
-                    <Link2 className="k" aria-hidden="true" />
-                    {isEditing ? (
-                      <input
-                        value={form.job_link}
-                        onChange={(e) => setForm((p) => ({ ...p, job_link: e.target.value }))}
-                        placeholder="Job link"
-                      />
-                    ) : job?.job_link ? (
-                      <a href={job.job_link} target="_blank" rel="noreferrer">
-                        Open posting
-                      </a>
-                    ) : (
-                      <span>Not provided</span>
-                    )}
-                  </div>
-
                   {job?.created_at && (
                     <div className="job-detail-meta-item">
                       <Calendar className="k" aria-hidden="true" />
@@ -960,26 +745,10 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
                     <span>Job Site: {job?.job_site || "Not specified"}</span>
                   </div>
                   <div className="job-detail-meta-item">
-                    <Users className="k" aria-hidden="true" />
-                    <span>Openings: {job?.openings ?? "Not specified"}</span>
-                  </div>
-                  <div className="job-detail-meta-item">
                     <GraduationCap className="k" aria-hidden="true" />
                     <span>
                       Min Experience: {job?.min_experience_years != null ? `${job.min_experience_years} years` : "Not specified"}
                     </span>
-                  </div>
-                  <div className="job-detail-meta-item">
-                    <Wrench className="k" aria-hidden="true" />
-                    <span>Perks: {perksList.length ? perksList.join(", ") : "None"}</span>
-                  </div>
-                  <div className="job-detail-meta-item">
-                    <CalendarClock className="k" aria-hidden="true" />
-                    <span>Screening Availability: {job?.screening_availability || "Not specified"}</span>
-                  </div>
-                  <div className="job-detail-meta-item">
-                    <Phone className="k" aria-hidden="true" />
-                    <span>Screening Phone: {job?.screening_phone || "Not specified"}</span>
                   </div>
                 </div>
 

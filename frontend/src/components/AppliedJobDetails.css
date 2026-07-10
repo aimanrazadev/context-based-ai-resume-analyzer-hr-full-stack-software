@@ -34,15 +34,6 @@
   border-color: rgba(185, 28, 28, 0.18);
 }
 
-.ajd-feedback-card {
-  margin-top: 20px;
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 16px;
-  border: 1px solid rgba(16, 185, 129, 0.20);
-  box-shadow: 0 1px 3px rgba(16, 185, 129, 0.10);
-}
-
 .ajd-head {
   margin-bottom: 10px;
 }
@@ -67,12 +58,8 @@
   position: relative;
   display: grid;
   place-items: center;
-}
-
-.ajd-score-svg {
-  width: 112px;
-  height: 112px;
-  display: block;
+  background: #f8fafc;
+  border: 8px solid #10b981;
 }
 
 .ajd-score-inner {
@@ -108,15 +95,6 @@
   font-size: 15px;
   font-weight: 500;
   opacity: 0.85;
-}
-
-.ajd-score-track {
-  filter: drop-shadow(0 1px 0 rgba(15, 23, 42, 0.06));
-}
-
-.ajd-score-arc {
-  transition: stroke-dashoffset 180ms ease;
-  filter: drop-shadow(0 4px 10px rgba(17, 24, 39, 0.10));
 }
 
 .ajd-sections {

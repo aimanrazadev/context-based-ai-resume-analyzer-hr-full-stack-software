@@ -1,6 +1,6 @@
 /**
  * Comprehensive tech skills list organized by category
- * Used in both MyProfile (candidate) and CreateJob (recruiter) pages
+ * Used by profile/job skill inputs.
  */
 
 export const TECH_SKILLS = {

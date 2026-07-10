@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useMemo, useState } from "react";
-import { Calendar, DollarSign, Link2, MapPin, Phone, UserRound } from "lucide-react";
+import { Calendar, DollarSign, MapPin } from "lucide-react";
 import "./Jobs.css";
 import { jobAPI } from "../utils/api";
 
@@ -131,13 +131,6 @@ export default function Jobs({ onViewJob, initialFilter = "all" }) {
 
   const fmtCount = (n) => (typeof n === "number" ? n : "…");
   const fmtStat = (n) => (typeof n === "number" ? n : "—");
-  const prettyText = (value) => String(value || "").replace(/[-_]/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
-  const formatPerks = (perks) => {
-    if (!perks || typeof perks !== "object") return "None";
-    const active = Object.keys(perks).filter((k) => perks[k]);
-    return active.length ? active.map(prettyText).join(", ") : "None";
-  };
-
   return (
     <div className="jobs-page">
       <div className="jobs-header">
@@ -243,46 +236,9 @@ export default function Jobs({ onViewJob, initialFilter = "all" }) {
                     <span className="job-card-meta-value">{job.job_site || "Not specified"}</span>
                   </div>
                   <div className="job-card-meta-item">
-                    <span className="job-card-meta-label">Openings</span>
-                    <span className="job-card-meta-value">{job.openings ?? "Not specified"}</span>
-                  </div>
-                  <div className="job-card-meta-item">
                     <span className="job-card-meta-label">Min Experience</span>
                     <span className="job-card-meta-value">
                       {job.min_experience_years != null ? `${job.min_experience_years} years` : "Not specified"}
-                    </span>
-                  </div>
-                  <div className="job-card-meta-item">
-                    <span className="job-card-meta-label">Perks</span>
-                    <span className="job-card-meta-value">{formatPerks(job.perks)}</span>
-                  </div>
-                  <div className="job-card-meta-item">
-                    <span className="job-card-meta-label">
-                      <UserRound className="detail-label" aria-hidden="true" />
-                      Screening Availability
-                    </span>
-                    <span className="job-card-meta-value">{job.screening_availability || "Not specified"}</span>
-                  </div>
-                  <div className="job-card-meta-item">
-                    <span className="job-card-meta-label">
-                      <Phone className="detail-label" aria-hidden="true" />
-                      Screening Phone
-                    </span>
-                    <span className="job-card-meta-value">{job.screening_phone || "Not specified"}</span>
-                  </div>
-                  <div className="job-card-meta-item">
-                    <span className="job-card-meta-label">
-                      <Link2 className="detail-label" aria-hidden="true" />
-                      Job Posting Link
-                    </span>
-                    <span className="job-card-meta-value">
-                      {job.job_link ? (
-                        <a className="job-card-link" href={job.job_link} target="_blank" rel="noreferrer">
-                          {job.job_link}
-                        </a>
-                      ) : (
-                        "Not specified"
-                      )}
                     </span>
                   </div>
                 </div>

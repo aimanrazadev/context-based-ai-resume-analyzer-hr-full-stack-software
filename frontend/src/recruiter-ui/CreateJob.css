@@ -352,6 +352,11 @@
   gap: 12px;
 }
 
+.skills-combobox {
+  display: block;
+  position: relative;
+}
+
 .skills-display {
   display: flex;
   flex-wrap: wrap;
@@ -458,6 +463,11 @@
   font-weight: 500;
 }
 
+.dropdown-item.create-skill {
+  color: #0f766e;
+  font-weight: 600;
+}
+
 .optional {
   color: #adb5bd;
   font-weight: 400;
@@ -483,6 +493,11 @@
 .skills-suggested-empty {
   font-size: 12px;
   color: #9ca3af;
+}
+
+.skills-help-text {
+  font-size: 12px;
+  color: #6b7280;
 }
 
 .skill-suggestion-btn {
@@ -511,4 +526,10 @@
   border-color: #bbdefb;
   background: #e3f2fd;
   color: #1976d2;
+}
+
+.skill-suggestion-btn.detected {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
 }

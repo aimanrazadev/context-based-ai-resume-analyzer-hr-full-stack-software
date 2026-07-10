@@ -8,18 +8,15 @@ from sqlalchemy import text
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
 
 from .api import auth as auth_api
-from .api import interview as interview_api
 from .api import job as job_api
-from .api import resume as resume_api
 from .database import engine, init_db
 from .utils.error_handlers import get_error_message
+from .services.application_service import backfill_missing_application_scores
 
 app = FastAPI(title="AI Resume Skill Analyzer")
 
 app.include_router(auth_api.router)
 app.include_router(job_api.router)
-app.include_router(resume_api.router)
-app.include_router(interview_api.router)
 
 logger = logging.getLogger(__name__)
 
@@ -542,15 +539,27 @@ def on_startup() -> None:
                         if exists == 0:
                             conn.execute(text(ddl))
 
+                    def _mysql_add_index_if_missing(*, table: str, index: str, ddl: str) -> None:
+                        row = conn.execute(
+                            text(
+                                """
+                                SELECT COUNT(*)
+                                FROM information_schema.STATISTICS
+                                WHERE TABLE_SCHEMA = DATABASE()
+                                  AND TABLE_NAME = :table
+                                  AND INDEX_NAME = :index
+                                """
+                            ),
+                            {"table": table, "index": index},
+                        ).fetchone()
+                        exists = int(row[0]) if row else 0
+                        if exists == 0:
+                            conn.execute(text(ddl))
+
                     _mysql_add_column_if_missing(
                         table="applications",
                         column="resume_id",
                         ddl="ALTER TABLE applications ADD COLUMN resume_id INT NULL",
-                    )
-                    _mysql_add_column_if_missing(
-                        table="applications",
-                        column="match_score",
-                        ddl="ALTER TABLE applications ADD COLUMN match_score DOUBLE NULL",
                     )
                     _mysql_add_column_if_missing(
                         table="applications",
@@ -574,6 +583,16 @@ def on_startup() -> None:
                     )
                     _mysql_add_column_if_missing(
                         table="applications",
+                        column="experience_score",
+                        ddl="ALTER TABLE applications ADD COLUMN experience_score DOUBLE NULL",
+                    )
+                    _mysql_add_column_if_missing(
+                        table="applications",
+                        column="ai_score",
+                        ddl="ALTER TABLE applications ADD COLUMN ai_score DOUBLE NULL",
+                    )
+                    _mysql_add_column_if_missing(
+                        table="applications",
                         column="final_score",
                         ddl="ALTER TABLE applications ADD COLUMN final_score INT NULL",
                     )
@@ -587,78 +606,44 @@ def on_startup() -> None:
                         column="score_updated_at",
                         ddl="ALTER TABLE applications ADD COLUMN score_updated_at DATETIME NULL",
                     )
-
-                    # interviews: Module 11 interview engine fields
                     _mysql_add_column_if_missing(
-                        table="interviews",
-                        column="status",
-                        ddl="ALTER TABLE interviews ADD COLUMN status VARCHAR(32) NULL",
+                        table="applications",
+                        column="matched_skills_json",
+                        ddl="ALTER TABLE applications ADD COLUMN matched_skills_json TEXT NULL",
                     )
                     _mysql_add_column_if_missing(
-                        table="interviews",
-                        column="updated_at",
-                        ddl="ALTER TABLE interviews ADD COLUMN updated_at DATETIME NULL",
+                        table="applications",
+                        column="missing_skills_json",
+                        ddl="ALTER TABLE applications ADD COLUMN missing_skills_json TEXT NULL",
                     )
                     _mysql_add_column_if_missing(
-                        table="interviews",
-                        column="scheduled_at",
-                        ddl="ALTER TABLE interviews ADD COLUMN scheduled_at DATETIME NULL",
+                        table="applications",
+                        column="ranking_explanation",
+                        ddl="ALTER TABLE applications ADD COLUMN ranking_explanation TEXT NULL",
                     )
-                    _mysql_add_column_if_missing(
-                        table="interviews",
-                        column="timezone",
-                        ddl="ALTER TABLE interviews ADD COLUMN timezone VARCHAR(64) NULL",
+                    _mysql_add_index_if_missing(
+                        table="jobs",
+                        index="ix_jobs_user_status_created",
+                        ddl="CREATE INDEX ix_jobs_user_status_created ON jobs (user_id, status, created_at)",
                     )
-                    _mysql_add_column_if_missing(
-                        table="interviews",
-                        column="duration_minutes",
-                        ddl="ALTER TABLE interviews ADD COLUMN duration_minutes INT NULL",
+                    _mysql_add_index_if_missing(
+                        table="resumes",
+                        index="ix_resumes_candidate_created",
+                        ddl="CREATE INDEX ix_resumes_candidate_created ON resumes (candidate_id, created_at)",
                     )
-                    _mysql_add_column_if_missing(
-                        table="interviews",
-                        column="mode",
-                        ddl="ALTER TABLE interviews ADD COLUMN mode VARCHAR(32) NULL",
+                    _mysql_add_index_if_missing(
+                        table="applications",
+                        index="ix_applications_job_final_score",
+                        ddl="CREATE INDEX ix_applications_job_final_score ON applications (job_id, final_score)",
                     )
-                    _mysql_add_column_if_missing(
-                        table="interviews",
-                        column="meeting_link",
-                        ddl="ALTER TABLE interviews ADD COLUMN meeting_link VARCHAR(500) NULL",
+                    _mysql_add_index_if_missing(
+                        table="applications",
+                        index="ix_applications_candidate_created",
+                        ddl="CREATE INDEX ix_applications_candidate_created ON applications (candidate_id, created_at)",
                     )
-                    _mysql_add_column_if_missing(
-                        table="interviews",
-                        column="location",
-                        ddl="ALTER TABLE interviews ADD COLUMN location VARCHAR(255) NULL",
-                    )
-                    _mysql_add_column_if_missing(
-                        table="interviews",
-                        column="interviewer_name",
-                        ddl="ALTER TABLE interviews ADD COLUMN interviewer_name VARCHAR(120) NULL",
-                    )
-                    _mysql_add_column_if_missing(
-                        table="interviews",
-                        column="recruiter_notes",
-                        ddl="ALTER TABLE interviews ADD COLUMN recruiter_notes TEXT NULL",
-                    )
-                    _mysql_add_column_if_missing(
-                        table="interviews",
-                        column="feedback",
-                        ddl="ALTER TABLE interviews ADD COLUMN feedback TEXT NULL",
-                    )
-                    _mysql_add_column_if_missing(
-                        table="interviews",
-                        column="outcome",
-                        ddl="ALTER TABLE interviews ADD COLUMN outcome VARCHAR(32) NULL",
-                    )
-                    _mysql_add_column_if_missing(
-                        table="interviews",
-                        column="completed_at",
-                        ddl="ALTER TABLE interviews ADD COLUMN completed_at DATETIME NULL",
-                    )
-                    _mysql_add_column_if_missing(
-                        table="interviews",
-                        column="evaluated_at",
-                        ddl="ALTER TABLE interviews ADD COLUMN evaluated_at DATETIME NULL",
-                    )
+                from .database import SessionLocal
+                with SessionLocal() as db:
+                    backfill_missing_application_scores(db)
             except Exception:
                 pass
 

@@ -61,14 +61,12 @@
   margin-bottom: 14px;
 }
 
-.applied-status-pill {
-  background: #d4edda;
-  color: #155724;
-  border-radius: 8px;
-  padding: 6px 12px;
-  font-size: 12px;
-  font-weight: 500;
-  white-space: nowrap;
+.applied-card-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .applied-job-meta-row {
@@ -131,21 +129,5 @@
 
 .btn-withdraw:hover {
   background: rgba(185, 28, 28, 0.08);
-}
-
-.btn-view-interview {
-  padding: 8px 16px;
-  background: #007bff;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-view-interview:hover {
-  background: #0056b3;
 }
 

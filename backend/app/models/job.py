@@ -1,4 +1,4 @@
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -7,6 +7,9 @@ from ..database import Base
 
 class Job(Base):
     __tablename__ = "jobs"
+    __table_args__ = (
+        Index("ix_jobs_user_status_created", "user_id", "status", "created_at"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
@@ -29,8 +32,6 @@ class Job(Base):
     job_site = Column(String(20), nullable=True)
     openings = Column(Integer, nullable=True)
     perks = Column(Text, nullable=True)  # JSON string of perks
-    screening_availability = Column(String(255), nullable=True)
-    screening_phone = Column(String(30), nullable=True)
     start_date = Column(DateTime(timezone=True), nullable=True)  # Job start date
     duration = Column(String(100), nullable=True)  # e.g., "6 months", "1 year", "Permanent"
     apply_by = Column(DateTime(timezone=True), nullable=True)  # Application deadline

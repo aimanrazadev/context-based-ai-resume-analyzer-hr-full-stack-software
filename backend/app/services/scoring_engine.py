@@ -41,25 +41,15 @@ _STOP = {
 }
 
 _SKILL_ALIASES = {
-    "fastapi": "python",
-    "django": "python",
-    "flask": "python",
-    "pandas": "python",
-    "numpy": "python",
-    "spring": "java",
-    "springboot": "java",
-    "node": "javascript",
-    "nodejs": "javascript",
+    "js": "javascript",
+    "node": "node.js",
+    "nodejs": "node.js",
+    "node.js": "node.js",
     "reactjs": "react",
-    "nextjs": "react",
-    "typescript": "javascript",
-    "postgresql": "sql",
-    "mysql": "sql",
-    "sqlite": "sql",
+    "react.js": "react",
+    "nextjs": "next.js",
     "rest": "api",
     "restapi": "api",
-    "microservices": "backend",
-    "microservice": "backend",
 }
 
 
@@ -104,6 +94,19 @@ def _canonical_skill(s: str) -> str:
     n = _normalize_skill(s)
     key = n.replace(" ", "")
     return _SKILL_ALIASES.get(key, _SKILL_ALIASES.get(n, n))
+
+
+def _context_tokens(text: str | None) -> list[str]:
+    """Extract non-skill context terms for experience and project relevance."""
+    seen: set[str] = set()
+    result: list[str] = []
+    for match in _WORD_RE.finditer((text or "").lower()):
+        token = match.group(0).strip(".")
+        if not token or token in _STOP or token in seen:
+            continue
+        seen.add(token)
+        result.append(token)
+    return result
 
 
 def extract_resume_skills(*, structured_json: str | None, ai_structured_json: str | None = None) -> list[str]:
@@ -159,11 +162,11 @@ def extract_job_skill_tokens(
     required_skills: list[str] | None = None,
 ) -> list[str]:
     """
-    Extract lightweight canonical skill tokens from job content.
+    Normalize the recruiter's explicit required-skills list.
 
     Args:
-        job_title: Job title text.
-        job_description: Job description text.
+        job_title: Retained for call compatibility; not used for skill inference.
+        job_description: Retained for call compatibility; not used for skill inference.
         required_skills: Optional explicit required skills list.
 
     Returns:
@@ -175,30 +178,16 @@ def extract_job_skill_tokens(
     Error Handling:
         Returns an empty list when no usable job skill signal exists.
     """
-    explicit = [_canonical_skill(str(s)) for s in (required_skills or []) if _canonical_skill(str(s))]
-    if explicit:
-        seen_explicit: set[str] = set()
-        out_explicit: list[str] = []
-        for skill in explicit:
-            if skill in seen_explicit:
-                continue
-            seen_explicit.add(skill)
-            out_explicit.append(skill)
-        return out_explicit[:60]
-
-    text = f"{job_title or ''}\n{job_description or ''}".strip().lower()
-    toks: list[str] = []
+    del job_title, job_description
     seen: set[str] = set()
-    for m in _WORD_RE.finditer(text):
-        w = m.group(0).strip(".")
-        if not w or w in _STOP or len(w) > 40:
+    result: list[str] = []
+    for value in required_skills or []:
+        skill = _canonical_skill(str(value))
+        if not skill or skill in seen:
             continue
-        w = _canonical_skill(w)
-        if w in seen:
-            continue
-        seen.add(w)
-        toks.append(w)
-    return toks[:60]
+        seen.add(skill)
+        result.append(skill)
+    return result[:60]
 
 
 def skills_overlap_score(*, resume_skills: list[str], job_skills: list[str]) -> tuple[float, list[str], list[str]]:
@@ -227,12 +216,7 @@ def skills_overlap_score(*, resume_skills: list[str], job_skills: list[str]) -> 
         return 0.0, [], []
     matched = [j for j in js if j in rs]
     missing = [j for j in js if j not in rs]
-    recall = len(matched) / max(1, len(js))
-    precision = len(matched) / max(1, len(rs)) if rs else 0.0
-    if (precision + recall) <= 0.0:
-        score = 0.0
-    else:
-        score = (2.0 * precision * recall) / (precision + recall)
+    score = len(matched) / max(1, len(js))
     return float(max(0.0, min(1.0, score))), matched[:12], missing[:8]
 
 
@@ -465,9 +449,7 @@ def compute_final_score(
     semantic_score: float,
     skills_score: float,
     experience_score: float,
-    projects_score: float,
-    education_score: float,
-    ai_reasoning_score: float,
+    ai_evaluation_score: float,
 ) -> int:
     """
     Combine normalized component scores into one final application score.
@@ -476,9 +458,7 @@ def compute_final_score(
         semantic_score: Embedding or fallback semantic score in [0, 1].
         skills_score: Skill overlap score in [0, 1].
         experience_score: Experience relevance score in [0, 1].
-        projects_score: Projects relevance score in [0, 1].
-        education_score: Education relevance score in [0, 1].
-        ai_reasoning_score: AI relevance score in [0, 1].
+        ai_evaluation_score: Deterministic recommendation mapping in [0, 1].
 
     Returns:
         A rounded integer final score in the range [0, 100].
@@ -492,25 +472,19 @@ def compute_final_score(
     semantic_score = max(0.0, min(1.0, float(semantic_score or 0.0)))
     skills_score = max(0.0, min(1.0, float(skills_score or 0.0)))
     experience_score = max(0.0, min(1.0, float(experience_score or 0.0)))
-    projects_score = max(0.0, min(1.0, float(projects_score or 0.0)))
-    education_score = max(0.0, min(1.0, float(education_score or 0.0)))
-    ai_reasoning_score = max(0.0, min(1.0, float(ai_reasoning_score or 0.0)))
+    ai_evaluation_score = max(0.0, min(1.0, float(ai_evaluation_score or 0.0)))
 
     weights = {
-        "ai_reasoning": 0.40,
-        "skills": 0.20,
-        "experience": 0.12,
-        "projects": 0.08,
-        "education": 0.10,
-        "semantic": 0.10,
+        "skills": 0.45,
+        "experience": 0.20,
+        "semantic": 0.25,
+        "ai": 0.10,
     }
     val = 100.0 * (
-        weights["semantic"] * semantic_score
-        + weights["skills"] * skills_score
+        weights["skills"] * skills_score
         + weights["experience"] * experience_score
-        + weights["projects"] * projects_score
-        + weights["education"] * education_score
-        + weights["ai_reasoning"] * ai_reasoning_score
+        + weights["semantic"] * semantic_score
+        + weights["ai"] * ai_evaluation_score
     )
     out = int(round(val))
     return max(0, min(100, out))
@@ -525,6 +499,7 @@ def score_application(
     resume_ai_structured_json: str | None,
     semantic_score: float,
     ai_relevance_pct: int | None = None,
+    ai_recommendation: str | None = None,
 ) -> tuple[float, int, dict[str, Any]]:
     """
     Compute the final application score and a recruiter-friendly breakdown.
@@ -536,7 +511,7 @@ def score_application(
         resume_structured_json: Deterministic structured resume JSON.
         resume_ai_structured_json: AI-structured resume JSON fallback.
         semantic_score: Semantic similarity score in [0, 1].
-        ai_relevance_pct: Optional AI score in 0-100 integer form.
+        ai_relevance_pct: Deprecated compatibility input; not used for scoring.
 
     Returns:
         A tuple of:
@@ -566,13 +541,18 @@ def score_application(
         structured_json=resume_structured_json,
         ai_structured_json=resume_ai_structured_json,
     )
-    experience_score = experience_relevance_score(job_tokens=job_skills, experience_text=exp_text)
+    context_tokens = [
+        token
+        for token in _context_tokens(f"{job_title or ''} {job_description or ''}")
+        if token not in _STOP
+    ][:80]
+    raw_experience_relevance = experience_relevance_score(job_tokens=context_tokens, experience_text=exp_text)
 
     projects_text = extract_resume_projects_text(
         structured_json=resume_structured_json,
         ai_structured_json=resume_ai_structured_json,
     )
-    projects_score = projects_relevance_score(job_tokens=job_skills, projects_text=projects_text)
+    projects_score = projects_relevance_score(job_tokens=context_tokens, projects_text=projects_text)
 
     edu_text = extract_resume_education_text(
         structured_json=resume_structured_json,
@@ -584,21 +564,42 @@ def score_application(
         education_text=edu_text,
     )
 
-    ai_score = None
-    try:
-        if ai_relevance_pct is not None:
-            ai_score = max(0, min(100, int(ai_relevance_pct)))
-    except Exception:
-        ai_score = None
-    ai_reasoning_score = float(ai_score / 100.0) if isinstance(ai_score, int) else 0.0
+    combined = f"{exp_text}\n{projects_text}".lower()
+    internship_hits = len(re.findall(r"\b(intern|internship)\b", combined))
+    professional_hits = len(re.findall(r"\b(full[- ]?time|employee|engineer|developer|consultant|freelance|contract)\b", exp_text.lower()))
+    relevant_projects = len([line for line in projects_text.splitlines() if line.strip() and any(t in line.lower() for t in context_tokens[:30])])
+    if professional_hits >= 2 or internship_hits >= 2 or re.search(r"\b[1-9]\+?\s+years?\b", exp_text.lower()):
+        experience_pct = 100
+    elif internship_hits >= 1 or professional_hits >= 1:
+        experience_pct = 80
+    elif relevant_projects >= 2 or projects_score >= 0.60:
+        experience_pct = 60
+    elif relevant_projects == 1 or projects_score >= 0.35:
+        experience_pct = 40
+    elif projects_text.strip():
+        experience_pct = 20
+    else:
+        experience_pct = 0
+    if raw_experience_relevance >= 0.70:
+        experience_pct = max(experience_pct, 80)
+    experience_score = experience_pct / 100.0
+
+    recommendation_map = {
+        "strong fit": 100,
+        "good fit": 80,
+        "average fit": 60,
+        "review manually": 40,
+        "weak fit": 20,
+    }
+    recommendation_key = str(ai_recommendation or "").strip().lower()
+    ai_score = recommendation_map.get(recommendation_key)
+    ai_evaluation_score = float(ai_score / 100.0) if isinstance(ai_score, int) else 0.0
 
     final_score = compute_final_score(
         semantic_score=semantic_score,
         skills_score=skills_score,
         experience_score=experience_score,
-        projects_score=projects_score,
-        education_score=education_score,
-        ai_reasoning_score=ai_reasoning_score,
+        ai_evaluation_score=ai_evaluation_score,
     )
 
     notes: list[str] = []
@@ -608,7 +609,7 @@ def score_application(
     if not job_skills:
         notes.append("Could not extract skill tokens from job description.")
     if ai_score is None:
-        notes.append("No AI reasoning score available; ai_reasoning_score set to 0.")
+        notes.append("No recognized AI recommendation was available; AI evaluation score set to 0.")
     if matched:
         evidence.append("Matched skills: " + ", ".join(matched[:6]))
     if projects_text.strip():
@@ -619,28 +620,22 @@ def score_application(
         evidence.append("Education section contributed to deterministic scoring.")
 
     weights = {
-        "ai_reasoning": 0.40,
-        "skills": 0.20,
-        "experience": 0.12,
-        "projects": 0.08,
-        "education": 0.10,
-        "semantic": 0.10,
+        "skills": 0.45,
+        "experience": 0.20,
+        "semantic": 0.25,
+        "ai": 0.10,
     }
     component_scores = {
-        "semantic_score": float(semantic_score),
-        "skills_score": float(skills_score),
-        "experience_score": float(experience_score),
-        "projects_score": float(projects_score),
-        "education_score": float(education_score),
-        "ai_reasoning_score": float(ai_reasoning_score),
+        "semantic_score": round(float(semantic_score) * 100.0, 2),
+        "skills_score": round(float(skills_score) * 100.0, 2),
+        "experience_score": float(experience_pct),
+        "ai_score": float(ai_score or 0),
     }
     weighted_contributions = {
-        "semantic": round(100.0 * weights["semantic"] * component_scores["semantic_score"], 2),
-        "skills": round(100.0 * weights["skills"] * component_scores["skills_score"], 2),
-        "experience": round(100.0 * weights["experience"] * component_scores["experience_score"], 2),
-        "projects": round(100.0 * weights["projects"] * component_scores["projects_score"], 2),
-        "education": round(100.0 * weights["education"] * component_scores["education_score"], 2),
-        "ai_reasoning": round(100.0 * weights["ai_reasoning"] * component_scores["ai_reasoning_score"], 2),
+        "semantic": round(weights["semantic"] * component_scores["semantic_score"], 2),
+        "skills": round(weights["skills"] * component_scores["skills_score"], 2),
+        "experience": round(weights["experience"] * component_scores["experience_score"], 2),
+        "ai": round(weights["ai"] * component_scores["ai_score"], 2),
     }
 
     breakdown: dict[str, Any] = {
@@ -648,10 +643,8 @@ def score_application(
         "semantic_score": component_scores["semantic_score"],
         "skills_score": component_scores["skills_score"],
         "experience_score": component_scores["experience_score"],
-        "projects_score": component_scores["projects_score"],
-        "education_score": component_scores["education_score"],
-        "ai_reasoning_score": component_scores["ai_reasoning_score"],
-        "ai_relevance_score": component_scores["ai_reasoning_score"],
+        "ai_score": component_scores["ai_score"],
+        "ai_recommendation": ai_recommendation or "",
         "matched_skills": matched,
         "missing_skills": missing,
         "projects_present": bool(projects_text.strip()),
@@ -661,4 +654,4 @@ def score_application(
         "evidence": evidence,
         "notes": notes,
     }
-    return float(skills_score), int(final_score), breakdown
+    return round(float(skills_score) * 100.0, 2), int(final_score), breakdown

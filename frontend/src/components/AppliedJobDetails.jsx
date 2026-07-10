@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Briefcase, GraduationCap, Wrench } from "lucide-react";
-import { jobAPI, interviewAPI } from "../utils/api";
-import { getRingMetrics, resolveApplicationMatchScore } from "../utils/matchScore";
+import { jobAPI } from "../utils/api";
+import { ErrorState, LoadingState, ScoreRing, SkillPill, StatusBadge } from "./ui";
 import "./AppliedJobDetails.css";
 
 export default function AppliedJobDetails({ applicationId, onBack }) {
@@ -10,8 +9,6 @@ export default function AppliedJobDetails({ applicationId, onBack }) {
   const [data, setData] = useState(null);
   const pollRef = useRef(null);
   const [downloading, setDownloading] = useState(false);
-  const [interviews, setInterviews] = useState([]);
-  const [interviewsLoading, setInterviewsLoading] = useState(false);
 
   const app = data?.application || null;
   const job = app?.job || null;
@@ -21,12 +18,7 @@ export default function AppliedJobDetails({ applicationId, onBack }) {
     return !!(app?.score_updated_at);
   }, [app?.score_updated_at]);
 
-  const overallScore = useMemo(() => {
-    if (!isAnalysisComplete) return 0;
-    return resolveApplicationMatchScore(app);
-  }, [app, isAnalysisComplete]);
-
-  const overallRing = useMemo(() => getRingMetrics(overallScore, 46), [overallScore]);
+  const overallScore = isAnalysisComplete ? Number(app?.final_score ?? 0) : 0;
 
   useEffect(() => {
     let alive = true;
@@ -40,42 +32,10 @@ export default function AppliedJobDetails({ applicationId, onBack }) {
     setData(null);
 
     const fetchOnce = async () => {
-      // Shared endpoint works for both candidate + recruiter.
-      // If the backend is older, fallback to candidate-only endpoint.
-      try {
-        const shared = await jobAPI.applicationDetailsShared(applicationId);
-        if (!alive) return null;
-        setData(shared || null);
-        // attempt to fetch interview details for this application (candidate view)
-        try {
-          setInterviewsLoading(true);
-          const im = await interviewAPI.myInterviews();
-          const items = im?.interviews || [];
-          const ours = items.filter((x) => Number(x.application_id) === Number(applicationId));
-          // fetch full details for each interview to surface feedback/outcome
-          const details = await Promise.all(
-            (ours || []).map(async (it) => {
-              try {
-                const r = await interviewAPI.interviewDetails(it.id);
-                return r?.interview || null;
-              } catch {
-                return null;
-              }
-            })
-          );
-          setInterviews((details || []).filter(Boolean));
-        } catch {
-          // ignore if not candidate or API fails
-        } finally {
-          setInterviewsLoading(false);
-        }
-        return shared || null;
-      } catch {
-        const res = await jobAPI.applicationDetails(applicationId);
-        if (!alive) return null;
-        setData(res || null);
-        return res || null;
-      }
+      const res = await jobAPI.applicationDetails(applicationId);
+      if (!alive) return null;
+      setData(res || null);
+      return res || null;
     };
 
     fetchOnce()
@@ -83,23 +43,18 @@ export default function AppliedJobDetails({ applicationId, onBack }) {
         if (!alive) return;
         // If analysis is still running (apply_save background task), poll briefly.
         const a = res?.application || null;
-        const pending = !a?.score_updated_at && !a?.ai_sections && !a?.ai_explanation;
+        const pending = !a?.score_updated_at && !a?.ai_analysis && !a?.ai_explanation;
         if (!pending) return;
         let tries = 0;
         if (pollRef.current) clearInterval(pollRef.current);
         pollRef.current = setInterval(async () => {
           tries += 1;
           try {
-            let rr = null;
-            try {
-              rr = await jobAPI.applicationDetailsShared(applicationId);
-            } catch {
-              rr = await jobAPI.applicationDetails(applicationId);
-            }
+            const rr = await jobAPI.applicationDetails(applicationId);
             if (!alive) return;
             setData(rr || null);
             const aa = rr?.application || null;
-            const done = !!aa?.score_updated_at || !!aa?.ai_sections || !!aa?.ai_explanation;
+            const done = !!aa?.score_updated_at || !!aa?.ai_analysis || !!aa?.ai_explanation;
             if (done || tries >= 25) {
               clearInterval(pollRef.current);
               pollRef.current = null;
@@ -130,10 +85,10 @@ export default function AppliedJobDetails({ applicationId, onBack }) {
     };
   }, [applicationId]);
 
-  const sections = app?.ai_sections || null;
+  const analysis = app?.ai_analysis || null;
   const resume = app?.resume || null;
   const resumeName = resume?.original_filename || "Resume";
-  const analysisPending = !app?.score_updated_at && !sections && !app?.ai_explanation;
+  const analysisPending = !app?.score_updated_at && !analysis && !app?.ai_explanation;
 
   const downloadResume = async () => {
     if (!applicationId || downloading) return;
@@ -162,9 +117,9 @@ export default function AppliedJobDetails({ applicationId, onBack }) {
       </button>
 
       {loading ? (
-        <div className="ajd-card">Loading…</div>
+        <div className="ajd-card"><LoadingState message="Loading application…" /></div>
       ) : error ? (
-        <div className="ajd-card ajd-error">{error}</div>
+        <div className="ajd-card"><ErrorState message={error} /></div>
       ) : (
         <div className="ajd-card">
           <div className="ajd-head">
@@ -211,6 +166,7 @@ export default function AppliedJobDetails({ applicationId, onBack }) {
             <div className="ajd-note-text">
               Your resume has been saved. <span className="ajd-muted">Waiting for recruiter to review it.</span>
             </div>
+            <StatusBadge status={app?.status || "submitted"} />
           </div>
 
           {applicationId && (
@@ -235,42 +191,7 @@ export default function AppliedJobDetails({ applicationId, onBack }) {
             </div>
           )}
 
-          <div className="ajd-score" aria-label={`Match score ${overallRing.score}%`}>
-            <svg className="ajd-score-svg" viewBox="0 0 112 112" role="img" aria-hidden="true">
-              <defs>
-                <linearGradient id="ajd-grad" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0%" stopColor={isAnalysisComplete ? "#10b981" : "#f59e0b"} />
-                  <stop offset="100%" stopColor={isAnalysisComplete ? "#059669" : "#d97706"} />
-                </linearGradient>
-              </defs>
-              <circle
-                className="ajd-score-track"
-                cx="56"
-                cy="56"
-                r={overallRing.radius}
-                fill="none"
-                stroke="rgba(15, 23, 42, 0.12)"
-                strokeWidth="10"
-              />
-              <circle
-                className="ajd-score-arc"
-                cx="56"
-                cy="56"
-                r={overallRing.radius}
-                fill="none"
-                stroke="url(#ajd-grad)"
-                strokeWidth="10"
-                strokeLinecap="round"
-                strokeDasharray={overallRing.strokeDasharray}
-                strokeDashoffset={overallRing.strokeDashoffset}
-                transform="rotate(-90 56 56)"
-              />
-            </svg>
-            <div className="ajd-score-inner" aria-hidden="true">
-              <div className="ajd-score-num">{overallRing.score}</div>
-              <div className="ajd-score-unit">%</div>
-            </div>
-          </div>
+          <div style={{ display: "grid", placeItems: "center", marginTop: 24 }}><ScoreRing score={overallScore} size={116} /></div>
 
           <div className="ajd-score-sub">Overall Match</div>
 
@@ -291,40 +212,15 @@ export default function AppliedJobDetails({ applicationId, onBack }) {
             </div>
           )}
 
-          {sections && (
-            <div className="ajd-sections">
-              {[
-                { key: "education_summary", title: "Education Match", Icon: GraduationCap },
-                { key: "projects_summary", title: "Projects Match", Icon: Wrench },
-                { key: "work_experience_summary", title: "Work Experience Match", Icon: Briefcase }
-              ].map((c) => {
-                const s = sections?.[c.key] || {};
-                const sc = typeof s.score === "number" ? s.score : 0;
-                const sum = (s.summary || "").trim();
-                const Icon = c.Icon;
-                const getTone = (score) => {
-                  if (score >= 80) return "tone-green";
-                  if (score >= 60) return "tone-lgreen";
-                  if (score >= 40) return "tone-yellow";
-                  if (score >= 20) return "tone-orange";
-                  return "tone-red";
-                };
-                return (
-                  <div key={c.key} className={`ajd-sec ${getTone(sc)}`}>
-                    <div className="ajd-sec-top">
-                      <div className="ajd-sec-title">
-                        <Icon className="ajd-sec-icon" aria-hidden="true" />
-                        {c.title}
-                      </div>
-                    </div>
-                    <div className="ajd-sec-text">{sum || "—"}</div>
-                  </div>
-                );
-              })}
+          {analysis ? (
+            <div className="ajd-expl" style={{ display: "grid", gap: 16 }}>
+              <div><div className="ajd-expl-title">Candidate summary</div><div className="ajd-expl-text">{analysis.candidate_summary || "—"}</div></div>
+              <div><div className="ajd-expl-title">Recommendation</div><div className="ajd-expl-text"><strong>{analysis.recommendation || "Review Manually"}</strong></div></div>
+              <div><div className="ajd-expl-title">Reasoning</div><div className="ajd-expl-text">{analysis.reasoning || "—"}</div></div>
+              {Array.isArray(analysis.strengths) && analysis.strengths.length > 0 && <div><div className="ajd-expl-title">Strengths</div><div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>{analysis.strengths.map((item) => <SkillPill key={item} tone="positive">{item}</SkillPill>)}</div></div>}
+              {Array.isArray(analysis.weaknesses) && analysis.weaknesses.length > 0 && <div><div className="ajd-expl-title">Weaknesses</div><div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>{analysis.weaknesses.map((item) => <SkillPill key={item} tone="negative">{item}</SkillPill>)}</div></div>}
             </div>
-          )}
-
-          {!sections && (
+          ) : (
             <div className="ajd-expl">
               <div className="ajd-expl-title">Explanation</div>
               <div className="ajd-expl-text">{app?.ai_explanation || "—"}</div>
@@ -338,47 +234,6 @@ export default function AppliedJobDetails({ applicationId, onBack }) {
         </div>
       )}
 
-      {/* Interview Feedback Section - Separate Container */}
-      {!loading && !error && (
-        <div className="ajd-feedback-card">
-          <div className="ajd-expl-title">Interview Feedback</div>
-          {interviewsLoading ? (
-            <div className="ajd-note-text">Loading feedback…</div>
-          ) : interviews.length === 0 ? (
-            <div className="ajd-note-text ajd-muted">No feedback yet.</div>
-          ) : (
-            interviews.map((it) => (
-              <div key={it.id} className="ajd-feedback-item">
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                  <div>
-                    <strong>{(it.job && it.job.title) || "Interview"}</strong>
-                    <div className="ajd-muted">Status: {it.status || "—"}</div>
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    {it.outcome && <div className="ajd-badge">{it.outcome}</div>}
-                    <div className="ajd-muted">{it.scheduled_at ? new Date(it.scheduled_at).toLocaleString() : ""}</div>
-                  </div>
-                </div>
-                {it.recruiter_notes && (
-                  <div className="ajd-note" style={{ marginTop: 8 }}>
-                    <div className="ajd-note-title">Recruiter notes</div>
-                    <div className="ajd-note-text">{it.recruiter_notes}</div>
-                  </div>
-                )}
-                {it.feedback && (
-                  <div className="ajd-note" style={{ marginTop: 8 }}>
-                    <div className="ajd-note-title">Feedback</div>
-                    <div className="ajd-note-text">{it.feedback}</div>
-                  </div>
-                )}
-                <div style={{ marginTop: 6 }} className="ajd-muted">
-                  {it.evaluated_at ? `Evaluated: ${new Date(it.evaluated_at).toLocaleString()}` : it.completed_at ? `Completed: ${new Date(it.completed_at).toLocaleString()}` : ""}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      )}
     </div>
   );
 }

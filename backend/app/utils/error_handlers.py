@@ -2,9 +2,7 @@
 Centralized error handling and user-friendly error messages.
 """
 import logging
-from typing import Any
 from fastapi import HTTPException
-from fastapi.responses import JSONResponse
 
 logger = logging.getLogger(__name__)
 
@@ -89,11 +87,6 @@ ERROR_MESSAGES = {
     "application_not_found": "Application not found. It may have been withdrawn.",
     "no_resume": "Please upload a resume before applying to jobs.",
     "application_failed": "Failed to submit application. Please try again.",
-    
-    # Interviews
-    "interview_not_found": "Interview not found or has been cancelled.",
-    "invalid_schedule": "Invalid interview schedule. Please check the date and time.",
-    "schedule_conflict": "This time slot conflicts with another interview.",
     
     # General
     "unauthorized": "Please login to access this feature.",
@@ -205,36 +198,3 @@ def handle_database_error(error: Exception, operation: str = "") -> HTTPExceptio
         status_code=500,
         detail=get_error_message("server_error")
     )
-
-
-def create_error_response(
-    status_code: int,
-    message: str,
-    details: dict | None = None
-) -> JSONResponse:
-    """Create a standardized error response."""
-    content = {
-        "success": False,
-        "error": message,
-    }
-    
-    if details:
-        content["details"] = details
-    
-    return JSONResponse(
-        status_code=status_code,
-        content=content
-    )
-
-
-def safe_execute(func, *args, fallback_value: Any = None, log_error: bool = True, **kwargs):
-    """
-    Safely execute a function with error handling.
-    Returns fallback_value if an error occurs.
-    """
-    try:
-        return func(*args, **kwargs)
-    except Exception as e:
-        if log_error:
-            logger.error(f"Error in {func.__name__}: {e}")
-        return fallback_value

@@ -1,11 +1,10 @@
 import "./AppliedJobsPage.css";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Calendar, MapPin } from "lucide-react";
 import { jobAPI } from "../utils/api";
+import { ScoreRing, StatusBadge } from "./ui";
 
 export default function AppliedJobsPage({ onViewDetails }) {
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [rows, setRows] = useState([]);
@@ -43,6 +42,7 @@ export default function AppliedJobsPage({ onViewDetails }) {
         ) : (
           rows.map((row) => {
             const job = row?.job || {};
+            const finalScore = Number(row?.final_score ?? 0);
             return (
               <div key={row.application_id} className="applied-job-card applied-job-card-v2">
                 <div className="applied-job-header-v2">
@@ -50,7 +50,10 @@ export default function AppliedJobsPage({ onViewDetails }) {
                     <h3 className="applied-job-title">{job?.title || "Job"}</h3>
                     <div className="applied-job-location">{job?.location || "Location not specified"}</div>
                   </div>
-                  <span className="applied-status-pill">Applied</span>
+                  <div className="applied-card-right">
+                    <StatusBadge status={row?.status || "submitted"} />
+                    <ScoreRing score={finalScore} size={54} />
+                  </div>
                 </div>
 
                 <div className="applied-job-meta-row">
@@ -90,9 +93,6 @@ export default function AppliedJobsPage({ onViewDetails }) {
                     }}
                   >
                     Withdraw
-                  </button>
-                  <button className="btn-view-interview" onClick={() => navigate(`/candidate/interviews`)}>
-                    View Interview Details
                   </button>
                 </div>
               </div>
