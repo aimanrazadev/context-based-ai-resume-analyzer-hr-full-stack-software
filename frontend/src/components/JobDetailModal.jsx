@@ -341,7 +341,7 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
     }
   };
 
-  const runApply = async (file) => {
+  const runApply = async () => {
     // Apply now saves the exact completed scan result. No second scoring pass runs here.
     setApplyError("");
     setApplying(true);
@@ -538,7 +538,7 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
                             if (uploadModeRef.current === "scan") {
                               await runScan(file);
                             } else {
-                              await runApply(file);
+                              await runApply();
                             }
                           } catch (err) {
                             setApplyError(err?.message || "Failed to apply");
