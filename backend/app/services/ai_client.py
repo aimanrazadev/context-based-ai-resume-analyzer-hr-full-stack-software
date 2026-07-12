@@ -89,7 +89,7 @@ async def _list_models(
     api_v = (api_version or "v1").strip().lstrip("/")
     url = f"{base}/{api_v}/models"
     headers = {"x-goog-api-key": api_key}
-    async with httpx.AsyncClient(timeout=timeout_s) as client:
+    async with httpx.AsyncClient(timeout=timeout_s, trust_env=False) as client:
         r = await client.get(url, headers=headers)
     if r.status_code >= 400:
         raise AIClientHTTPError(status_code=r.status_code, message=_safe_truncate(r.text, 1000))
@@ -233,7 +233,7 @@ async def gemini_generate_content(
 
     for attempt in range(max_retries + 1):
         try:
-            async with httpx.AsyncClient(timeout=timeout_s) as client:
+            async with httpx.AsyncClient(timeout=timeout_s, trust_env=False) as client:
                 if log_payloads:
                     logger.info(
                         "Gemini request model=%s url=%s body=%s",

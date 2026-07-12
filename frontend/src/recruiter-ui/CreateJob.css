@@ -463,9 +463,12 @@
   font-weight: 500;
 }
 
-.dropdown-item.create-skill {
-  color: #0f766e;
-  font-weight: 600;
+.dropdown-item.disabled,
+.dropdown-item.disabled:hover {
+  cursor: default;
+  background: #f8fafc;
+  color: #94a3b8;
+  font-weight: 500;
 }
 
 .optional {
@@ -473,63 +476,63 @@
   font-weight: 400;
 }
 
-.skills-suggested {
-  display: grid;
-  gap: 10px;
-}
-
-.skills-suggested-title {
-  font-size: 13px;
-  font-weight: 400;
-  color: #6b7280;
-}
-
-.skills-suggested-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.skills-suggested-empty {
-  font-size: 12px;
-  color: #9ca3af;
-}
-
 .skills-help-text {
   font-size: 12px;
   color: #6b7280;
 }
 
-.skill-suggestion-btn {
-  padding: 6px 10px;
-  border-radius: 999px;
-  border: 1px solid #bbdefb;
-  background: #e3f2fd;
-  color: #1976d2;
+.skills-warning {
+  color: #b45309;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 10px;
+}
+
+.form-error-message {
+  background: var(--color-danger-soft);
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-md);
+  color: #b91c1c;
   font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  line-height: 1.5;
+  margin-bottom: 16px;
+  padding: 12px;
 }
 
-.skill-suggestion-btn span {
-  font-weight: 500;
+/* Visual consistency audit pass */
+.job-card {
+  padding: 28px;
 }
 
-.skill-suggestion-btn:hover {
-  background: #dbeafe;
+.job-card h2,
+.form-section-title,
+.requirements-section h3 {
+  font-weight: 620;
 }
 
-.skill-suggestion-btn.common {
-  border-color: #bbdefb;
-  background: #e3f2fd;
-  color: #1976d2;
+.form-group label,
+.field-label,
+.radio-option,
+.checkbox-option {
+  font-weight: 430;
 }
 
-.skill-suggestion-btn.detected {
-  border-color: #bfdbfe;
-  background: #eff6ff;
-  color: #1d4ed8;
+.form-group input,
+.form-group textarea,
+.form-group select {
+  font-weight: 400;
+}
+
+.form-row,
+.requirements-section {
+  gap: 12px;
+}
+
+.skill-tag,
+.non-negotiable-input,
+.skills-input {
+  font-weight: 430;
 }

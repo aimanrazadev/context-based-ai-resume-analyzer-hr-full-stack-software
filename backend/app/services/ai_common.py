@@ -3,6 +3,15 @@ import re
 
 
 _JSON_OBJECT_RE = re.compile(r"\{[\s\S]*\}")
+_FENCED_JSON_RE = re.compile(r"```(?:json)?\s*([\s\S]*?)\s*```", re.IGNORECASE)
+
+
+def _clean_model_json_text(text: str) -> str:
+    raw = (text or "").strip()
+    fenced = _FENCED_JSON_RE.search(raw)
+    if fenced:
+        raw = fenced.group(1).strip()
+    return raw
 
 
 def extract_first_json_object(text: str) -> dict:
@@ -22,7 +31,7 @@ def extract_first_json_object(text: str) -> dict:
         Raises ValueError when the response is empty, contains no JSON object,
         or does not decode to a dictionary.
     """
-    raw = (text or "").strip()
+    raw = _clean_model_json_text(text)
     if not raw:
         raise ValueError("Empty AI response")
 

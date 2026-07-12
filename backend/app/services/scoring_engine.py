@@ -41,15 +41,46 @@ _STOP = {
 }
 
 _SKILL_ALIASES = {
+    "fastapi": "fastapi",
+    "fast api": "fastapi",
     "js": "javascript",
+    "javascript": "javascript",
+    "machine learning": "machine learning",
+    "machinelearning": "machine learning",
+    "ml": "machine learning",
+    "natural language processing": "nlp",
+    "naturallanguageprocessing": "nlp",
+    "nlp": "nlp",
     "node": "node.js",
     "nodejs": "node.js",
     "node.js": "node.js",
     "reactjs": "react",
     "react.js": "react",
+    "react": "react",
     "nextjs": "next.js",
+    "sql": "sql",
+    "mysql": "sql",
+    "sqlite": "sql",
+    "postgresql": "sql",
+    "postgres": "sql",
     "rest": "api",
+    "rest apis": "api",
+    "rest api": "api",
+    "restapis": "api",
     "restapi": "api",
+    "api": "api",
+    "apis": "api",
+    "large language models": "llm",
+    "largelanguagemodels": "llm",
+    "llm": "llm",
+    "llms": "llm",
+    "gemini api": "gemini",
+    "gemini": "gemini",
+    "openai api": "openai",
+    "openai": "openai",
+    "scikit learn": "scikit-learn",
+    "scikit-learn": "scikit-learn",
+    "sklearn": "scikit-learn",
 }
 
 
@@ -607,7 +638,7 @@ def score_application(
     if not resume_structured_json and not resume_ai_structured_json:
         notes.append("No structured resume data available; deterministic scoring may be limited.")
     if not job_skills:
-        notes.append("Could not extract skill tokens from job description.")
+        notes.append("No recruiter-required skills were available for skill-overlap scoring.")
     if ai_score is None:
         notes.append("No recognized AI recommendation was available; AI evaluation score set to 0.")
     if matched:

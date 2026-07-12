@@ -1,4 +1,4 @@
-export default function SkillPill({ children, tone = "neutral" }) {
+export default function Badge({ children, tone = "neutral", className = "", ...props }) {
   const toneClass = {
     positive: "ds-tone-positive",
     negative: "ds-tone-negative",
@@ -7,5 +7,9 @@ export default function SkillPill({ children, tone = "neutral" }) {
     neutral: "ds-tone-neutral",
   }[tone] || "ds-tone-neutral";
 
-  return <span className={`ds-skill-pill ${toneClass}`}>{children}</span>;
+  return (
+    <span className={`ds-badge ${toneClass} ${className}`.trim()} {...props}>
+      {children}
+    </span>
+  );
 }

@@ -621,6 +621,16 @@ def on_startup() -> None:
                         column="ranking_explanation",
                         ddl="ALTER TABLE applications ADD COLUMN ranking_explanation TEXT NULL",
                     )
+                    _mysql_add_column_if_missing(
+                        table="ai_resume_analyses",
+                        column="strength_reasoning",
+                        ddl="ALTER TABLE ai_resume_analyses ADD COLUMN strength_reasoning TEXT NULL",
+                    )
+                    _mysql_add_column_if_missing(
+                        table="ai_resume_analyses",
+                        column="weakness_reasoning",
+                        ddl="ALTER TABLE ai_resume_analyses ADD COLUMN weakness_reasoning TEXT NULL",
+                    )
                     _mysql_add_index_if_missing(
                         table="jobs",
                         index="ix_jobs_user_status_created",

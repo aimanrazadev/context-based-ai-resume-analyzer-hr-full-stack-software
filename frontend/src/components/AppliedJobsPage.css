@@ -131,3 +131,45 @@
   background: rgba(185, 28, 28, 0.08);
 }
 
+/* UI consistency audit pass */
+.applied-jobs-header {
+  margin-bottom: 18px;
+}
+
+.applied-jobs-header h2 {
+  font-weight: 650;
+}
+
+.applied-jobs-list {
+  gap: 14px;
+}
+
+.applied-job-card,
+.applied-job-card-v2 {
+  padding: 18px;
+}
+
+.applied-job-title {
+  font-size: 18px;
+  font-weight: 620;
+}
+
+.applied-job-location,
+.applied-meta-item {
+  font-weight: 400;
+}
+
+.applied-job-header-v2 {
+  margin-bottom: 12px;
+}
+
+.applied-job-meta-row {
+  padding: 10px 12px;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.applied-job-actions {
+  gap: 10px;
+}
+

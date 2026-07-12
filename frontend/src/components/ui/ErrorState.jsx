@@ -1,1 +1,3 @@
-export default function ErrorState({ message = "Something went wrong." }) { return <div role="alert" style={{ color: "#b91c1c", background: "#fef2f2", borderRadius: 12, padding: 14 }}>{message}</div>; }
+export default function ErrorState({ message = "Something went wrong." }) {
+  return <div className="ds-error-state" role="alert">{message}</div>;
+}

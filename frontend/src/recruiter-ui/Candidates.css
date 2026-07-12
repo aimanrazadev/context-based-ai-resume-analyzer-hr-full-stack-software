@@ -1,0 +1,357 @@
+.candidates-panel {
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 16px;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.055);
+  padding: 18px;
+}
+
+.candidates-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.candidates-panel-header h2 {
+  color: #111827;
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  margin: 0 0 5px;
+}
+
+.candidates-panel-header p {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 400;
+  margin: 0;
+}
+
+.candidates-filters {
+  align-items: end;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(200px, 1.2fr) minmax(150px, 0.8fr) minmax(170px, 0.8fr) auto;
+  margin-bottom: 14px;
+}
+
+.candidate-filter-field {
+  display: grid;
+  gap: 6px;
+}
+
+.candidate-filter-field span {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 560;
+}
+
+.candidate-filter-field select,
+.candidate-status-menu select {
+  appearance: auto;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  color: #0f172a;
+  font-size: 12.5px;
+  height: 36px;
+  outline: none;
+  padding: 0 11px;
+}
+
+.candidate-filter-field select:focus,
+.candidate-status-menu select:focus {
+  border-color: #818cf8;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.14);
+}
+
+.candidate-clear-filters {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #eef2ff;
+  border-radius: 10px;
+  color: #64748b;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 12.5px;
+  font-weight: 560;
+  gap: 8px;
+  height: 36px;
+  justify-content: center;
+  padding: 0 13px;
+}
+
+.candidate-clear-filters:hover {
+  background: #eef2ff;
+  color: #4f46e5;
+}
+
+.candidate-error,
+.candidate-state {
+  border-radius: 14px;
+  font-size: 14px;
+  padding: 16px;
+}
+
+.candidate-error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  margin-bottom: 16px;
+}
+
+.candidate-state {
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  color: #64748b;
+}
+
+.candidate-list {
+  display: grid;
+  gap: 12px;
+}
+
+.candidate-row-card {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 13px;
+  box-shadow: 0 7px 20px rgba(15, 23, 42, 0.045);
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 40px minmax(180px, 0.9fr) minmax(260px, 1.6fr) 74px 132px;
+  padding: 14px;
+}
+
+.candidate-rank {
+  align-items: center;
+  background: #f5f3ff;
+  border-radius: 999px;
+  color: #4f46e5;
+  display: flex;
+  font-size: 14px;
+  font-weight: 650;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.candidate-profile-block,
+.candidate-skills-block,
+.candidate-score-block,
+.candidate-actions-block {
+  min-width: 0;
+}
+
+.candidate-name-line {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 5px;
+}
+
+.candidate-name-line h3 {
+  color: #111827;
+  font-size: 14.5px;
+  font-weight: 650;
+  margin: 0;
+}
+
+.candidate-job-title,
+.candidate-email,
+.candidate-summary {
+  color: #64748b;
+  font-size: 12.5px;
+  font-weight: 400;
+  margin: 0;
+}
+
+.candidate-job-title {
+  margin-bottom: 7px;
+}
+
+.candidate-email {
+  align-items: center;
+  display: flex;
+  gap: 7px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.candidate-skills-block {
+  border-left: 1px solid #e5e7eb;
+  padding-left: 18px;
+}
+
+.candidate-section-label {
+  color: #64748b;
+  display: block;
+  font-size: 11px;
+  font-weight: 560;
+  margin-bottom: 6px;
+}
+
+.candidate-skill-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.candidate-muted {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.candidate-summary {
+  align-items: flex-start;
+  display: flex;
+  gap: 8px;
+  line-height: 1.4;
+}
+
+.candidate-summary svg {
+  color: #4f46e5;
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.candidate-score-block {
+  align-items: center;
+  display: grid;
+  gap: 5px;
+  justify-items: center;
+}
+
+.candidate-score-block span {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 560;
+}
+
+.candidate-actions-block {
+  display: grid;
+  gap: 8px;
+}
+
+.candidate-view-btn {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #6366f1;
+  border-radius: 8px;
+  color: #4f46e5;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 12.5px;
+  font-weight: 600;
+  gap: 6px;
+  height: 34px;
+  justify-content: center;
+  padding: 0 12px;
+}
+
+.candidate-view-btn:hover {
+  background: #eef2ff;
+}
+
+.candidate-status-menu {
+  align-items: center;
+  display: grid;
+  gap: 6px;
+  grid-template-columns: 1fr 24px;
+}
+
+.candidate-status-menu select {
+  font-weight: 500;
+  height: 32px;
+  min-width: 0;
+}
+
+.candidate-menu-btn {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  color: #64748b;
+  cursor: pointer;
+  display: inline-flex;
+  height: 28px;
+  justify-content: center;
+  width: 24px;
+}
+
+.candidate-menu-btn:hover {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.candidate-list-footer {
+  color: #64748b;
+  font-size: 12.5px;
+  margin-top: 12px;
+}
+
+@media (max-width: 1180px) {
+  .candidate-row-card {
+    grid-template-columns: 48px minmax(180px, 1fr) minmax(240px, 1.4fr);
+  }
+
+  .candidate-score-block,
+  .candidate-actions-block {
+    grid-column: 2 / -1;
+  }
+
+  .candidate-score-block {
+    align-items: center;
+    display: flex;
+    justify-content: flex-start;
+  }
+
+  .candidate-actions-block {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 860px) {
+  .candidates-panel {
+    padding: 18px;
+  }
+
+  .candidates-filters,
+  .candidate-row-card {
+    grid-template-columns: 1fr;
+  }
+
+  .candidate-rank {
+    height: 38px;
+    width: 38px;
+  }
+
+  .candidate-skills-block {
+    border-left: 0;
+    border-top: 1px solid #e5e7eb;
+    padding-left: 0;
+    padding-top: 16px;
+  }
+
+  .candidate-score-block,
+  .candidate-actions-block {
+    grid-column: auto;
+  }
+}
+
+.candidates-panel .ds-skill-pill,
+.candidate-name-line .ds-status-badge {
+  font-size: 11px;
+  padding: 4px 9px;
+}
+
+.candidates-panel .ds-score-ring__value {
+  font-weight: 650;
+}

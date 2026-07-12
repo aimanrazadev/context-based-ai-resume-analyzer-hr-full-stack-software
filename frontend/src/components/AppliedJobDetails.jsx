@@ -3,6 +3,148 @@ import { jobAPI } from "../utils/api";
 import { ErrorState, LoadingState, ScoreRing, SkillPill, StatusBadge } from "./ui";
 import "./AppliedJobDetails.css";
 
+const cleanList = (items = [], limit = 6) => {
+  if (!Array.isArray(items)) return [];
+  return [...new Set(items.map((item) => String(item || "").trim()).filter(Boolean))].slice(0, limit);
+};
+
+const getShortVerdict = (analysis) => {
+  const text = String(analysis?.candidate_summary || "").trim();
+  if (!text) return "No AI summary was saved for this application.";
+  return text;
+};
+
+const SKILL_ALIASES = {
+  fastapi: "fastapi",
+  "fast api": "fastapi",
+  js: "javascript",
+  javascript: "javascript",
+  "machine learning": "machine learning",
+  machinelearning: "machine learning",
+  ml: "machine learning",
+  "natural language processing": "nlp",
+  naturallanguageprocessing: "nlp",
+  nlp: "nlp",
+  mysql: "sql",
+  postgres: "sql",
+  postgresql: "sql",
+  sql: "sql",
+  sqlite: "sql",
+  react: "react",
+  reactjs: "react",
+  "react.js": "react",
+  "rest api": "api",
+  "rest apis": "api",
+  restapi: "api",
+  restapis: "api",
+  api: "api",
+  apis: "api",
+  "large language models": "llm",
+  largelanguagemodels: "llm",
+  llm: "llm",
+  llms: "llm",
+  "gemini api": "gemini",
+  gemini: "gemini",
+  "openai api": "openai",
+  openai: "openai",
+  "scikit learn": "scikit-learn",
+  "scikit-learn": "scikit-learn",
+  sklearn: "scikit-learn",
+  "problem solving": "problem solving",
+  problemsolving: "problem solving",
+  communication: "communication",
+  communications: "communication",
+  teamwork: "teamwork",
+};
+
+const normalizeSkill = (skill) => {
+  const normalized = String(skill || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9+#. ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const compact = normalized.replace(/\s+/g, "");
+  return SKILL_ALIASES[normalized] || SKILL_ALIASES[compact] || normalized;
+};
+
+const uniqueByNormalizedSkill = (items = [], excludeKeys = new Set()) => {
+  const seen = new Set(excludeKeys);
+  const result = [];
+  cleanList(items, 80).forEach((skill) => {
+    const key = normalizeSkill(skill);
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    result.push(skill);
+  });
+  return result;
+};
+
+const classifySkillSnapshot = ({ analysis }) => {
+  const matched = cleanList(analysis?.matched_skills, 40);
+  const missing = cleanList(analysis?.missing_skills, 40);
+  const safeMatched = uniqueByNormalizedSkill(matched);
+  const matchedKeys = new Set(safeMatched.map(normalizeSkill));
+  const safeMissing = uniqueByNormalizedSkill(missing, matchedKeys);
+  return { matched: safeMatched, missing: safeMissing };
+};
+
+const limitReasoningParagraphs = (text, maxParagraphs = 2, maxSentencesPerParagraph = 3) => {
+  const cleanText = String(text || "").replace(/\s+/g, " ").trim();
+  if (!cleanText) return "";
+  const sentences = cleanText.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [cleanText];
+  const capped = sentences.slice(0, maxParagraphs * maxSentencesPerParagraph);
+  const paragraphs = [];
+  for (let i = 0; i < capped.length; i += maxSentencesPerParagraph) {
+    paragraphs.push(capped.slice(i, i + maxSentencesPerParagraph).join(" ").trim());
+  }
+  return paragraphs.filter(Boolean).join("\n\n");
+};
+
+const detailedReasoningText = (analysis) => {
+  const source =
+    analysis?.reasoning ||
+    [analysis?.strength_reasoning, analysis?.weakness_reasoning]
+      .map((item) => String(item || "").trim())
+      .filter(Boolean)
+      .join(" ");
+
+  return limitReasoningParagraphs(source, 2, 3);
+};
+
+const formatJobDescription = (description) => {
+  const text = String(description || "").replace(/\\n/g, "\n").trim();
+  if (!text) return null;
+
+  const normalized = text
+    .replace(/\s*•\s*/g, "\n• ")
+    .replace(/\s*(Responsibilities:)/gi, "\n$1\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  const lines = normalized
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const blocks = [];
+  let bullets = [];
+
+  lines.forEach((line) => {
+    if (line.startsWith("•")) {
+      bullets.push(line.replace(/^•\s*/, ""));
+      return;
+    }
+    if (bullets.length) {
+      blocks.push({ type: "bullets", items: bullets });
+      bullets = [];
+    }
+    blocks.push({ type: "text", text: line });
+  });
+
+  if (bullets.length) blocks.push({ type: "bullets", items: bullets });
+  return blocks;
+};
+
 export default function AppliedJobDetails({ applicationId, onBack }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -86,6 +228,8 @@ export default function AppliedJobDetails({ applicationId, onBack }) {
   }, [applicationId]);
 
   const analysis = app?.ai_analysis || null;
+  const skillSnapshot = analysis ? classifySkillSnapshot({ analysis }) : { matched: [], missing: [] };
+  const detailedReasoning = analysis ? detailedReasoningText(analysis) : "";
   const resume = app?.resume || null;
   const resumeName = resume?.original_filename || "Resume";
   const analysisPending = !app?.score_updated_at && !analysis && !app?.ai_explanation;
@@ -170,66 +314,119 @@ export default function AppliedJobDetails({ applicationId, onBack }) {
           </div>
 
           {applicationId && (
-            <div className="ajd-resume">
+            <div
+              className={`ajd-resume ${downloading ? "is-downloading" : ""}`}
+              role="button"
+              tabIndex={0}
+              aria-label="Download resume"
+              onClick={downloadResume}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  downloadResume();
+                }
+              }}
+            >
               <div className="ajd-expl-title">Your resume</div>
-              <div
-                className={`ajd-resume-row ${downloading ? "is-downloading" : ""}`}
-                role="button"
-                tabIndex={0}
-                aria-label="Download resume"
-                onClick={downloadResume}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    downloadResume();
-                  }
-                }}
-              >
+              <div className="ajd-resume-row">
                 <div className="ajd-resume-name">{resumeName}</div>
-                <div className="ajd-resume-hint">{downloading ? "Downloading…" : "Click to download"}</div>
+                {downloading && <div className="ajd-resume-hint">Downloading…</div>}
               </div>
             </div>
           )}
 
-          <div style={{ display: "grid", placeItems: "center", marginTop: 24 }}><ScoreRing score={overallScore} size={116} /></div>
+          <div className="ajd-score-ring-wrap"><ScoreRing score={overallScore} size={116} /></div>
 
           <div className="ajd-score-sub">Overall Match</div>
 
           {analysisPending && (
             <div className="ajd-pending">
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <div
-                  style={{
-                    width: "8px",
-                    height: "8px",
-                    borderRadius: "50%",
-                    background: "#f59e0b",
-                    animation: "pulse 2s infinite",
-                  }}
-                />
+              <div className="ajd-pending-row">
+                <div className="ajd-pending-dot" />
                 Analyzing your resume… this page will update automatically.
               </div>
             </div>
           )}
 
           {analysis ? (
-            <div className="ajd-expl" style={{ display: "grid", gap: 16 }}>
-              <div><div className="ajd-expl-title">Candidate summary</div><div className="ajd-expl-text">{analysis.candidate_summary || "—"}</div></div>
-              <div><div className="ajd-expl-title">Recommendation</div><div className="ajd-expl-text"><strong>{analysis.recommendation || "Review Manually"}</strong></div></div>
-              <div><div className="ajd-expl-title">Reasoning</div><div className="ajd-expl-text">{analysis.reasoning || "—"}</div></div>
-              {Array.isArray(analysis.strengths) && analysis.strengths.length > 0 && <div><div className="ajd-expl-title">Strengths</div><div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>{analysis.strengths.map((item) => <SkillPill key={item} tone="positive">{item}</SkillPill>)}</div></div>}
-              {Array.isArray(analysis.weaknesses) && analysis.weaknesses.length > 0 && <div><div className="ajd-expl-title">Weaknesses</div><div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>{analysis.weaknesses.map((item) => <SkillPill key={item} tone="negative">{item}</SkillPill>)}</div></div>}
+            <div className="ajd-insights">
+              <div className="ajd-verdict-card">
+                <div>
+                  <div className="ajd-expl-title">Candidate Summary</div>
+                  <div className="ajd-verdict-text">{getShortVerdict(analysis)}</div>
+                </div>
+              </div>
+
+              <div className="ajd-recommendation-row">
+                <span>Recommendation</span>
+                <div className="ajd-recommendation-pill">{analysis.recommendation || "Review Manually"}</div>
+              </div>
+
+              <div className="ajd-insight-grid">
+                <div className="ajd-insight-box">
+                  <div className="ajd-expl-title">Strengths</div>
+                  <div className="ajd-pill-list">
+                    {cleanList(analysis.strengths).length > 0 ? (
+                      cleanList(analysis.strengths).map((item) => <SkillPill key={item} tone="positive">{item}</SkillPill>)
+                    ) : (
+                      <span className="ajd-empty-text">No specific strengths saved.</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="ajd-insight-box">
+                  <div className="ajd-expl-title">Weaknesses</div>
+                  <div className="ajd-pill-list">
+                    {cleanList(analysis.weaknesses).length > 0 ? (
+                      cleanList(analysis.weaknesses).map((item) => <SkillPill key={item} tone="negative">{item}</SkillPill>)
+                    ) : (
+                      <span className="ajd-empty-text">No major gaps saved.</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {detailedReasoning && (
+                <div className="ajd-insight-box ajd-reasoning-card">
+                  <details className="ajd-reasoning-details">
+                    <summary>View Detailed AI Reasoning</summary>
+                    <div className="ajd-expl-text">
+                      {detailedReasoning}
+                    </div>
+                  </details>
+                </div>
+              )}
+
+              {(skillSnapshot.matched.length > 0 || skillSnapshot.missing.length > 0) && (
+                <div className="ajd-insight-box">
+                  <div className="ajd-expl-title">Skill match snapshot</div>
+                  <div className="ajd-skill-snapshot">
+                    {skillSnapshot.matched.map((item) => <SkillPill key={`matched-${normalizeSkill(item)}`} tone="positive">{item}</SkillPill>)}
+                    {skillSnapshot.missing.map((item) => <SkillPill key={`missing-${normalizeSkill(item)}`} tone="negative">{item}</SkillPill>)}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="ajd-expl">
               <div className="ajd-expl-title">Explanation</div>
-              <div className="ajd-expl-text">{app?.ai_explanation || "—"}</div>
+              <div className="ajd-expl-text">{app?.ai_explanation || "No explanation saved."}</div>
             </div>
           )}
 
           <div className="ajd-job">
             <div className="ajd-expl-title">Job description</div>
-            <div className="ajd-expl-text">{job?.description || "—"}</div>
+            <div className="ajd-expl-text ajd-job-description">
+              {formatJobDescription(job?.description)?.map((block, index) => (
+                block.type === "bullets" ? (
+                  <ul key={`bullets-${index}`}>
+                    {block.items.map((item) => <li key={item}>{item}</li>)}
+                  </ul>
+                ) : (
+                  <p key={`text-${index}`}>{block.text}</p>
+                )
+              )) || "—"}
+            </div>
           </div>
         </div>
       )}

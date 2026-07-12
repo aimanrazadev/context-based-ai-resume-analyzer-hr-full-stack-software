@@ -79,6 +79,14 @@ def get_task(*, task_id: str) -> dict[str, Any] | None:
         return dict(t) if t else None
 
 
+def _public_value(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {k: _public_value(v) for k, v in value.items() if not str(k).startswith("_")}
+    if isinstance(value, list):
+        return [_public_value(item) for item in value]
+    return value
+
+
 def public_view(task: dict[str, Any]) -> dict[str, Any]:
     return {
         "task_id": task.get("task_id"),
@@ -86,7 +94,7 @@ def public_view(task: dict[str, Any]) -> dict[str, Any]:
         "status": task.get("status"),
         "percent": int(task.get("percent") or 0),
         "message": task.get("message") or "",
-        "result": task.get("result"),
+        "result": _public_value(task.get("result")),
         "error": task.get("error"),
         "updated_at": task.get("updated_at"),
     }

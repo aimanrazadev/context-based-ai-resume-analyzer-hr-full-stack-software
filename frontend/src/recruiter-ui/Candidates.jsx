@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
+import { Eye, Mail, MoreVertical, SlidersHorizontal, Sparkles } from "lucide-react";
 import { jobAPI } from "../utils/api";
 import { ScoreRing, SkillPill, StatusBadge } from "../components/ui";
+import "./Candidates.css";
 
 const ALL_JOBS_ID = "all";
 const ALL_STATUSES = "all";
@@ -10,6 +12,29 @@ const SORT_OPTIONS = {
   SCORE_ASC: "score_asc",
   NEWEST: "newest",
   OLDEST: "oldest",
+};
+
+const getStatusValue = (status) => String(status || "submitted").toLowerCase();
+const getScore = (row) => Math.round(Number(row?.final_score) || 0);
+
+const getTopSkills = (row) => {
+  const breakdown = row?.breakdown && typeof row.breakdown === "object" ? row.breakdown : {};
+  const insights = row?.insights && typeof row.insights === "object" ? row.insights : {};
+  const matchedSkills = Array.isArray(insights.matched_skills)
+    ? insights.matched_skills
+    : Array.isArray(breakdown.matched_skills)
+      ? breakdown.matched_skills
+      : [];
+
+  return [...new Set(matchedSkills.map((skill) => String(skill || "").trim()).filter(Boolean))].slice(0, 5);
+};
+
+const getCandidateSummary = (row) => {
+  const insights = row?.insights && typeof row.insights === "object" ? row.insights : {};
+  return (
+    insights.candidate_summary ||
+    "Resume analysis is available in the application details."
+  );
 };
 
 export default function Candidates() {
@@ -112,12 +137,12 @@ export default function Candidates() {
   const visibleRows = useMemo(() => {
     const filtered = rows.filter((row) => {
       if (statusFilter === ALL_STATUSES) return true;
-      return String(row?.status || "submitted").toLowerCase() === statusFilter;
+      return getStatusValue(row?.status) === statusFilter;
     });
 
     return [...filtered].sort((a, b) => {
       if (sortBy === SORT_OPTIONS.SCORE_ASC) {
-        return (Number(a?.final_score) || 0) - (Number(b?.final_score) || 0);
+        return getScore(a) - getScore(b);
       }
       if (sortBy === SORT_OPTIONS.NEWEST) {
         return new Date(b?.created_at || 0) - new Date(a?.created_at || 0);
@@ -125,9 +150,15 @@ export default function Candidates() {
       if (sortBy === SORT_OPTIONS.OLDEST) {
         return new Date(a?.created_at || 0) - new Date(b?.created_at || 0);
       }
-      return (Number(b?.final_score) || 0) - (Number(a?.final_score) || 0);
+      return getScore(b) - getScore(a);
     });
   }, [rows, sortBy, statusFilter]);
+
+  const clearFilters = () => {
+    setJobId(jobs.length ? ALL_JOBS_ID : null);
+    setStatusFilter(ALL_STATUSES);
+    setSortBy(SORT_OPTIONS.SCORE_DESC);
+  };
 
   const handleDeleteCandidate = async (row) => {
     const appId = row?.application_id;
@@ -147,7 +178,7 @@ export default function Candidates() {
   const handleStatusChange = async (row, status) => {
     const appId = row?.application_id;
     if (!appId) return;
-    const nextStatus = String(status || "").toLowerCase();
+    const nextStatus = getStatusValue(status);
     setUpdatingStatusId(appId);
     try {
       const res = await jobAPI.updateApplicationStatus(appId, nextStatus);
@@ -164,27 +195,134 @@ export default function Candidates() {
     }
   };
 
-  return (
-    <div>
-      <div className="dashboard-card">
-        <h2 style={{ fontSize: "20px", fontWeight: 600, marginBottom: "10px", color: "#212529" }}>{title}</h2>
-        <p style={{ color: "#6c757d", marginBottom: "18px" }}>Ranked by the final score stored when each candidate applied.</p>
+  const renderCandidateRows = () => {
+    if (error) return <div className="candidate-error">{error}</div>;
 
-        <div style={{ display: "flex", gap: "12px", alignItems: "center", marginBottom: "16px", flexWrap: "wrap" }}>
-          <div style={{ color: "#6c757d", fontSize: "14px" }}>Job:</div>
+    if (loading) return <div className="candidate-state">Loading candidates...</div>;
+
+    if (visibleRows.length === 0) {
+      return (
+        <div className="candidate-state">
+          {rows.length === 0
+            ? (jobId === ALL_JOBS_ID ? "No applications yet." : "No applications yet for this job.")
+            : "No candidates match the selected filters."}
+        </div>
+      );
+    }
+
+    return (
+      <>
+        <div className="candidate-list">
+          {visibleRows.map((row, index) => {
+            const topSkills = getTopSkills(row);
+            const summary = getCandidateSummary(row);
+            const currentStatus = getStatusValue(row?.status);
+
+            return (
+              <article key={row.application_id} className="candidate-row-card">
+                <div className="candidate-rank">#{index + 1}</div>
+
+                <div className="candidate-profile-block">
+                  <div className="candidate-name-line">
+                    <h3>{row?.candidate?.name || "Candidate"}</h3>
+                    <StatusBadge status={currentStatus} />
+                  </div>
+                  <p className="candidate-job-title">
+                    {row?._job?.title || row?.job_title || "Applied job"}
+                  </p>
+                  <p className="candidate-email">
+                    <Mail size={14} />
+                    {row?.candidate?.email || "No email available"}
+                  </p>
+                </div>
+
+                <div className="candidate-skills-block">
+                  <span className="candidate-section-label">Top Skills</span>
+                  <div className="candidate-skill-list">
+                    {topSkills.length > 0 ? (
+                      topSkills.map((skill) => (
+                        <SkillPill key={`${row.application_id}-${skill}`}>{skill}</SkillPill>
+                      ))
+                    ) : (
+                      <span className="candidate-muted">No matched skills saved</span>
+                    )}
+                  </div>
+                  <p className="candidate-summary">
+                    <Sparkles size={14} />
+                    <span>{summary}</span>
+                  </p>
+                </div>
+
+                <div className="candidate-score-block">
+                  <ScoreRing score={getScore(row)} size={58} label="Final score" />
+                  <span>Final Score</span>
+                </div>
+
+                <div className="candidate-actions-block">
+                  <button
+                    type="button"
+                    className="candidate-view-btn"
+                    onClick={() => {
+                      window.location.assign(`/applications/${row.application_id}`);
+                    }}
+                  >
+                    <Eye size={15} />
+                    View Application
+                  </button>
+
+                  <div className="candidate-status-menu">
+                    <select
+                      value={currentStatus}
+                      onChange={(e) => handleStatusChange(row, e.target.value)}
+                      disabled={updatingStatusId === row.application_id}
+                      aria-label="Update application status"
+                    >
+                      {STATUS_OPTIONS.map((status) => (
+                        <option key={status} value={status}>{status}</option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      className="candidate-menu-btn"
+                      aria-label="Delete candidate application"
+                      onClick={() => handleDeleteCandidate(row)}
+                    >
+                      <MoreVertical size={18} />
+                    </button>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+
+        <div className="candidate-list-footer">
+          Showing 1 to {visibleRows.length} of {visibleRows.length} candidates
+        </div>
+      </>
+    );
+  };
+
+  return (
+    <section className="candidates-panel">
+      <div className="candidates-panel-header">
+        <div>
+          <h2>{title}</h2>
+          <p>Ranked by the final score stored when each candidate applied.</p>
+        </div>
+      </div>
+
+      <div className="candidates-filters" aria-label="Candidate filters">
+        <label className="candidate-filter-field">
+          <span>Job</span>
           <select
             value={jobId ?? ""}
             onChange={(e) => {
               const value = e.target.value;
-              if (!value) {
-                setJobId(null);
-              } else if (value === ALL_JOBS_ID) {
-                setJobId(ALL_JOBS_ID);
-              } else {
-                setJobId(Number(value));
-              }
+              if (!value) setJobId(null);
+              else if (value === ALL_JOBS_ID) setJobId(ALL_JOBS_ID);
+              else setJobId(Number(value));
             }}
-            style={{ padding: "10px 12px", borderRadius: "10px", border: "1px solid #e9ecef", minWidth: "320px" }}
             disabled={loading || jobs.length === 0}
           >
             {jobs.length === 0 ? (
@@ -192,7 +330,7 @@ export default function Candidates() {
             ) : (
               [
                 <option key={ALL_JOBS_ID} value={ALL_JOBS_ID}>
-                  All candidates
+                  All jobs
                 </option>,
                 ...jobs.map((job) => (
                   <option key={job.id} value={job.id}>
@@ -202,209 +340,35 @@ export default function Candidates() {
               ]
             )}
           </select>
+        </label>
 
-          <div style={{ color: "#6c757d", fontSize: "14px" }}>Status:</div>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            style={{ padding: "10px 12px", borderRadius: "10px", border: "1px solid #e9ecef", minWidth: "180px" }}
-            disabled={loading}
-          >
+        <label className="candidate-filter-field">
+          <span>Status</span>
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} disabled={loading}>
             <option value={ALL_STATUSES}>All statuses</option>
             {STATUS_OPTIONS.map((status) => (
               <option key={status} value={status}>{status}</option>
             ))}
           </select>
+        </label>
 
-          <div style={{ color: "#6c757d", fontSize: "14px" }}>Sort:</div>
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            style={{ padding: "10px 12px", borderRadius: "10px", border: "1px solid #e9ecef", minWidth: "190px" }}
-            disabled={loading}
-          >
-            <option value={SORT_OPTIONS.SCORE_DESC}>Highest stored score</option>
-            <option value={SORT_OPTIONS.SCORE_ASC}>Lowest stored score</option>
+        <label className="candidate-filter-field">
+          <span>Sort</span>
+          <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} disabled={loading}>
+            <option value={SORT_OPTIONS.SCORE_DESC}>Highest score</option>
+            <option value={SORT_OPTIONS.SCORE_ASC}>Lowest score</option>
             <option value={SORT_OPTIONS.NEWEST}>Newest applications</option>
             <option value={SORT_OPTIONS.OLDEST}>Oldest applications</option>
           </select>
+        </label>
 
-        </div>
-
-        {error && (
-          <div style={{ color: "#b91c1c", background: "rgba(185,28,28,0.08)", border: "1px solid rgba(185,28,28,0.18)", borderRadius: "10px", padding: "12px", marginBottom: "14px" }}>
-            {error}
-          </div>
-        )}
-
-        {loading ? (
-          <div style={{ color: "#6c757d" }}>Loading...</div>
-        ) : visibleRows.length === 0 ? (
-          <div style={{ color: "#6c757d" }}>
-            {rows.length === 0
-              ? (jobId === ALL_JOBS_ID ? "No applications yet." : "No applications yet for this job.")
-              : "No candidates match the selected filters."}
-          </div>
-        ) : (
-          <div className="candidate-list">
-            {visibleRows.map((row, index) => {
-              const breakdown = row?.breakdown && typeof row.breakdown === "object" ? row.breakdown : {};
-              const insights = row?.insights || {};
-              const matchedSkills = Array.isArray(insights.matched_skills)
-                ? insights.matched_skills
-                : Array.isArray(breakdown.matched_skills)
-                  ? breakdown.matched_skills
-                  : [];
-              const missingSkills = Array.isArray(insights.missing_skills)
-                ? insights.missing_skills
-                : Array.isArray(breakdown.missing_skills)
-                  ? breakdown.missing_skills
-                  : [];
-              const strengths = Array.isArray(insights.strengths) ? insights.strengths : [];
-              const weaknesses = Array.isArray(insights.weaknesses) ? insights.weaknesses : [];
-              const recruiterSummary = insights.recruiter_summary || row?.ranking_explanation || "";
-              const recommendation = insights.recommendation || "";
-              const skillsScore = Number(row?.skills_score ?? breakdown.skills_score ?? 0);
-
-              return (
-                <div key={row.application_id} className="candidate-item">
-                  <div className="candidate-info" style={{ minWidth: 0 }}>
-                    <div className="candidate-name" style={{ display: "flex", justifyContent: "space-between", gap: "12px", alignItems: "start" }}>
-                      <div style={{ display: "grid", gap: "4px", minWidth: 0 }}>
-                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          #{index + 1} {row?.candidate?.name || "Candidate"}
-                        </span>
-                        <div style={{ color: "#6b7280", fontSize: "12px" }}>{row?.candidate?.email || "No email available"}</div>
-                        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                          <StatusBadge status={row?.status || "submitted"} />
-                          {row?._job?.title && jobId === ALL_JOBS_ID && (
-                            <span style={{ color: "#6b7280", fontSize: 12 }}>{row._job.title}</span>
-                          )}
-                        </div>
-                      </div>
-                      <ScoreRing score={row?.final_score ?? 0} size={52} />
-                    </div>
-
-                    {recruiterSummary && (
-                      <div
-                        style={{
-                          marginTop: "10px",
-                          padding: "10px 12px",
-                          borderRadius: "12px",
-                          border: "1px solid rgba(15,23,42,0.08)",
-                          background: "rgba(15,23,42,0.03)",
-                          color: "#1f2937",
-                          fontSize: "13px",
-                          lineHeight: 1.5,
-                        }}
-                      >
-                        {recruiterSummary}
-                      </div>
-                    )}
-
-                    {recommendation && <div style={{ marginTop: 10, fontSize: 13 }}><strong>Recommendation:</strong> {recommendation}</div>}
-                    {insights.reasoning && <div style={{ marginTop: 8, fontSize: 13, lineHeight: 1.5 }}><strong>Reasoning:</strong> {insights.reasoning}</div>}
-                    {(strengths.length > 0 || weaknesses.length > 0) && (
-                      <div style={{ marginTop: 10, display: "grid", gap: 6, fontSize: 12 }}>
-                        {strengths.length > 0 && <div><strong>Strengths:</strong> {strengths.slice(0, 4).join(", ")}</div>}
-                        {weaknesses.length > 0 && <div><strong>Weaknesses:</strong> {weaknesses.slice(0, 4).join(", ")}</div>}
-                      </div>
-                    )}
-
-                    {(matchedSkills.length > 0 || missingSkills.length > 0) && (
-                      <div
-                        style={{
-                          marginTop: 10,
-                          padding: "10px 12px",
-                          borderRadius: 12,
-                          border: "1px solid rgba(15,23,42,0.08)",
-                          background: "rgba(15,23,42,0.025)",
-                          display: "grid",
-                          gap: 8,
-                        }}
-                      >
-                        <div style={{ fontSize: 12, fontWeight: 800, color: "#111827" }}>
-                          Skill match breakdown{Number.isFinite(skillsScore) ? ` · ${Math.round(skillsScore)}%` : ""}
-                        </div>
-                        {matchedSkills.length > 0 && (
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                            {matchedSkills.slice(0, 8).map((skill) => (
-                              <SkillPill key={`matched-${row.application_id}-${skill}`} tone="positive">{skill}</SkillPill>
-                            ))}
-                          </div>
-                        )}
-                        {missingSkills.length > 0 && (
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                            {missingSkills.slice(0, 8).map((skill) => (
-                              <SkillPill key={`missing-${row.application_id}-${skill}`} tone="negative">{skill}</SkillPill>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    <div style={{ marginTop: "10px" }}>
-                      <select
-                        value={row?.status || "submitted"}
-                        onChange={(e) => handleStatusChange(row, e.target.value)}
-                        disabled={updatingStatusId === row.application_id}
-                        style={{
-                          padding: "8px 10px",
-                          borderRadius: "10px",
-                          border: "1px solid rgba(15,23,42,0.18)",
-                          background: "#fff",
-                          marginRight: 10,
-                          fontWeight: 600,
-                        }}
-                        aria-label="Update application status"
-                      >
-                        {STATUS_OPTIONS.map((status) => (
-                          <option key={status} value={status}>{status}</option>
-                        ))}
-                      </select>
-                      <button
-                        type="button"
-                        style={{
-                          padding: "8px 12px",
-                          borderRadius: "10px",
-                          border: "1px solid rgba(15,23,42,0.18)",
-                          background: "rgba(15,23,42,0.04)",
-                          cursor: "pointer",
-                          fontWeight: 600,
-                        }}
-                        onClick={() => {
-                          window.location.assign(`/applications/${row.application_id}`);
-                        }}
-                      >
-                        View Application Details
-                      </button>
-                      {jobId === ALL_JOBS_ID && (
-                        <button
-                          type="button"
-                          style={{
-                            marginLeft: "10px",
-                            padding: "8px 12px",
-                            borderRadius: "10px",
-                            border: "1px solid rgba(239,68,68,0.35)",
-                            background: "rgba(239,68,68,0.10)",
-                            cursor: "pointer",
-                            fontWeight: 700,
-                            color: "#b91c1c",
-                          }}
-                          onClick={() => handleDeleteCandidate(row)}
-                        >
-                          Delete Candidate
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        <button type="button" className="candidate-clear-filters" onClick={clearFilters} disabled={loading}>
+          <SlidersHorizontal size={14} />
+          Clear filters
+        </button>
       </div>
 
-    </div>
+      {renderCandidateRows()}
+    </section>
   );
 }

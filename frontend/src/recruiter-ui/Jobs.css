@@ -255,3 +255,54 @@
   line-height: 1.6;
 }
 
+/* UI consistency audit pass */
+.jobs-page {
+  padding: 18px;
+}
+
+.jobs-header {
+  margin-bottom: 20px;
+}
+
+.jobs-header h2 {
+  font-weight: 650;
+}
+
+.jobs-header p,
+.job-card-description,
+.job-card-meta-value,
+.job-detail-item,
+.metric-hint {
+  font-weight: 400;
+}
+
+.jobs-filters {
+  margin-bottom: 16px;
+}
+
+.jobs-list {
+  gap: 14px;
+}
+
+.job-card-item {
+  padding: 18px;
+}
+
+.job-card-header {
+  margin-bottom: 12px;
+}
+
+.job-card-title {
+  font-size: 18px;
+  font-weight: 620;
+}
+
+.job-card-meta {
+  gap: 10px 16px;
+  padding: 10px 0 4px;
+}
+
+.job-card-metrics {
+  margin-bottom: 12px;
+}
+

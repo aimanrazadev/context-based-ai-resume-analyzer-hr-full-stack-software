@@ -274,6 +274,13 @@ export const jobAPI = {
     return apiFetch(`/jobs/${jobId}/scan_resume_async`, { method: "POST", body: form, timeoutMs: 120000 });
   },
 
+  applyFromScan: async (jobId, taskId) =>
+    apiFetch(`/jobs/${jobId}/apply_from_scan`, {
+      method: "POST",
+      body: JSON.stringify({ task_id: taskId }),
+      timeoutMs: 60000
+    }),
+
   // Candidate: list applied jobs (applications)
   myApplications: async () => apiFetch("/jobs/applied"),
 

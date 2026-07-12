@@ -135,7 +135,7 @@ export default function LoginSignup({ onLoginSuccess }) {
           <p className="auth-subtitle">
             It's free to join and gain full access to thousands of exciting {userType === "recruiter" ? "hiring" : "job"} opportunities.
           </p>
-          <p className="auth-subtitle" style={{ marginTop: 8 }}>
+          <p className="auth-subtitle auth-status-line">
             Backend status: {backendStatus}
           </p>
 

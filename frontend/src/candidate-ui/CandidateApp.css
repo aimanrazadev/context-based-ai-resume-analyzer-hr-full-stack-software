@@ -7,23 +7,24 @@
 
 /* Candidate App Shell */
 .candidate-app-shell {
-  height: 100vh;
+  min-height: 100vh;
   background: transparent;
   border-radius: 0;
   display: flex;
   padding: 0;
   gap: 0;
   box-shadow: none;
-  overflow: visible;
+  overflow: hidden;
 }
 
 /* Candidate Sidebar */
 .candidate-sidebar {
-  width: 240px;
+  min-height: 100vh;
+  width: 220px;
   background: radial-gradient(1200px 600px at -200px -200px, rgba(79, 70, 229, 0.18) 0%, rgba(79, 70, 229, 0) 55%),
     linear-gradient(180deg, #0b1020 0%, #070a14 100%);
   border-right: none;
-  padding: 24px 20px;
+  padding: 20px 18px;
   display: flex;
   flex-direction: column;
   /* softer, classier separation (no hard divider line) */
@@ -34,14 +35,14 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 32px;
-  padding-bottom: 24px;
+  margin-bottom: 26px;
+  padding-bottom: 18px;
   border-bottom: none;
 }
 
 .candidate-logo-icon {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   background: #4f46e5;
   border-radius: 8px;
   display: flex;
@@ -49,12 +50,12 @@
   justify-content: center;
   color: white;
   font-weight: 700;
-  font-size: 16px;
+  font-size: 15px;
   flex-shrink: 0;
 }
 
 .candidate-logo-text {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.92);
   letter-spacing: -0.3px;
@@ -67,7 +68,7 @@
 }
 
 .candidate-nav-item {
-  padding: 11px 14px;
+  padding: 10px 12px;
   border-radius: 12px;
   font-size: 14px;
   color: rgba(255, 255, 255, 0.74);
@@ -140,8 +141,8 @@
 }
 
 .candidate-sidebar-avatar {
-  width: 42px;
-  height: 42px;
+  width: 38px;
+  height: 38px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.16);
   color: #ffffff;
@@ -229,6 +230,7 @@
   background: transparent;
   display: flex;
   flex-direction: column;
+  min-height: 100vh;
   overflow: hidden;
 }
 
@@ -237,7 +239,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 24px 32px;
+  padding: 18px 24px;
   background: transparent;
   border-bottom: none;
   /* gentle elevation so it still feels structured */
@@ -245,7 +247,7 @@
 }
 
 .candidate-page-title {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 600;
   color: #212529;
   margin: 0;
@@ -265,12 +267,12 @@
 .candidate-search-icon {
   position: absolute;
   left: 14px;
-  font-size: 16px;
+  font-size: 15px;
   color: #6c757d;
 }
 
 .candidate-search {
-  width: 400px;
+  width: 360px;
   padding: 10px 14px 10px 40px;
   border-radius: 12px;
   border: 1px solid #e9ecef;
@@ -289,8 +291,9 @@
 /* Candidate Content Area */
 .candidate-content-grid {
   flex: 1;
-  padding: 24px;
+  padding: 20px 24px 24px;
   overflow-y: auto;
+  min-height: 0;
   /* subtle contrast vs page chrome */
   background: #ffffff;
 }
@@ -330,7 +333,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: 20px 24px 24px;
 }
 
 .candidate-account-modal {
@@ -483,4 +486,54 @@
   background: #2563eb;
   color: #ffffff;
 }
+
+/* Final compact scale pass for normal 100% browser zoom */
+.candidate-sidebar {
+  width: 200px;
+  padding: 18px 16px;
+}
+
+.candidate-logo-container {
+  margin-bottom: 22px;
+  padding-bottom: 14px;
+}
+
+.candidate-logo-icon,
+.candidate-sidebar-avatar {
+  width: 34px;
+  height: 34px;
+}
+
+.candidate-nav-menu {
+  gap: 6px;
+}
+
+.candidate-nav-item {
+  padding: 9px 11px;
+  font-size: 13px;
+}
+
+.candidate-sidebar-profile {
+  padding: 11px;
+  border-radius: 16px;
+}
+
+.candidate-topbar {
+  padding: 12px 20px;
+}
+
+.candidate-page-title {
+  font-size: 22px;
+  font-weight: 650;
+}
+
+.candidate-search {
+  width: 320px;
+  padding: 8px 13px 8px 38px;
+}
+
+.candidate-content-grid {
+  padding: 16px 20px 20px;
+}
+
 

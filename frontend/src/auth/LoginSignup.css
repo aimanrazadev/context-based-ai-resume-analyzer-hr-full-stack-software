@@ -47,6 +47,10 @@
   text-align: left;
 }
 
+.auth-status-line {
+  margin-top: 8px;
+}
+
 /* User Type Selection */
 .user-type-selection {
   display: flex;
@@ -352,4 +356,53 @@
   .auth-form-container {
     border-radius: 20px;
   }
+}
+
+/* UI consistency audit pass */
+.auth-card {
+  max-width: 760px;
+}
+
+.auth-form-container {
+  padding: 38px;
+}
+
+.auth-title {
+  font-size: 30px;
+  font-weight: 650;
+}
+
+.auth-subtitle {
+  margin-bottom: 24px;
+  font-weight: 400;
+}
+
+.user-type-selection {
+  margin-bottom: 18px;
+}
+
+.user-type-option span,
+.auth-checkbox,
+.auth-input,
+.auth-message,
+.auth-switch,
+.auth-divider {
+  font-weight: 400;
+}
+
+.auth-form {
+  gap: 13px;
+}
+
+.auth-submit-btn {
+  padding: 12px 22px;
+  font-weight: 560;
+}
+
+.auth-switch {
+  margin-top: 18px;
+}
+
+.auth-divider {
+  margin: 18px 0;
 }

@@ -1,366 +1,1222 @@
+.application-details-page {
+  min-height: 100vh;
+  background: #f8fbff;
+  padding: 34px 38px 56px;
+}
+
 .ajd-wrap {
-  width: 100%;
-  max-width: 1180px;
+  width: min(100%, 1680px);
   margin: 0 auto;
+  color: #0f1f3d;
 }
 
 .ajd-back {
-  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 28px;
+  padding: 0;
+  border: 0;
   background: transparent;
-  color: #0f172a;
-  font-size: 15px;
-  font-weight: 600;
+  color: #2563eb;
   cursor: pointer;
-  padding: 10px 8px;
-  border-radius: 10px;
-}
-
-.ajd-back:hover {
-  background: rgba(15, 23, 42, 0.06);
-}
-
-.ajd-card {
-  margin-top: 14px;
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 16px;
-  border: 1px solid rgba(17, 24, 39, 0.10);
-  box-shadow: var(--shadow-card);
-}
-
-.ajd-card.ajd-error {
-  color: #b91c1c;
-  background: rgba(185, 28, 28, 0.06);
-  border-color: rgba(185, 28, 28, 0.18);
-}
-
-.ajd-head {
-  margin-bottom: 10px;
-}
-
-.ajd-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: #111827;
-}
-
-.ajd-sub {
-  margin-top: 4px;
-  color: #6b7280;
-  font-size: 14px;
-}
-
-.ajd-score {
-  margin: 12px auto 10px;
-  width: 112px;
-  height: 112px;
-  border-radius: 999px;
-  position: relative;
-  display: grid;
-  place-items: center;
-  background: #f8fafc;
-  border: 8px solid #10b981;
-}
-
-.ajd-score-inner {
-  z-index: 2;
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  display: flex;
-  align-items: baseline;
-  justify-content: center;
-  gap: 4px;
-  color: #0f172a;
-}
-
-.ajd-score-num {
-  font-size: 34px;
-  font-weight: 600;
+  font-size: 17px;
+  font-weight: 650;
   line-height: 1;
 }
 
-.ajd-score-unit {
-  font-size: 16px;
-  font-weight: 600;
-  opacity: 0.8;
+.ajd-back:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }
 
-.ajd-score-sub {
-  text-align: center;
-  margin-top: 2px;
-  color: #0f172a;
-  font-size: 15px;
-  font-weight: 500;
-  opacity: 0.85;
-}
-
-.ajd-sections {
-  margin-top: 12px;
+.ajd-card {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
+  grid-template-columns: 420px minmax(0, 1fr);
+  grid-template-areas:
+    "head head"
+    "candidate candidate"
+    "note verdict"
+    "resume verdict"
+    "score insights"
+    "score reasoning"
+    "recommendation skills"
+    ". job";
+  gap: 28px 34px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
-.ajd-sec {
+.ajd-head {
+  grid-area: head;
+  display: grid;
+  gap: 14px;
+  margin: 0;
+}
+
+.ajd-title {
+  max-width: 1180px;
+  color: #07142f;
+  font-size: clamp(34px, 3.4vw, 46px);
+  font-weight: 780;
+  letter-spacing: -0.045em;
+  line-height: 1.08;
+}
+
+.ajd-sub {
+  color: #50617d;
+  font-size: 18px;
+  font-weight: 520;
+}
+
+.ajd-sub::before {
+  content: "⌖";
+  margin-right: 10px;
+  color: #315f9b;
+}
+
+.ajd-candidate-info,
+.ajd-note,
+.ajd-resume,
+.ajd-score-ring-wrap,
+.ajd-recommendation-row,
+.ajd-verdict-card,
+.ajd-insight-box,
+.ajd-job,
+.ajd-expl,
+.ajd-pending {
   background: #ffffff;
-  border-radius: 10px;
-  border: 1px solid rgba(17, 24, 39, 0.10);
-  padding: 14px 14px;
-  box-shadow: 0 4px 12px rgba(17, 24, 39, 0.05);
+  border: 1px solid #d7e0ed;
+  border-radius: 16px;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.045);
 }
 
-.ajd-sec-top {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 8px;
-}
-
-.ajd-sec-title {
-  color: #111827;
-  font-weight: 500;
-  font-size: 17px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.ajd-sec-icon {
-  width: 22px;
-  height: 22px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.ajd-sec-text {
-  color: #374151;
-  font-size: 16px;
-  line-height: 1.6;
-}
-
-.ajd-sec.tone-green {
-  border-color: rgba(34, 197, 94, 0.35);
-}
-.ajd-sec.tone-lgreen {
-  border-color: rgba(52, 211, 153, 0.35);
-}
-.ajd-sec.tone-yellow {
-  border-color: rgba(250, 204, 21, 0.40);
-}
-.ajd-sec.tone-orange {
-  border-color: rgba(249, 115, 22, 0.40);
-}
-.ajd-sec.tone-red {
-  border-color: rgba(239, 68, 68, 0.40);
-}
-
-.ajd-expl {
-  margin-top: 14px;
-}
-
-.ajd-expl-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: #111827;
-  margin-bottom: 6px;
-}
-
-.ajd-expl-text {
-  color: #374151;
-  font-size: 15px;
-  line-height: 1.65;
-  white-space: pre-wrap;
-}
-
-.ajd-job {
-  margin-top: 16px;
+.ajd-candidate-info {
+  grid-area: candidate;
+  padding: 24px 30px;
 }
 
 .ajd-note {
-  margin-top: 12px;
-  border: 1px solid rgba(59, 130, 246, 0.22);
-  background: rgba(59, 130, 246, 0.06);
-  border-radius: 12px;
-  padding: 12px;
+  grid-area: note;
+  display: flex;
+  flex-direction: column;
+  min-height: 230px;
+  padding: 32px 30px;
+}
+
+.ajd-note-title,
+.ajd-expl-title {
+  margin: 0 0 22px;
+  color: #243552;
+  font-size: 18px;
+  font-weight: 780;
+  letter-spacing: 0.035em;
+  line-height: 1.2;
+  text-transform: uppercase;
 }
 
 .ajd-note-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: #0f172a;
-  margin-bottom: 4px;
+  color: transparent;
+  height: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
+.ajd-note::before {
+  content: "Application Status";
+  display: block;
+  margin-bottom: 22px;
+  color: #243552;
+  font-size: 18px;
+  font-weight: 780;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+.ajd-note .ds-status-badge {
+  order: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 70px;
+  margin: 0 0 24px;
+  padding: 0 30px;
+  border: 1px solid #bce8d0;
+  border-radius: 12px;
+  background: #f3fcf7;
+  color: #16a34a;
+  font-size: 20px;
+  font-weight: 780;
+  text-transform: capitalize;
+}
+
+.ajd-note .ds-status-badge::before {
+  content: "";
+  width: 13px;
+  height: 13px;
+  margin-right: 22px;
+  border-radius: 999px;
+  background: #22c55e;
 }
 
 .ajd-note-text {
-  color: #334155;
-  font-size: 15px;
-  line-height: 1.6;
+  order: 2;
+  color: #546582;
+  font-size: 19px;
+  line-height: 1.65;
 }
 
 .ajd-muted {
-  color: #64748b;
-  font-weight: 500;
+  color: inherit;
 }
 
 .ajd-resume {
-  margin-top: 14px;
+  grid-area: resume;
+  min-height: 205px;
+  padding: 32px 30px;
+  cursor: pointer;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
 }
 
 .ajd-resume-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr;
   gap: 12px;
-  border: 1px solid rgba(17, 24, 39, 0.10);
-  border-radius: 10px;
-  padding: 11px 12px;
-  background: #ffffff;
-  cursor: pointer;
-  transition: background 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  border: 0;
+  background: transparent;
 }
 
-.ajd-resume-row:hover {
-  background: rgba(15, 23, 42, 0.03);
-  box-shadow: var(--shadow-card-hover);
-  border-color: rgba(15, 23, 42, 0.14);
+.ajd-resume:hover {
+  border-color: #93c5fd;
+  box-shadow: 0 18px 38px rgba(37, 99, 235, 0.13), 0 6px 14px rgba(15, 23, 42, 0.08);
+  transform: translateY(-1px);
 }
 
-.ajd-resume-row:focus {
+.ajd-resume:hover .ajd-resume-hint {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.ajd-resume:focus {
   outline: none;
 }
 
-.ajd-resume-row:focus-visible {
-  outline: 3px solid rgba(59, 130, 246, 0.45);
-  outline-offset: 2px;
+.ajd-resume:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.28);
+  outline-offset: 3px;
 }
 
-.ajd-resume-row.is-downloading {
+.ajd-resume.is-downloading {
   cursor: progress;
-  opacity: 0.92;
+  opacity: 0.9;
 }
 
 .ajd-resume-name {
-  color: #111827;
-  font-size: 15px;
-  font-weight: 500;
+  color: #101b35;
+  font-size: 19px;
+  font-weight: 620;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .ajd-resume-hint {
+  color: #2563eb;
+  font-size: 16px;
+  font-weight: 720;
+}
+
+.ajd-score-ring-wrap {
+  grid-area: score;
+  display: grid;
+  justify-items: center;
+  min-height: 585px;
+  padding: 34px 30px 132px;
+}
+
+.ajd-score-ring-wrap::before {
+  justify-self: stretch;
+  content: "Match Score";
+  margin-bottom: 40px;
+  color: #243552;
+  font-size: 18px;
+  font-weight: 780;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+.ajd-score-ring-wrap .ds-score-ring {
+  width: 205px !important;
+  height: 205px !important;
+}
+
+.ajd-score-ring-wrap .ds-score-ring svg {
+  width: 205px;
+  height: 205px;
+}
+
+.ajd-score-ring-wrap .ds-score-ring__value {
+  color: #0c1833;
+  font-size: 50px !important;
+  font-weight: 800;
+}
+
+.ajd-score-sub {
+  grid-area: score;
+  align-self: end;
+  justify-self: center;
+  margin: 0 0 132px;
+  color: #50617d;
+  font-size: 20px;
+  font-weight: 550;
+  text-align: center;
+  z-index: 1;
+}
+
+.ajd-recommendation-row {
+  grid-area: recommendation;
+  display: grid;
+  gap: 14px;
+  min-height: 155px;
+  padding: 26px 30px;
+}
+
+.ajd-recommendation-row span {
+  display: none;
+}
+
+.ajd-recommendation-row::before {
+  content: "Recommendation";
+  color: #243552;
+  font-size: 18px;
+  font-weight: 780;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+.ajd-recommendation-pill {
+  justify-self: stretch;
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  min-height: 80px;
+  padding: 0 28px;
+  border: 1px solid #bce8d0;
+  border-radius: 12px;
+  background: #f4fcf7;
+  color: #16a34a;
+  font-size: 19px;
+  font-weight: 780;
+}
+
+.ajd-recommendation-pill::after {
+  content: "Great alignment with the role requirements.";
+  color: #546582;
+  font-size: 17px;
+  font-weight: 520;
+}
+
+.ajd-insights {
+  display: contents;
+}
+
+.ajd-verdict-card {
+  grid-area: verdict;
+  min-height: 258px;
+  padding: 36px 34px;
+}
+
+.ajd-verdict-text,
+.ajd-expl-text {
+  color: #172443;
+  font-size: 19px;
+  line-height: 1.75;
+}
+
+.ajd-insight-grid {
+  grid-area: insights;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.ajd-insight-grid > .ajd-insight-box {
+  min-height: 455px;
+  padding: 34px 30px;
+}
+
+.ajd-pill-list,
+.ajd-skill-snapshot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.ajd-pill-list {
+  display: grid;
+  gap: 14px;
+}
+
+.ajd-pill-list .ds-skill-pill {
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 76px;
+  padding: 14px 24px;
+  border-radius: 12px;
+  font-size: 17px;
+  line-height: 1.4;
+  white-space: normal;
+}
+
+.ajd-skill-snapshot .ds-skill-pill {
+  min-height: 44px;
+  padding: 0 24px;
+  border-radius: 999px;
+  font-size: 16px;
+}
+
+.ds-skill-pill.ds-tone-positive {
+  border: 1px solid #bce8d0;
+  background: #f3fcf7;
+  color: #10955b;
+}
+
+.ds-skill-pill.ds-tone-negative {
+  border: 1px solid #ffc9c9;
+  background: #fff5f5;
+  color: #dc2626;
+}
+
+.ajd-empty-text {
   color: #64748b;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 17px;
+}
+
+.ajd-reasoning-card {
+  grid-area: reasoning;
+  padding: 0;
+  overflow: hidden;
+}
+
+.ajd-reasoning-card .ajd-expl-title {
+  margin-bottom: 0;
+}
+
+.ajd-reasoning-details {
+  border: 0;
+  background: transparent;
+}
+
+.ajd-reasoning-details summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 78px;
+  padding: 0 34px;
+  color: #0d1b35;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: 760;
+  list-style: none;
+}
+
+.ajd-reasoning-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.ajd-reasoning-details summary::before {
+  content: "›";
+  margin-right: 18px;
+  color: #0d1b35;
+  font-size: 34px;
+  transform: rotate(0deg);
+}
+
+.ajd-reasoning-details[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.ajd-reasoning-details summary::after {
+  content: "⌄";
+  margin-left: auto;
+  color: #0d1b35;
+  font-size: 22px;
+}
+
+.ajd-reasoning-details .ajd-expl-text {
+  padding: 0 34px 32px;
+  white-space: pre-line;
+}
+
+.ajd-insights > .ajd-insight-box:not(.ajd-reasoning-card) {
+  grid-area: skills;
+  padding: 34px 30px;
+}
+
+.ajd-job {
+  grid-area: job;
+  padding: 34px 30px;
+}
+
+.ajd-job .ajd-expl-title::after {
+  content: "";
+}
+
+.ajd-job .ajd-expl-text {
+  max-width: 1040px;
+  color: #23304b;
 }
 
 .ajd-pending {
-  margin-top: 10px;
+  grid-area: verdict;
+  padding: 24px 30px;
+  color: #64748b;
+  font-size: 17px;
+}
+
+.ajd-pending-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ajd-pending-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #f59e0b;
+}
+
+.candidate-details {
+  display: grid;
+  gap: 14px;
+}
+
+.candidate-name-section h4 {
+  margin: 0 0 4px;
+  color: #0f172a;
+  font-size: 18px;
+}
+
+.candidate-name-section p,
+.socials-title {
+  margin: 0;
   color: #64748b;
   font-size: 15px;
 }
 
-/* Candidate Info Section */
-.ajd-candidate-info {
-  margin-bottom: 18px;
-  padding-bottom: 18px;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.12);
-}
-
-.candidate-details {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.candidate-name-section {
-  margin-top: 8px;
-}
-
-.candidate-name-section h4 {
-  font-size: 16px;
-  font-weight: 600;
-  color: #111827;
-  margin: 0 0 4px 0;
-}
-
-.candidate-name-section p {
-  font-size: 14px;
-  color: #6b7280;
-  margin: 0;
-}
-
-.candidate-socials {
-  margin-top: 12px;
-}
-
-.socials-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #495057;
-  margin-bottom: 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
 .social-links {
   display: flex;
-  gap: 10px;
   flex-wrap: wrap;
+  gap: 10px;
 }
 
 .social-link {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   padding: 10px 12px;
-  background: #f3f4f6;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
+  border: 1px solid #d7e0ed;
+  border-radius: 999px;
+  color: #2563eb;
+  font-weight: 700;
   text-decoration: none;
-  color: #374151;
-  font-weight: 500;
+}
+
+@media (max-width: 1100px) {
+  .application-details-page {
+    padding: 24px 18px 42px;
+  }
+
+  .ajd-card {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "head"
+      "candidate"
+      "note"
+      "resume"
+      "score"
+      "recommendation"
+      "verdict"
+      "insights"
+      "reasoning"
+      "skills"
+      "job";
+  }
+
+  .ajd-insight-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ajd-score-ring-wrap {
+    min-height: 360px;
+  }
+
+  .ajd-score-sub {
+    margin-bottom: 72px;
+  }
+}
+
+@media (max-width: 640px) {
+  .ajd-title {
+    font-size: 30px;
+  }
+
+  .ajd-note,
+  .ajd-resume,
+  .ajd-score-ring-wrap,
+  .ajd-recommendation-row,
+  .ajd-verdict-card,
+  .ajd-insight-grid > .ajd-insight-box,
+  .ajd-insights > .ajd-insight-box:not(.ajd-reasoning-card),
+  .ajd-job {
+    padding: 24px 20px;
+  }
+}
+
+/* Compact 100% viewport pass */
+.application-details-page {
+  padding: 24px 30px 44px;
+}
+
+.ajd-wrap {
+  width: min(100%, 1320px);
+}
+
+.ajd-back {
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+.ajd-card {
+  grid-template-columns: 340px minmax(0, 1fr);
+  gap: 20px 24px;
+}
+
+.ajd-head {
+  gap: 8px;
+}
+
+.ajd-title {
+  max-width: 980px;
+  font-size: clamp(28px, 2.5vw, 36px);
+}
+
+.ajd-sub {
+  font-size: 14px;
+}
+
+.ajd-candidate-info,
+.ajd-note,
+.ajd-resume,
+.ajd-score-ring-wrap,
+.ajd-recommendation-row,
+.ajd-verdict-card,
+.ajd-insight-box,
+.ajd-job,
+.ajd-expl,
+.ajd-pending {
+  border-radius: 14px;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.09), 0 3px 10px rgba(15, 23, 42, 0.05);
+}
+
+.ajd-candidate-info,
+.ajd-job,
+.ajd-insights > .ajd-insight-box:not(.ajd-reasoning-card) {
+  padding: 22px;
+}
+
+.ajd-note {
+  min-height: 170px;
+  padding: 22px;
+}
+
+.ajd-note::before,
+.ajd-expl-title,
+.ajd-recommendation-row::before,
+.ajd-score-ring-wrap::before {
+  margin-bottom: 14px;
+  font-size: 14px;
+}
+
+.ajd-note .ds-status-badge {
+  min-height: 52px;
+  margin-bottom: 16px;
+  padding: 0 18px;
+  border-radius: 10px;
+  font-size: 16px;
+}
+
+.ajd-note .ds-status-badge::before {
+  margin-right: 14px;
+}
+
+.ajd-note-text,
+.ajd-verdict-text,
+.ajd-expl-text {
+  font-size: 15px;
+  line-height: 1.62;
+}
+
+.ajd-resume {
+  min-height: 140px;
+  padding: 22px;
+}
+
+.ajd-resume-row {
+  gap: 8px;
+}
+
+.ajd-resume-name {
+  font-size: 15px;
+}
+
+.ajd-resume-hint {
   font-size: 13px;
-  transition: all 0.2s;
 }
 
-.social-link:hover {
-  background: #e5e7eb;
-  border-color: #1976d2;
-  color: #1976d2;
-  transform: translateY(-1px);
+.ajd-score-ring-wrap {
+  min-height: 360px;
+  padding: 22px 22px 86px;
 }
 
-.social-icon {
-  display: inline-flex;
-  align-items: center;
+.ajd-score-ring-wrap::before {
+  margin-bottom: 22px;
+}
+
+.ajd-score-ring-wrap .ds-score-ring {
+  width: 150px !important;
+  height: 150px !important;
+}
+
+.ajd-score-ring-wrap .ds-score-ring svg {
+  width: 150px;
+  height: 150px;
+}
+
+.ajd-score-ring-wrap .ds-score-ring__value {
+  font-size: 34px !important;
+}
+
+.ajd-score-sub {
+  margin-bottom: 82px;
+  font-size: 15px;
+}
+
+.ajd-recommendation-row {
+  min-height: 120px;
+  padding: 20px 22px;
+}
+
+.ajd-recommendation-pill {
+  min-height: 62px;
+  padding: 0 18px;
+  font-size: 15px;
+}
+
+.ajd-recommendation-pill::after {
+  font-size: 13px;
+}
+
+.ajd-verdict-card {
+  min-height: 180px;
+  padding: 24px 26px;
+}
+
+.ajd-insight-grid {
+  gap: 16px;
+}
+
+.ajd-insight-grid > .ajd-insight-box {
+  min-height: 280px;
+  padding: 22px;
+}
+
+.ajd-pill-list {
+  gap: 10px;
+}
+
+.ajd-pill-list .ds-skill-pill {
+  min-height: 46px;
+  padding: 9px 14px;
+  font-size: 13px;
+}
+
+.ajd-skill-snapshot {
+  gap: 8px;
+}
+
+.ajd-skill-snapshot .ds-skill-pill {
+  min-height: 32px;
+  padding: 0 14px;
+  font-size: 12.5px;
+}
+
+.ajd-reasoning-details summary {
+  min-height: 56px;
+  padding: 0 22px;
+  font-size: 14px;
+}
+
+.ajd-reasoning-details summary::before {
+  font-size: 24px;
+}
+
+.ajd-reasoning-details summary::after {
+  font-size: 16px;
+}
+
+.ajd-reasoning-details .ajd-expl-text {
+  padding: 0 22px 22px;
+}
+
+/* Dense full-screen application details layout */
+.application-details-page {
+  padding: 18px 24px 28px;
+}
+
+.ajd-wrap {
+  width: min(100%, 1500px);
+}
+
+.ajd-back {
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+
+.ajd-card {
+  grid-template-columns: 280px minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas:
+    "head head head"
+    "note verdict verdict"
+    "resume score recommendation"
+    "insights insights insights"
+    "reasoning skills skills"
+    "job job job";
+  gap: 14px 16px;
+}
+
+.ajd-title {
+  font-size: clamp(24px, 2.2vw, 32px);
+  line-height: 1.05;
+}
+
+.ajd-sub {
+  font-size: 13px;
+}
+
+.ajd-head {
+  gap: 6px;
+}
+
+.ajd-candidate-info {
+  display: none;
+}
+
+.ajd-note,
+.ajd-resume,
+.ajd-score-ring-wrap,
+.ajd-recommendation-row,
+.ajd-verdict-card,
+.ajd-insight-box,
+.ajd-job,
+.ajd-expl,
+.ajd-pending {
+  border-radius: 12px;
+}
+
+.ajd-note,
+.ajd-resume,
+.ajd-recommendation-row,
+.ajd-verdict-card,
+.ajd-insight-grid > .ajd-insight-box,
+.ajd-insights > .ajd-insight-box:not(.ajd-reasoning-card),
+.ajd-job {
+  padding: 14px 16px;
+}
+
+.ajd-note,
+.ajd-resume,
+.ajd-recommendation-row,
+.ajd-verdict-card,
+.ajd-insight-grid > .ajd-insight-box {
+  min-height: 0;
+}
+
+.ajd-note::before,
+.ajd-expl-title,
+.ajd-recommendation-row::before,
+.ajd-score-ring-wrap::before {
+  margin-bottom: 9px;
+  font-size: 12px;
+  letter-spacing: 0.03em;
+}
+
+.ajd-note .ds-status-badge {
+  min-height: 38px;
+  margin-bottom: 10px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+.ajd-note .ds-status-badge::before {
+  width: 9px;
+  height: 9px;
+  margin-right: 10px;
+}
+
+.ajd-note-text,
+.ajd-verdict-text,
+.ajd-expl-text {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.ajd-resume-row,
+.ajd-recommendation-pill {
+  gap: 4px;
+}
+
+.ajd-resume-name {
+  font-size: 13px;
+}
+
+.ajd-resume-hint,
+.ajd-recommendation-pill::after {
+  font-size: 11px;
+}
+
+.ajd-score-ring-wrap {
+  min-height: 0;
+  padding: 14px 16px 34px;
+}
+
+.ajd-score-ring-wrap::before {
+  margin-bottom: 8px;
+}
+
+.ajd-score-ring-wrap .ds-score-ring {
+  width: 96px !important;
+  height: 96px !important;
+}
+
+.ajd-score-ring-wrap .ds-score-ring svg {
+  width: 96px;
+  height: 96px;
+}
+
+.ajd-score-ring-wrap .ds-score-ring__value {
+  font-size: 22px !important;
+}
+
+.ajd-score-sub {
+  margin-bottom: 18px;
+  font-size: 12px;
+}
+
+.ajd-recommendation-pill {
+  min-height: 44px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+.ajd-insight-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.ajd-pill-list {
+  gap: 7px;
+}
+
+.ajd-pill-list .ds-skill-pill {
+  min-height: 34px;
+  padding: 7px 10px;
+  font-size: 11.5px;
+}
+
+.ajd-skill-snapshot {
+  gap: 6px;
+}
+
+.ajd-skill-snapshot .ds-skill-pill {
+  min-height: 26px;
+  padding: 0 10px;
+  font-size: 11px;
+}
+
+.ajd-reasoning-details summary {
+  min-height: 42px;
+  padding: 0 16px;
+  font-size: 12.5px;
+}
+
+.ajd-reasoning-details .ajd-expl-text {
+  padding: 0 16px 14px;
+}
+
+.ajd-job {
+  max-height: none;
+  overflow: visible;
+}
+
+/* Screenshot hierarchy pass: keep card styling, change layout order only */
+.application-details-page {
+  padding: 18px 28px 32px;
+}
+
+.ajd-wrap {
+  width: min(100%, 1540px);
+}
+
+.ajd-card {
+  grid-template-columns: minmax(0, 1fr) 220px;
+  grid-template-areas:
+    "head note"
+    "resume resume"
+    "score score"
+    "verdict verdict"
+    "insights insights"
+    "reasoning reasoning"
+    "skills skills"
+    "job job";
+  gap: 14px;
+  align-items: start;
+}
+
+.ajd-head {
+  align-self: center;
+}
+
+.ajd-title {
+  max-width: none;
+  font-size: clamp(22px, 2.1vw, 30px);
+}
+
+.ajd-note {
+  justify-self: end;
+  width: 220px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.ajd-note::before {
+  content: "Application Status";
+  margin: 0 0 6px;
+  color: #172443;
+  font-size: 12px;
+  font-weight: 780;
+  letter-spacing: 0.02em;
+  text-align: left;
+}
+
+.ajd-note-text {
+  display: none;
+}
+
+.ajd-note .ds-status-badge {
+  width: 100%;
+  min-height: 34px;
+  margin: 0;
   justify-content: center;
-  width: 20px;
-  height: 20px;
-  background: #1976d2;
-  color: white;
-  border-radius: 50%;
-  font-size: 10px;
-  font-weight: 600;
+  padding: 0 12px;
+  border-radius: 8px;
+  font-size: 12px;
 }
 
-.social-link.linkedin .social-icon {
-  background: #0077b5;
+.ajd-resume {
+  min-height: 74px;
+  padding: 14px 18px;
 }
 
-.social-link.github .social-icon {
-  background: #333;
+.ajd-resume .ajd-expl-title {
+  margin-bottom: 8px;
 }
 
-.social-link.linkedin:hover .social-icon {
-  background: #005a87;
+.ajd-resume-row {
+  grid-template-columns: 1fr;
+  align-items: center;
+  justify-items: center;
+  min-height: 34px;
 }
 
-.social-link.github:hover .social-icon {
-  background: #1a1a1a;
+.ajd-resume-hint {
+  color: #2563eb;
+  font-weight: 780;
+}
+
+.ajd-score-ring-wrap {
+  min-height: 150px;
+  border-color: #aee6c6;
+}
+
+.ajd-score-ring-wrap {
+  display: grid;
+  grid-template-columns: 190px 1fr 390px;
+  grid-template-areas:
+    "ring label rec"
+    "ring value rec";
+  align-items: center;
+  justify-items: start;
+  padding: 18px 26px;
+}
+
+.ajd-score-ring-wrap::before {
+  grid-area: label;
+  content: "Match Score";
+  margin: 0 0 2px;
+  align-self: end;
+}
+
+.ajd-score-ring-wrap .ds-score-ring {
+  grid-area: ring;
+}
+
+.ajd-score-sub {
+  grid-area: score;
+  align-self: center;
+  justify-self: start;
+  margin: 58px 0 0 218px;
+  color: #50617d;
+  font-size: 15px;
+  z-index: 2;
+}
+
+.ajd-recommendation-row {
+  grid-area: score;
+  align-self: center;
+  justify-self: end;
+  width: min(390px, 44%);
+  min-height: 0;
+  margin-right: 22px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  align-content: center;
+  padding: 0;
+  z-index: 2;
+}
+
+.ajd-recommendation-row::before {
+  margin-bottom: 8px;
+}
+
+.ajd-recommendation-pill {
+  width: 100%;
+  min-width: 0;
+  min-height: 72px;
+  padding: 0 22px;
+}
+
+.ajd-score-ring-wrap .ds-score-ring {
+  width: 130px !important;
+  height: 130px !important;
+}
+
+.ajd-score-ring-wrap .ds-score-ring svg {
+  width: 130px;
+  height: 130px;
+}
+
+.ajd-score-ring-wrap .ds-score-ring__value {
+  font-size: 30px !important;
+}
+
+.ajd-verdict-card {
+  min-height: 82px;
+  padding: 16px 18px;
+}
+
+.ajd-insight-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.ajd-insight-grid > .ajd-insight-box {
+  min-height: 120px;
+  padding: 16px 18px;
+}
+
+.ajd-pill-list .ds-skill-pill {
+  min-height: 28px;
+}
+
+.ajd-reasoning-card {
+  min-height: 46px;
+}
+
+.ajd-insights > .ajd-insight-box:not(.ajd-reasoning-card) {
+  padding: 16px 18px;
+}
+
+.ajd-job {
+  max-height: none;
+  overflow: visible;
+  padding: 16px 18px;
+}
+
+.ajd-job-description {
+  display: grid;
+  gap: 8px;
+  white-space: normal;
+}
+
+.ajd-job-description p {
+  margin: 0;
+}
+
+.ajd-job-description ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.ajd-job-description li {
+  margin: 0;
+  padding-left: 2px;
+}
+
+@media (max-width: 900px) {
+  .ajd-card {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "head"
+      "note"
+      "resume"
+      "score"
+      "recommendation"
+      "verdict"
+      "insights"
+      "reasoning"
+      "skills"
+      "job";
+  }
+
+  .ajd-note {
+    justify-self: stretch;
+    width: 100%;
+  }
+
+  .ajd-score-ring-wrap {
+    grid-template-columns: 120px 1fr;
+  }
+
+  .ajd-score-sub {
+    margin-left: 142px;
+  }
+
+  .ajd-recommendation-row {
+    position: static;
+    width: auto;
+    margin: 0;
+  }
 }

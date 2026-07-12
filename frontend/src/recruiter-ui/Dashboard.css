@@ -259,3 +259,47 @@
   }
 }
 
+/* UI consistency audit pass */
+.summary-cards {
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.summary-card,
+.dashboard-card {
+  padding: 18px;
+}
+
+.dashboard-main-grid {
+  gap: 16px;
+}
+
+.card-header {
+  margin-bottom: 14px;
+}
+
+.summary-value {
+  font-size: 26px;
+  font-weight: 650;
+}
+
+.summary-label,
+.summary-change,
+.recent-candidate-role,
+.match-label {
+  font-weight: 400;
+}
+
+.recent-candidates-list {
+  gap: 12px;
+}
+
+.recent-candidate-item {
+  padding: 10px;
+}
+
+.recent-candidate-avatar {
+  width: 40px;
+  height: 40px;
+}
+

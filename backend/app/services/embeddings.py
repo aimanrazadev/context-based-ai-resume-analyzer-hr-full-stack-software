@@ -12,6 +12,7 @@ This module is responsible for:
 import hashlib
 import json
 import logging
+import os
 import re
 from typing import Any
 
@@ -25,6 +26,7 @@ logger = logging.getLogger(__name__)
 
 _WS_RE = re.compile(r"\s+")
 _EMBEDDER = None
+_EMBEDDER_FAILED = False
 _MAX_EMBED_TEXT_CHARS = 12000
 
 
@@ -62,18 +64,29 @@ def _get_embedder():
     Uses `sentence-transformers` as the primary local transformer embedding
     stack and keeps the same external interface for the rest of the backend.
     """
-    global _EMBEDDER
+    global _EMBEDDER, _EMBEDDER_FAILED
     if _EMBEDDER is not None:
         return _EMBEDDER
+    if _EMBEDDER_FAILED:
+        raise RuntimeError("Local embedding model is unavailable.")
     if EMBEDDINGS_PROVIDER != "local":
         raise RuntimeError("Only local embeddings are supported in this build.")
+    for key in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy"):
+        os.environ.pop(key, None)
     try:
         from sentence_transformers import SentenceTransformer  # type: ignore
     except Exception as e:
+        _EMBEDDER_FAILED = True
         raise RuntimeError(
             "sentence-transformers is not installed. Install backend requirements."
         ) from e
-    _EMBEDDER = SentenceTransformer(EMBEDDINGS_MODEL)
+    try:
+        _EMBEDDER = SentenceTransformer(EMBEDDINGS_MODEL, local_files_only=True)
+    except TypeError:
+        _EMBEDDER = SentenceTransformer(EMBEDDINGS_MODEL)
+    except Exception as e:
+        _EMBEDDER_FAILED = True
+        raise RuntimeError("Local embedding model is unavailable. Semantic score will fall back to 0.") from e
     return _EMBEDDER
 
 

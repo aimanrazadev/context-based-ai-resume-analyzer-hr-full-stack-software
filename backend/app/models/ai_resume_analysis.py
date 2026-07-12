@@ -13,6 +13,8 @@ class AIResumeAnalysis(Base):
     candidate_summary = Column(Text, nullable=False)
     strengths_json = Column(Text, nullable=False)
     weaknesses_json = Column(Text, nullable=False)
+    strength_reasoning = Column(Text, nullable=True)
+    weakness_reasoning = Column(Text, nullable=True)
     matched_skills_json = Column(Text, nullable=False)
     missing_skills_json = Column(Text, nullable=False)
     recommendation = Column(String(32), nullable=False)

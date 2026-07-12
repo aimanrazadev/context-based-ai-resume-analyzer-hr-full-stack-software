@@ -90,20 +90,6 @@ $env:VITE_API_BASE_URL="http://127.0.0.1:8002"
 npm run dev -- --host 127.0.0.1 --port 5190 --strictPort
 ```
 
-Start backend and frontend together from the repo root:
-
-PowerShell:
-
-```powershell
-.\scripts\dev.ps1
-```
-
-Command Prompt:
-
-```bat
-scripts\dev.bat
-```
-
 ## GitHub Actions
 
 This repo now includes a basic CI workflow in `.github/workflows/ci.yml`.

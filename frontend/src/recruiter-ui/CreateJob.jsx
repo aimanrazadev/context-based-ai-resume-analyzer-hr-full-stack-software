@@ -1,22 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
 import "./CreateJob.css";
 import { jobAPI } from "../utils/api";
-import { TECH_SKILLS, ALL_SKILLS } from "../utils/skillsList";
+import { ALL_SKILLS } from "../utils/skillsList";
 
-const COMMON_SKILLS = [
-  "Communication",
-  "Teamwork",
-  "Problem Solving",
-  "Critical Thinking",
-  "Time Management",
-  "Leadership",
-  "Adaptability",
-  "Collaboration",
-  "Presentation",
-  "Stakeholder Management",
-  "Project Management",
-  "Analytical Thinking"
-];
+const NON_MATCHING_SKILL_KEYS = new Set([
+  "communication",
+  "teamwork",
+  "problem solving",
+  "critical thinking",
+  "time management",
+  "leadership",
+  "adaptability",
+  "collaboration",
+  "presentation",
+  "stakeholder management",
+  "project management",
+  "analytical thinking"
+]);
 
 const DEFAULT_FORM_DATA = {
   opportunityType: "job",
@@ -32,9 +32,9 @@ const DEFAULT_FORM_DATA = {
   jobDescription: "",
   requiredSkills: [],
   nonNegotiables: [
-    "Understanding of technology combined with customer-first & business-first thinking.",
-    "Comfort working hands-on in a fast-paced start-up environment.",
-    "Curiosity about metrics, execution processes, and macro trends."
+    "Candidate should communicate clearly with team members and stakeholders.",
+    "Candidate should collaborate well in a team environment.",
+    "Candidate should solve problems independently and think critically."
   ]
 };
 
@@ -57,6 +57,12 @@ const uniqueSkills = (skills) => {
   });
 };
 
+const SYSTEM_REQUIRED_SKILLS = uniqueSkills(ALL_SKILLS).filter(
+  (skill) => !NON_MATCHING_SKILL_KEYS.has(skillKey(skill))
+);
+
+const skillLookup = new Map(SYSTEM_REQUIRED_SKILLS.map((skill) => [skillKey(skill), skill]));
+
 export default function CreateJob({ onClose, onCreated, draftJobId = null, initialDraft = null }) {
   const isEditingDraft = useMemo(() => Boolean(draftJobId), [draftJobId]);
   const [isPublishing, setIsPublishing] = useState(false);
@@ -66,6 +72,7 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
   const [formData, setFormData] = useState(DEFAULT_FORM_DATA);
   const [skillsDropdown, setSkillsDropdown] = useState(false);
   const [skillSearch, setSkillSearch] = useState("");
+  const [skillWarning, setSkillWarning] = useState("");
 
   // Helper function to convert datetime-local to ISO string
   const toISOString = (dateTimeLocal) => {
@@ -98,7 +105,7 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
   const filteredSkills = useMemo(() => {
     if (!skillSearch.trim()) return [];
     const query = skillSearch.toLowerCase();
-    return uniqueSkills(ALL_SKILLS)
+    return SYSTEM_REQUIRED_SKILLS
       .filter((s) => !selectedSkillKeys.has(skillKey(s)) && s.toLowerCase().includes(query))
       .slice(0, 15);
   }, [skillSearch, selectedSkillKeys]);
@@ -107,14 +114,22 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
     return selectedSkillKeys.has(skillKey(skill));
   };
 
-  const handleAddSkill = (skill, { keepInputOpen = true } = {}) => {
+  const handleAddSkill = (skill, { keepInputOpen = true, showWarning = true } = {}) => {
     const normalized = normalizeSkill(skill);
     if (!normalized) return;
+    const systemSkill = skillLookup.get(skillKey(normalized));
+    if (!systemSkill) {
+      if (showWarning) setSkillWarning("Some skills are not recognised.");
+      setSkillSearch("");
+      setSkillsDropdown(keepInputOpen);
+      return;
+    }
 
-    if (!hasSkill(normalized)) {
+    setSkillWarning("");
+    if (!hasSkill(systemSkill)) {
       setFormData((prev) => ({
         ...prev,
-        requiredSkills: [...prev.requiredSkills, normalized]
+        requiredSkills: [...prev.requiredSkills, systemSkill]
       }));
     }
     setSkillSearch("");
@@ -128,44 +143,33 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
     }));
   };
 
-  const commonSkills = useMemo(
-    () => uniqueSkills(COMMON_SKILLS).filter((s) => !selectedSkillKeys.has(skillKey(s))),
-    [selectedSkillKeys]
-  );
-
-  const jdSuggestedSkills = useMemo(() => {
-    const sourceText = [
-      formData.jobTitle,
-      formData.shortDescription,
-      formData.jobDescription,
-      ...(formData.nonNegotiables || [])
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
-
-    if (!sourceText.trim()) return [];
-
-    const compactSource = sourceText.replace(/[^a-z0-9+#.]+/g, " ");
-    return uniqueSkills(ALL_SKILLS).filter((skill) => {
-      if (selectedSkillKeys.has(skillKey(skill))) return false;
-      const normalizedSkill = skill
-        .toLowerCase()
-        .replace(/\([^)]*\)/g, "")
-        .replace(/\s+/g, " ")
-        .trim();
-      if (!normalizedSkill) return false;
-      const escaped = normalizedSkill.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      return new RegExp(`(^|[^a-z0-9+#.])${escaped}([^a-z0-9+#.]|$)`, "i").test(compactSource);
-    }).slice(0, 12);
-  }, [formData.jobTitle, formData.shortDescription, formData.jobDescription, formData.nonNegotiables, selectedSkillKeys]);
-
   const addSkillsFromText = (value) => {
     const pieces = String(value || "")
       .split(/[,;\n\t]+/)
       .map(normalizeSkill)
       .filter(Boolean);
-    pieces.forEach((skill) => handleAddSkill(skill));
+    let added = 0;
+    let rejected = 0;
+    setFormData((prev) => {
+      const selected = new Set(prev.requiredSkills.map(skillKey));
+      const nextSkills = [...prev.requiredSkills];
+      pieces.forEach((skill) => {
+        const systemSkill = skillLookup.get(skillKey(skill));
+        if (!systemSkill) {
+          rejected += 1;
+          return;
+        }
+        const key = skillKey(systemSkill);
+        if (selected.has(key)) return;
+        selected.add(key);
+        nextSkills.push(systemSkill);
+        added += 1;
+      });
+      return { ...prev, requiredSkills: nextSkills };
+    });
+    setSkillWarning(rejected > 0 ? "Some skills are not recognised." : "");
+    if (added > 0 || rejected > 0) setSkillSearch("");
+    setSkillsDropdown(true);
   };
 
   const handleSkillKeyDown = (e) => {
@@ -299,7 +303,8 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
           salaryRange: "",
           location: "",
           jobDescription: "",
-          nonNegotiables: []
+          requiredSkills: [],
+          nonNegotiables: DEFAULT_FORM_DATA.nonNegotiables
         });
       }
     } catch (err) {
@@ -337,6 +342,7 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
         jobSite: formData.jobSite || null,
         apply_by: toISOString(formData.applyBy),
         required_skills: formData.requiredSkills || [],
+        nonNegotiables: formData.nonNegotiables.filter(req => req.trim() !== ""),
         status: "draft",
         draft_data: { formData },
         draft_step: 1
@@ -581,6 +587,7 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
             >
               <span>+</span> Add a new Non-Negotiable
             </button>
+
           </div>
 
           <div className="form-group">
@@ -611,16 +618,7 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
                   {skillsDropdown && skillSearch.trim() && (
                     <div className="skills-dropdown">
                       {filteredSkills.length === 0 ? (
-                        <button
-                          type="button"
-                          className="dropdown-item create-skill"
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            handleAddSkill(skillSearch);
-                          }}
-                        >
-                          Add "{skillSearch.trim()}"
-                        </button>
+                        <div className="dropdown-item disabled">No recognised system skill</div>
                       ) : (
                         filteredSkills.map((skill) => (
                           <button
@@ -660,46 +658,10 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
               )}
 
               <div className="skills-help-text">
-                Add quickly like LinkedIn: type, press Enter/comma, paste a list, or click suggestions below.
+                These skills directly control resume matching and the green/red skill snapshot. Add only real must-check technical skills; keep soft skills in non-negotiables.
               </div>
 
-              {jdSuggestedSkills.length > 0 && (
-                <div className="skills-suggested">
-                  <div className="skills-suggested-title">Suggested from job description</div>
-                  <div className="skills-suggested-list">
-                    {jdSuggestedSkills.map((skill) => (
-                      <button
-                        key={`jd-${skill}`}
-                        type="button"
-                        className="skill-suggestion-btn detected"
-                        onClick={() => handleAddSkill(skill)}
-                      >
-                        {skill} <span>+</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="skills-suggested">
-                <div className="skills-suggested-title">Common skills</div>
-                <div className="skills-suggested-list">
-                  {commonSkills.length === 0 ? (
-                    <span className="skills-suggested-empty">All common skills added</span>
-                  ) : (
-                    commonSkills.map((skill) => (
-                      <button
-                        key={`common-${skill}`}
-                        type="button"
-                        className="skill-suggestion-btn common"
-                        onClick={() => handleAddSkill(skill)}
-                      >
-                        {skill} <span>+</span>
-                      </button>
-                    ))
-                  )}
-                </div>
-              </div>
+              {skillWarning && <div className="skills-warning">{skillWarning}</div>}
 
             </div>
           </div>
@@ -707,13 +669,7 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
 
         {/* Error Message */}
         {error && (
-          <div style={{ 
-            padding: "12px", 
-            background: "#f8d7da", 
-            color: "#721c24", 
-            borderRadius: "8px", 
-            marginBottom: "16px" 
-          }}>
+          <div className="form-error-message">
             {error}
           </div>
         )}

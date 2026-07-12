@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 import json
 from pathlib import Path
 import re
+import shutil
 from uuid import uuid4
 import logging
 
@@ -24,7 +25,18 @@ from ..services.resume_service import extract_and_clean_resume_text
 from ..services.parsing_service import parse_resume_text
 from ..services.ai_resume_structuring import ai_structure_resume
 from ..services.ai_service import analyze_resume_for_job
-from ..services.application_service import ai_analysis_payload, delete_ai_resume_analysis, upsert_ai_resume_analysis
+from ..services.application_service import (
+    ai_analysis_payload,
+    analysis_conflicts_with_skill_snapshot,
+    apply_skill_snapshot_to_score,
+    classify_required_skills_from_text,
+    classify_required_skills_from_resume,
+    delete_ai_resume_analysis,
+    deterministic_insights_from_resume,
+    factual_candidate_summary_from_resume,
+    is_evaluative_candidate_summary,
+    upsert_ai_resume_analysis,
+)
 from ..services.job_service import normalize_required_skills
 from ..services.embedding_service import cosine_similarity, embed_text, get_or_create_embedding, resume_job_similarity
 from ..services.scoring_service import score_application
@@ -174,6 +186,10 @@ class JobUpdate(BaseModel):
 
 class ApplicationStatusUpdate(BaseModel):
     status: str = Field(..., min_length=1, max_length=50)
+
+
+class ApplyFromScanRequest(BaseModel):
+    task_id: str = Field(..., min_length=8, max_length=120)
 
 
 ALLOWED_APPLICATION_STATUSES = {"submitted", "shortlisted", "rejected", "on-hold", "accepted"}
@@ -851,13 +867,17 @@ async def _analyze_and_persist_application(
         resume_ai_structured_json=getattr(resume, "ai_structured_json", None),
         semantic_score=float(semantic_score),
     )
+    live_snapshot = classify_required_skills_from_resume(resume, required_skills)
+    live_matched = live_snapshot.get("matched_skills") or preliminary.get("matched_skills") or []
+    live_missing = live_snapshot.get("missing_skills") or preliminary.get("missing_skills") or []
     ai_analysis, ai_analysis_meta = await analyze_resume_for_job(
         structured_resume=structured,
+        resume_text=extracted,
         job_title=job.job_title or "",
         job_description=job.job_description or "",
         required_skills=required_skills,
-        matched_skills=preliminary.get("matched_skills") or [],
-        missing_skills=preliminary.get("missing_skills") or [],
+        matched_skills=live_matched,
+        missing_skills=live_missing,
     )
     explanation = str(ai_analysis.get("reasoning") or ai_analysis.get("candidate_summary") or explanation)
 
@@ -870,6 +890,15 @@ async def _analyze_and_persist_application(
         semantic_score=float(semantic_score),
         ai_recommendation=str(ai_analysis.get("recommendation") or "Review Manually"),
     )
+    skills_score, final_score, breakdown = apply_skill_snapshot_to_score(
+        breakdown=breakdown,
+        semantic_score=float(semantic_score),
+        ai_recommendation=str(ai_analysis.get("recommendation") or "Review Manually"),
+        matched_skills=live_matched,
+        missing_skills=live_missing,
+    )
+    ai_analysis["matched_skills"] = live_matched
+    ai_analysis["missing_skills"] = live_missing
 
     prog(93, "Saving results…")
     application = (
@@ -977,6 +1006,8 @@ async def _run_scan_task(
     candidate_id: int,
     dest_path: str,
     original_filename: str,
+    content_type: str | None,
+    size_bytes: int,
 ) -> None:
     """
     Scan-only: analyze resume vs job (AI + deterministic) without creating an Application.
@@ -1016,13 +1047,20 @@ async def _run_scan_task(
             resume_ai_structured_json=None,
             semantic_score=float(semantic_score),
         )
+        live_snapshot = classify_required_skills_from_text(
+            text=f"{extracted}\n{json.dumps(structured, ensure_ascii=False)}",
+            required_skills=required_skills,
+        )
+        live_matched = live_snapshot.get("matched_skills") or preliminary.get("matched_skills") or []
+        live_missing = live_snapshot.get("missing_skills") or preliminary.get("missing_skills") or []
         ai_analysis, ai_meta = await analyze_resume_for_job(
             structured_resume=structured,
+            resume_text=extracted,
             job_title=job.job_title or "",
             job_description=job.job_description or "",
             required_skills=required_skills,
-            matched_skills=preliminary.get("matched_skills") or [],
-            missing_skills=preliminary.get("missing_skills") or [],
+            matched_skills=live_matched,
+            missing_skills=live_missing,
         )
         skills_score, final_score, breakdown = score_application(
             job_title=job.job_title,
@@ -1033,8 +1071,20 @@ async def _run_scan_task(
             semantic_score=float(semantic_score),
             ai_recommendation=str(ai_analysis.get("recommendation") or "Review Manually"),
         )
+        skills_score, final_score, breakdown = apply_skill_snapshot_to_score(
+            breakdown=breakdown,
+            semantic_score=float(semantic_score),
+            ai_recommendation=str(ai_analysis.get("recommendation") or "Review Manually"),
+            matched_skills=live_matched,
+            missing_skills=live_missing,
+        )
+        ai_analysis["matched_skills"] = live_matched
+        ai_analysis["missing_skills"] = live_missing
         explanation = str(ai_analysis.get("reasoning") or ai_analysis.get("candidate_summary") or "")
-        ai_error = None if ai_meta.get("status") == "success" else {"type": "ai_unavailable", "message": ai_meta.get("error_message")}
+        ai_error = None if ai_meta.get("status") == "success" else {
+            "type": "ai_unavailable",
+            "message": ai_meta.get("error_message") or "AI explanation could not be generated. The match score is still available.",
+        }
 
         result = {
             "job_id": int(job.id),
@@ -1045,6 +1095,15 @@ async def _run_scan_task(
             "skills_score": float(skills_score or 0.0),
             "final_score": int(final_score or 0),
             "score_breakdown": breakdown,
+            "_internal": {
+                "scan_file_path": str(dest_path),
+                "original_filename": original_filename,
+                "content_type": content_type,
+                "size_bytes": int(size_bytes or 0),
+                "extraction": extraction,
+                "structured": structured,
+                "ai_meta": ai_meta,
+            },
         }
 
         complete_task(task_id=task_id, result=result)
@@ -1052,13 +1111,6 @@ async def _run_scan_task(
         fail_task(task_id=task_id, error_message=str(e))
     finally:
         db.close()
-        # Best-effort: delete scan file
-        try:
-            p = Path(str(dest_path))
-            if p.exists():
-                p.unlink()
-        except Exception:
-            pass
 
 
 @router.post("/{job_id:int}/apply")
@@ -1223,13 +1275,17 @@ async def _analyze_and_update_existing_application(
         resume_ai_structured_json=getattr(resume, "ai_structured_json", None),
         semantic_score=float(semantic_score),
     )
+    live_snapshot = classify_required_skills_from_resume(resume, required_skills)
+    live_matched = live_snapshot.get("matched_skills") or preliminary.get("matched_skills") or []
+    live_missing = live_snapshot.get("missing_skills") or preliminary.get("missing_skills") or []
     ai_analysis, ai_analysis_meta = await analyze_resume_for_job(
         structured_resume=structured,
+        resume_text=extracted,
         job_title=job.job_title or "",
         job_description=job.job_description or "",
         required_skills=required_skills,
-        matched_skills=preliminary.get("matched_skills") or [],
-        missing_skills=preliminary.get("missing_skills") or [],
+        matched_skills=live_matched,
+        missing_skills=live_missing,
     )
     explanation = str(ai_analysis.get("reasoning") or ai_analysis.get("candidate_summary") or explanation)
 
@@ -1242,6 +1298,15 @@ async def _analyze_and_update_existing_application(
         semantic_score=float(semantic_score),
         ai_recommendation=str(ai_analysis.get("recommendation") or "Review Manually"),
     )
+    skills_score, final_score, breakdown = apply_skill_snapshot_to_score(
+        breakdown=breakdown,
+        semantic_score=float(semantic_score),
+        ai_recommendation=str(ai_analysis.get("recommendation") or "Review Manually"),
+        matched_skills=live_matched,
+        missing_skills=live_missing,
+    )
+    ai_analysis["matched_skills"] = live_matched
+    ai_analysis["missing_skills"] = live_missing
     a.ai_explanation = explanation
     a.status = _safe_application_status(db, "submitted")
     a.semantic_score = round(float(semantic_score or 0.0) * 100.0, 2)
@@ -1593,9 +1658,167 @@ async def scan_resume_async(
         candidate_id=int(candidate.id),
         dest_path=dest.as_posix(),
         original_filename=original_filename,
+        content_type=file.content_type,
+        size_bytes=int(size),
     )
 
     return {"success": True, "task_id": task_id}
+
+
+@router.post("/{job_id:int}/apply_from_scan")
+async def apply_from_scan(
+    job_id: int,
+    payload: ApplyFromScanRequest,
+    db: Session = Depends(get_db),
+    user=Depends(candidate_only),
+):
+    """
+    Save the exact completed scan result as the candidate's application.
+    This keeps scan, score, AI insights, and application details in one flow.
+    """
+    job = db.query(Job).filter(Job.id == int(job_id)).first()
+    if not job or (job.status or "active") != "active":
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    candidate = _find_or_create_candidate(db, user_id=int(user.get("sub")))
+    existing = _find_candidate_job_application(db, candidate_id=int(candidate.id), job_id=int(job_id))
+    if existing:
+        return _already_applied_response(existing)
+
+    task = get_task(task_id=payload.task_id)
+    if (
+        not task
+        or int(task.get("user_id") or 0) != int(user.get("sub"))
+        or int(task.get("job_id") or 0) != int(job_id)
+        or task.get("status") != "done"
+    ):
+        raise HTTPException(status_code=404, detail="Completed scan not found. Please scan your resume again.")
+
+    result = task.get("result") if isinstance(task.get("result"), dict) else {}
+    internal = result.get("_internal") if isinstance(result.get("_internal"), dict) else {}
+    scan_file = Path(str(internal.get("scan_file_path") or ""))
+    if not scan_file.exists():
+        raise HTTPException(status_code=410, detail="Scanned resume expired. Please scan your resume again.")
+
+    original_filename = Path(str(internal.get("original_filename") or scan_file.name)).name
+    ext = Path(original_filename).suffix.lower() or scan_file.suffix.lower()
+    if ext not in ALLOWED_RESUME_EXTENSIONS:
+        raise HTTPException(status_code=400, detail="Only PDF or DOCX files are allowed")
+
+    stored_filename = f"{uuid4().hex}{ext}"
+    base_dir = Path(UPLOAD_DIR) / "applications" / str(job_id) / str(candidate.id)
+    base_dir.mkdir(parents=True, exist_ok=True)
+    dest = base_dir / stored_filename
+    rel_path = Path("applications") / str(job_id) / str(candidate.id) / stored_filename
+
+    try:
+        shutil.copy2(scan_file, dest)
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to save scanned resume") from None
+
+    extraction = internal.get("extraction") if isinstance(internal.get("extraction"), dict) else {}
+    structured = internal.get("structured") if isinstance(internal.get("structured"), dict) else {}
+    ai_meta = internal.get("ai_meta") if isinstance(internal.get("ai_meta"), dict) else {}
+    ai_analysis = result.get("ai_analysis") if isinstance(result.get("ai_analysis"), dict) else {}
+    breakdown = result.get("score_breakdown") if isinstance(result.get("score_breakdown"), dict) else {}
+
+    try:
+        resume = Resume(
+            candidate_id=candidate.id,
+            file_path=rel_path.as_posix(),
+            stored_filename=stored_filename,
+            original_filename=original_filename,
+            content_type=internal.get("content_type"),
+            size_bytes=int(internal.get("size_bytes") or 0),
+            raw_extracted_text=extraction.get("raw_text") or "",
+            extracted_text=extraction.get("clean_text") or "",
+            extraction_status=str(extraction.get("extraction_status") or "success"),
+            extraction_metadata_json=json.dumps(_extraction_metadata(extraction), ensure_ascii=False),
+            structured_json=json.dumps(structured, ensure_ascii=False),
+            structured_version=int(structured.get("version") or 1),
+            ai_structured_json=None,
+            ai_structured_version=1,
+            ai_model=str(ai_meta.get("model") or "") or None,
+            ai_generated_at=datetime.now(timezone.utc) if ai_analysis else None,
+            ai_warnings=json.dumps(ai_meta.get("warnings", []), ensure_ascii=False)
+            if isinstance(ai_meta.get("warnings"), list)
+            else None,
+        )
+        db.add(resume)
+        db.flush()
+
+        application = Application(job_id=job.id, candidate_id=candidate.id)
+        application.resume_id = int(resume.id)
+        application.ai_explanation = str(result.get("ai_explanation") or ai_analysis.get("reasoning") or "")
+        application.status = _safe_application_status(db, "submitted")
+        application.semantic_score = float(result.get("semantic_score") or 0.0)
+        application.skills_score = float(result.get("skills_score") or 0.0)
+        application.experience_score = float(breakdown.get("experience_score") or 0.0)
+        application.ai_score = float(breakdown.get("ai_score") or 0.0)
+        application.final_score = int(result.get("final_score") or 0)
+        application.matched_skills_json = json.dumps(ai_analysis.get("matched_skills") or breakdown.get("matched_skills") or [], ensure_ascii=False)
+        application.missing_skills_json = json.dumps(ai_analysis.get("missing_skills") or breakdown.get("missing_skills") or [], ensure_ascii=False)
+        application.ranking_explanation = application.ai_explanation
+        application.score_breakdown_json = json.dumps(breakdown, ensure_ascii=False)
+        application.score_updated_at = datetime.now(timezone.utc)
+        db.add(application)
+        db.flush()
+
+        upsert_ai_resume_analysis(
+            db,
+            application_id=int(application.id),
+            analysis=ai_analysis,
+            metadata=ai_meta or {"status": "success"},
+        )
+        db.commit()
+        db.refresh(application)
+    except IntegrityError:
+        db.rollback()
+        try:
+            if dest.exists():
+                dest.unlink()
+        except Exception:
+            pass
+        existing = _find_candidate_job_application(db, candidate_id=int(candidate.id), job_id=int(job_id))
+        if existing:
+            return _already_applied_response(existing)
+        raise HTTPException(status_code=409, detail="Application already exists") from None
+    except Exception:
+        db.rollback()
+        try:
+            if dest.exists():
+                dest.unlink()
+        except Exception:
+            pass
+        raise
+
+    try:
+        scan_file.unlink()
+    except Exception:
+        pass
+
+    return {
+        "success": True,
+        "already_applied": False,
+        "created": True,
+        "application": {
+            "id": int(application.id),
+            "job_id": int(application.job_id),
+            "candidate_id": int(application.candidate_id),
+            "resume_id": int(application.resume_id),
+            "ai_explanation": application.ai_explanation,
+            "ai_analysis": ai_analysis,
+            "semantic_score": float(application.semantic_score or 0.0),
+            "skills_score": float(application.skills_score or 0.0),
+            "final_score": int(application.final_score or 0),
+            "score_breakdown": breakdown,
+            "status": application.status,
+            "created_at": application.created_at.isoformat()
+            if isinstance(application.created_at, datetime)
+            else application.created_at,
+        },
+        "job": _job_to_public(job),
+    }
 
 
 @router.get("/applied")
@@ -1647,10 +1870,12 @@ def _application_details_payload(*, db: Session, a: Application, candidate: Cand
         breakdown = None
 
     resume_meta = None
+    resume_row = None
     try:
         if a.resume_id:
             r = db.query(Resume).filter(Resume.id == int(a.resume_id)).first()
             if r and ((candidate and r.candidate_id == candidate.id) or (not candidate)):
+                resume_row = r
                 resume_meta = {
                     "id": int(r.id),
                     "original_filename": r.original_filename,
@@ -1661,6 +1886,38 @@ def _application_details_payload(*, db: Session, a: Application, candidate: Cand
         resume_meta = None
 
     analysis = ai_analysis_payload(db, application_id=int(a.id))
+    if not isinstance(analysis, dict):
+        analysis = {}
+
+    required_skills = _job_required_skills_list(job) if job else []
+    live_skill_snapshot = classify_required_skills_from_resume(resume_row, required_skills)
+    live_matched = live_skill_snapshot.get("matched_skills") or []
+    live_missing = live_skill_snapshot.get("missing_skills") or []
+    deterministic = deterministic_insights_from_resume(
+        resume_row,
+        matched_skills=live_matched,
+        missing_skills=live_missing,
+    )
+
+    if is_evaluative_candidate_summary(analysis.get("candidate_summary")) or not str(analysis.get("candidate_summary") or "").strip():
+        analysis["candidate_summary"] = deterministic.get("candidate_summary") or factual_candidate_summary_from_resume(resume_row)
+    if not (isinstance(analysis.get("strengths"), list) and analysis.get("strengths")):
+        analysis["strengths"] = deterministic.get("strengths") or []
+    weakness_conflict = analysis_conflicts_with_skill_snapshot(analysis, live_matched)
+    if weakness_conflict or not (isinstance(analysis.get("weaknesses"), list) and analysis.get("weaknesses")):
+        analysis["weaknesses"] = deterministic.get("weaknesses") or []
+    if not str(analysis.get("strength_reasoning") or "").strip():
+        analysis["strength_reasoning"] = deterministic.get("strength_reasoning") or ""
+    if weakness_conflict or not str(analysis.get("weakness_reasoning") or "").strip():
+        analysis["weakness_reasoning"] = deterministic.get("weakness_reasoning") or ""
+    if not str(analysis.get("reasoning") or "").strip():
+        analysis["reasoning"] = deterministic.get("reasoning") or ""
+    analysis["matched_skills"] = live_matched
+    analysis["missing_skills"] = live_missing
+    analysis["recommendation"] = analysis.get("recommendation") or "Review Manually"
+    if isinstance(breakdown, dict):
+        breakdown["matched_skills"] = live_matched
+        breakdown["missing_skills"] = live_missing
 
     return {
         "id": a.id,
@@ -1938,7 +2195,11 @@ def ranked_candidates(
             notes = []
 
         ai_analysis = row.get("ai_analysis") if isinstance(row.get("ai_analysis"), dict) else {}
-        recruiter_summary = str(ai_analysis.get("candidate_summary") or row.get("ai_explanation") or "").strip()
+        candidate_summary = str(ai_analysis.get("candidate_summary") or "").strip()
+        if is_evaluative_candidate_summary(candidate_summary):
+            application = db.query(Application).filter(Application.id == int(row.get("application_id"))).first()
+            resume = db.query(Resume).filter(Resume.id == application.resume_id).first() if application and application.resume_id else None
+            candidate_summary = factual_candidate_summary_from_resume(resume) or ""
         recommendation = str(ai_analysis.get("recommendation") or "").strip()
 
         row["insights"] = {
@@ -1946,19 +2207,20 @@ def ranked_candidates(
             "missing_skills": missing,
             "evidence": evidence,
             "notes": notes,
-            "recruiter_summary": recruiter_summary,
+            "candidate_summary": candidate_summary,
+            "recruiter_summary": candidate_summary,
             "strengths": ai_analysis.get("strengths") if isinstance(ai_analysis.get("strengths"), list) else [],
             "weaknesses": ai_analysis.get("weaknesses") if isinstance(ai_analysis.get("weaknesses"), list) else [],
             "missing_skills_ai": ai_analysis.get("missing_skills") if isinstance(ai_analysis.get("missing_skills"), list) else [],
             "recommendation": recommendation,
-            "reasoning": ai_analysis.get("reasoning") or row.get("ai_explanation") or "",
+            "reasoning": ai_analysis.get("reasoning") or "",
         }
 
         ranking_reason_parts = []
         if matched:
             ranking_reason_parts.append(f"Matched {len(matched)} required skills.")
-        if recruiter_summary:
-            ranking_reason_parts.append(recruiter_summary)
+        if candidate_summary:
+            ranking_reason_parts.append(candidate_summary)
         elif evidence:
             ranking_reason_parts.append(str(evidence[0]))
         row["ranking_explanation"] = " ".join(part for part in ranking_reason_parts if part).strip()

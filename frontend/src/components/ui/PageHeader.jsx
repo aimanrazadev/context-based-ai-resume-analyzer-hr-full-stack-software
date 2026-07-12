@@ -1,1 +1,11 @@
-export default function PageHeader({ title, description, actions }) { return <header style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "start", marginBottom: 20 }}><div><h1 style={{ margin: 0 }}>{title}</h1>{description && <p style={{ color: "#64748b" }}>{description}</p>}</div>{actions}</header>; }
+export default function PageHeader({ title, subtitle, actions, className = "" }) {
+  return (
+    <header className={`ds-page-header ${className}`.trim()}>
+      <div>
+        <h1 className="ds-page-title">{title}</h1>
+        {subtitle && <p className="ds-page-subtitle">{subtitle}</p>}
+      </div>
+      {actions && <div>{actions}</div>}
+    </header>
+  );
+}

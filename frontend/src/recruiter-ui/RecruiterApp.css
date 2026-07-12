@@ -7,23 +7,24 @@
 
 /* Recruiter App Shell */
 .app-shell {
-  height: 100vh;
+  min-height: 100vh;
   background: transparent;
   border-radius: 0;
   display: flex;
   padding: 0;
   gap: 0;
   box-shadow: none;
-  overflow: visible;
+  overflow: hidden;
 }
 
 /* Recruiter Sidebar */
 .sidebar {
-  width: 240px;
+  min-height: 100vh;
+  width: 200px;
   background: radial-gradient(1200px 600px at -200px -200px, rgba(79, 70, 229, 0.18) 0%, rgba(79, 70, 229, 0) 55%),
     linear-gradient(180deg, #0b1020 0%, #070a14 100%);
   border-right: none;
-  padding: 24px 20px;
+  padding: 18px 16px;
   display: flex;
   flex-direction: column;
   box-shadow: 12px 0 28px rgba(16, 24, 40, 0.06);
@@ -33,14 +34,14 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 32px;
-  padding-bottom: 24px;
+  margin-bottom: 26px;
+  padding-bottom: 18px;
   border-bottom: none;
 }
 
 .logo-icon {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   background: #4f46e5;
   border-radius: 8px;
   display: flex;
@@ -48,12 +49,12 @@
   justify-content: center;
   color: #ffffff;
   font-weight: 700;
-  font-size: 16px;
+  font-size: 15px;
   flex-shrink: 0;
 }
 
 .logo-text {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.92);
   letter-spacing: -0.3px;
@@ -66,9 +67,9 @@
 }
 
 .nav-item {
-  padding: 11px 14px;
+  padding: 10px 12px;
   border-radius: 12px;
-  font-size: 14px;
+  font-size: 13.5px;
   color: rgba(255, 255, 255, 0.74);
   cursor: pointer;
   display: flex;
@@ -110,6 +111,7 @@
   background: transparent;
   display: flex;
   flex-direction: column;
+  min-height: 100vh;
   overflow: hidden;
 }
 
@@ -117,14 +119,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 24px 32px;
+  padding: 12px 20px;
   background: transparent;
   border-bottom: none;
   box-shadow: 0 12px 24px rgba(16, 24, 40, 0.04);
 }
 
 .page-title {
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 600;
   color: #212529;
   margin: 0;
@@ -166,8 +168,9 @@
 
 .content-grid {
   flex: 1;
-  padding: 24px 32px 32px;
+  padding: 16px 20px 20px;
   overflow: auto;
+  min-height: 0;
 }
 
 /* Topbar Create Job Button */
@@ -230,7 +233,7 @@
   background: rgba(255, 255, 255, 0.08);
   color: #ffffff;
   border-radius: 18px;
-  padding: 14px;
+  padding: 12px;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -245,8 +248,8 @@
 }
 
 .sidebar-profile-avatar {
-  width: 42px;
-  height: 42px;
+  width: 38px;
+  height: 38px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.16);
   color: #ffffff;

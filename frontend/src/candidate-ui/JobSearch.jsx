@@ -170,11 +170,11 @@ export default function JobSearch() {
       <div className="job-listings">
         <div className="jobs-list">
           {loading ? (
-            <div style={{ padding: 12, color: "#6c757d" }}>Loading jobs...</div>
+            <div className="job-search-state">Loading jobs...</div>
           ) : error ? (
-            <div style={{ padding: 12, color: "#b91c1c" }}>{error}</div>
+            <div className="job-search-state is-error">{error}</div>
           ) : filteredJobs.length === 0 ? (
-            <div style={{ padding: 12, color: "#6c757d" }}>
+            <div className="job-search-state">
               No jobs found matching your filters.
             </div>
           ) : (

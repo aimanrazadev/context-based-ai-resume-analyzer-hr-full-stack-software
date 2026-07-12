@@ -22,6 +22,22 @@ function getStoredRole() {
   }
 }
 
+function cleanScanError(message) {
+  const text = String(message || "").trim();
+  if (!text) return "Analysis failed. Please try again.";
+  const lower = text.toLowerCase();
+  if (
+    lower.includes("generativelanguage.googleapis.com") ||
+    lower.includes("access_token_type_unsupported") ||
+    lower.includes("unauthenticated") ||
+    lower.includes("gemini") ||
+    lower.includes('"error"')
+  ) {
+    return "AI explanation could not be generated. The match score is still available.";
+  }
+  return text;
+}
+
 export default function JobDetailModal({ jobId, onClose, onContinueDraft, onApplied }) {
   const navigate = useNavigate();
   const role = useMemo(() => getStoredRole(), []);
@@ -53,10 +69,11 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
   const [existingApplication, setExistingApplication] = useState(null);
   const [checkingApplication, setCheckingApplication] = useState(false);
   const [progress, setProgress] = useState({ active: false, percent: 0, message: "", taskId: null });
+  const [scanTaskId, setScanTaskId] = useState(null);
   const rafRef = useRef(null);
   const [displayPct, setDisplayPct] = useState(0);
   const alreadyApplied = Boolean(existingApplication?.id);
-  const canApplyAfterScan = Boolean(applyResult && cachedFileRef.current && !progress.active && !applying && !checkingApplication);
+  const canApplyAfterScan = Boolean(applyResult && scanTaskId && !progress.active && !applying && !checkingApplication);
 
   const jobTags = useMemo(() => {
     // Use required_skills from job data if available
@@ -65,6 +82,61 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
     }
     return [];
   }, [job?.required_skills]);
+
+  const detailCards = useMemo(() => {
+    if (!job) return [];
+    return [
+      {
+        label: "Location",
+        value: isEditing ? null : (job.location || "Not specified"),
+        icon: MapPin,
+        editor: (
+          <input
+            value={form.location}
+            onChange={(e) => setForm((p) => ({ ...p, location: e.target.value }))}
+            placeholder="Location"
+          />
+        ),
+      },
+      {
+        label: "Salary",
+        value: isEditing ? null : (job.salary_range || "Not specified"),
+        icon: DollarSign,
+        editor: (
+          <input
+            value={form.salary_range}
+            onChange={(e) => setForm((p) => ({ ...p, salary_range: e.target.value }))}
+            placeholder="Salary range"
+          />
+        ),
+      },
+      {
+        label: "Date & Time",
+        value: job.created_at ? new Date(job.created_at).toLocaleString() : "Not specified",
+        icon: Calendar,
+      },
+      {
+        label: "Opportunity Type",
+        value: job.opportunity_type || "Not specified",
+        icon: Briefcase,
+      },
+      {
+        label: "Job Type",
+        value: job.job_type || "Not specified",
+        icon: Briefcase,
+      },
+      {
+        label: "Job Site",
+        value: job.job_site || "Not specified",
+        icon: MapPin,
+      },
+      {
+        label: "Min Experience",
+        value: job.min_experience_years != null ? `${job.min_experience_years} years` : "Not specified",
+        icon: GraduationCap,
+      },
+    ];
+  }, [form.location, form.salary_range, isEditing, job]);
 
   const bullets = useMemo(() => {
     const raw = String(job?.description || "").trim();
@@ -98,6 +170,7 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
     setError("");
     setApplyError("");
     setApplyResult(null);
+    setScanTaskId(null);
     setExistingApplication(null);
     setCheckingApplication(false);
     setProgress({ active: false, percent: 0, message: "", taskId: null });
@@ -161,6 +234,7 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
         rafRef.current = null;
       }
       cachedFileRef.current = null;
+      setScanTaskId(null);
     };
   }, [jobId, isCandidate]);
 
@@ -206,6 +280,7 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
 
       if (status === "done") {
         setApplyResult(t.result || null);
+        setScanTaskId(taskId);
         setProgress({ active: false, percent: 100, message: "Done", taskId: null });
         if (pollRef.current) {
           clearInterval(pollRef.current);
@@ -214,8 +289,9 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
         return;
       }
       if (status === "error") {
-        setApplyError(t.error || msg || "Analysis failed");
+        setApplyError(cleanScanError(t.error || msg || "Analysis failed"));
         setApplyResult(null);
+        setScanTaskId(null);
         setProgress({ active: false, percent: pct, message: msg, taskId: null });
         if (pollRef.current) {
           clearInterval(pollRef.current);
@@ -230,8 +306,9 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
     if (pollRef.current) clearInterval(pollRef.current);
     pollRef.current = setInterval(() => {
       poll().catch((err) => {
-        setApplyError(err?.message || "Failed to fetch progress");
+        setApplyError(cleanScanError(err?.message || "Failed to fetch progress"));
         setApplyResult(null);
+        setScanTaskId(null);
         setProgress({ active: false, percent: 0, message: "", taskId: null });
         if (pollRef.current) {
           clearInterval(pollRef.current);
@@ -245,6 +322,7 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
   const runScan = async (file) => {
     setApplyError("");
     setApplyResult(null);
+    setScanTaskId(null);
     setApplying(true);
     setProgress({ active: true, percent: 1, message: "Uploading resume for scan…", taskId: null });
     try {
@@ -256,7 +334,7 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
       setApplying(false);
       await startPoll(taskId);
     } catch (e) {
-      setApplyError(e?.message || "Failed to scan resume");
+      setApplyError(cleanScanError(e?.message || "Failed to scan resume"));
       setProgress({ active: false, percent: 0, message: "", taskId: null });
     } finally {
       setApplying(false);
@@ -264,15 +342,15 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
   };
 
   const runApply = async (file) => {
-    // Apply now should ONLY save the application (no scoring). After saving, navigate to Applied Jobs.
+    // Apply now saves the exact completed scan result. No second scoring pass runs here.
     setApplyError("");
     setApplying(true);
     setProgress({ active: false, percent: 0, message: "", taskId: null });
     try {
-      if (!file) {
-        throw new Error("Please upload a resume to apply.");
+      if (!scanTaskId) {
+        throw new Error("Please scan your resume first. You can apply after the match score is generated.");
       }
-      const res = await jobAPI.applySaveOnly(jobId, file);
+      const res = await jobAPI.applyFromScan(jobId, scanTaskId);
       if (res?.already_applied) {
         if (res?.application) setExistingApplication(res.application);
         setApplyError("Already applied to this job.");
@@ -282,6 +360,7 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
         setExistingApplication(res.application);
       }
       cachedFileRef.current = null;
+      setScanTaskId(null);
       setApplyResult(null);
       onApplied?.();
     } catch (e) {
@@ -506,9 +585,9 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
                                 setApplyError("Please scan your resume first. You can apply after the match score is generated.");
                                 return;
                               }
-                              // Apply now: save application only (no scoring).
+                              // Apply now: persist the completed scan result only.
                               uploadModeRef.current = "apply";
-                              await runApply(cachedFileRef.current);
+                              await runApply();
                             }}
                             disabled={!canApplyAfterScan}
                             title={
@@ -559,7 +638,7 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
 
                           {applyResult.ai_error ? (
                             <div className="jd-result-text jd-result-text-error">
-                              {applyResult.ai_error?.message || "Token exhausted. Please try again later."}
+                              {cleanScanError(applyResult.ai_error?.message)}
                             </div>
                           ) : applyResult.ai_analysis ? (
                             <div className="jd-summary-cards" style={{ gridTemplateColumns: "1fr" }}>
@@ -624,16 +703,23 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
             ) : (
               <>
                 <div className="job-detail-header">
-                  {isEditing ? (
-                    <input
-                      className="job-detail-title-input"
-                      value={form.title}
-                      onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
-                      placeholder="Job title"
-                    />
-                  ) : (
-                    <h2 className="job-detail-title">{job?.title}</h2>
-                  )}
+                  <div className="job-detail-title-group">
+                    {!isEditing && (
+                      <div className="job-detail-avatar" aria-hidden="true">
+                        {(job?.title || "J").trim().charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    {isEditing ? (
+                      <input
+                        className="job-detail-title-input"
+                        value={form.title}
+                        onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
+                        placeholder="Job title"
+                      />
+                    ) : (
+                      <h2 className="job-detail-title">{job?.title}</h2>
+                    )}
+                  </div>
 
                   {canEdit && (
                     <div className="job-detail-actions">
@@ -696,60 +782,23 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
                   )}
                 </div>
 
-                <div className="job-detail-meta">
-                  <div className="job-detail-meta-item">
-                    <MapPin className="k" aria-hidden="true" />
-                    {isEditing ? (
-                      <input
-                        value={form.location}
-                        onChange={(e) => setForm((p) => ({ ...p, location: e.target.value }))}
-                        placeholder="Location"
-                      />
-                    ) : (
-                      <span>{job?.location || "Not specified"}</span>
-                    )}
-                  </div>
-
-                  <div className="job-detail-meta-item">
-                    <DollarSign className="k" aria-hidden="true" />
-                    {isEditing ? (
-                      <input
-                        value={form.salary_range}
-                        onChange={(e) => setForm((p) => ({ ...p, salary_range: e.target.value }))}
-                        placeholder="Salary range"
-                      />
-                    ) : (
-                      <span>{job?.salary_range || "Not specified"}</span>
-                    )}
-                  </div>
-
-                  {job?.created_at && (
-                    <div className="job-detail-meta-item">
-                      <Calendar className="k" aria-hidden="true" />
-                      <span>{new Date(job.created_at).toLocaleString()}</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="job-detail-meta job-detail-meta-secondary">
-                  <div className="job-detail-meta-item">
-                    <Briefcase className="k" aria-hidden="true" />
-                    <span>Opportunity Type: {job?.opportunity_type || "Not specified"}</span>
-                  </div>
-                  <div className="job-detail-meta-item">
-                    <Briefcase className="k" aria-hidden="true" />
-                    <span>Job Type: {job?.job_type || "Not specified"}</span>
-                  </div>
-                  <div className="job-detail-meta-item">
-                    <MapPin className="k" aria-hidden="true" />
-                    <span>Job Site: {job?.job_site || "Not specified"}</span>
-                  </div>
-                  <div className="job-detail-meta-item">
-                    <GraduationCap className="k" aria-hidden="true" />
-                    <span>
-                      Min Experience: {job?.min_experience_years != null ? `${job.min_experience_years} years` : "Not specified"}
-                    </span>
-                  </div>
+                <div className="job-detail-info-grid">
+                  {detailCards.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <div className="job-detail-info-card" key={item.label}>
+                        <div className="job-detail-info-icon">
+                          <Icon aria-hidden="true" />
+                        </div>
+                        <div className="job-detail-info-body">
+                          <div className="job-detail-info-label">{item.label}</div>
+                          <div className="job-detail-info-value">
+                            {item.editor && isEditing ? item.editor : item.value}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
 
                 <div className="job-detail-section">
@@ -775,6 +824,24 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
                     </ul>
                   ) : (
                     <p className="job-detail-desc">No non-negotiables provided.</p>
+                  )}
+                </div>
+
+                <div className="job-detail-section">
+                  <h3>Required Skills</h3>
+                  <p className="job-detail-desc job-detail-help">
+                    These exact skills are used for resume matching and the green/red skill snapshot.
+                  </p>
+                  {Array.isArray(job?.required_skills) && job.required_skills.length > 0 ? (
+                    <div className="job-detail-skill-list" aria-label="Required skills used for matching">
+                      {job.required_skills.map((skill, idx) => (
+                        <span key={`${skill}-${idx}`} className="job-detail-skill-pill">
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="job-detail-desc">No required skills provided.</p>
                   )}
                 </div>
               </>

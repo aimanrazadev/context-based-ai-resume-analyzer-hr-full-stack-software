@@ -30,7 +30,7 @@ export default function ApplicationDetailsPage() {
   if (!applicationId) return <Navigate to={fallbackHome} replace />;
 
   return (
-    <div style={{ padding: "18px" }}>
+    <div className="application-details-page">
       <AppliedJobDetails
         applicationId={applicationId}
         onBack={() => {

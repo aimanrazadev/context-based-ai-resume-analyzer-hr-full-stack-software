@@ -14,15 +14,14 @@ def resume_structuring_system_prompt() -> str:
 
 def candidate_summary_prompt_rule() -> str:
     """
-    Return the rule block for candidate and recruiter summaries.
+    Return the rule block for the single canonical candidate summary.
 
     Returns:
-        A short instruction describing how to write candidate-facing and
-        recruiter-facing summaries from resume evidence only.
+        A short instruction describing how to write the factual summary from
+        resume evidence only.
     """
     return (
-        '- "candidate_summary": 2-3 sentences summarizing the profile in plain professional language.\n'
-        '- "recruiter_summary": 2 short recruiter-friendly sentences focusing on fit, strengths, and readiness.\n'
+        '- "candidate_summary": maximum 2 concise lines and factual only: profile, major project names, primary tech stack, education institution/CGPA if present, and professional experience/company/impact if present. Do not include recommendation, strengths, weaknesses, or suitability. Omit missing facts instead of inventing them.\n'
     )
 
 
@@ -35,8 +34,8 @@ def strengths_weaknesses_prompt_rule() -> str:
         weaknesses lists.
     """
     return (
-        '- "strengths": up to 5 short evidence-based bullets.\n'
-        '- "weaknesses": up to 5 short bullets describing unclear, weak, or missing areas from the resume.\n'
+        '- "strengths": up to 5 short evidence-based bullets focused on demonstrated strengths relevant to the target role.\n'
+        '- "weaknesses": up to 5 short bullets; include only genuine missing, weak, or unclear areas. Do not invent weaknesses.\n'
     )
 
 
@@ -86,7 +85,6 @@ def resume_structuring_user_prompt(*, resume_text: str) -> str:
         "  },\n"
         '  "analysis": {\n'
         '    "candidate_summary": string,\n'
-        '    "recruiter_summary": string,\n'
         '    "strengths": string[],\n'
         '    "weaknesses": string[],\n'
         '    "missing_skills": string[],\n'
@@ -113,65 +111,4 @@ def resume_structuring_user_prompt(*, resume_text: str) -> str:
         "-----\n"
     )
 
-
-def job_match_system_prompt() -> str:
-    """
-    Build the system prompt for AI-based job matching.
-
-    Returns:
-        A strict instruction string for recruiter-style JSON output.
-    """
-    return (
-        "You are a recruiter. Return only valid JSON. No markdown, no extra text. "
-        "Use resume evidence; do not hallucinate."
-    )
-
-
-def job_match_sectioned_user_prompt(*, job_title: str | None, job_description: str | None, resume_text: str) -> str:
-    """
-    Build the sectioned job-match prompt used by the newer match flow.
-
-    Args:
-        job_title: Job title text, if available.
-        job_description: Job description text, if available.
-        resume_text: Resume text to compare against the job.
-
-    Returns:
-        A strict JSON prompt that asks the model for sectioned recruiter-style
-        match summaries.
-    """
-    return (
-        "You are an AI resume evaluator.\n\n"
-        "Analyze the resume against the job description.\n\n"
-        "Return the response STRICTLY in the following JSON format:\n\n"
-        "{\n"
-        '  "education_summary": {\n'
-        '    "score": 0-100,\n'
-        '    "summary": "2 short sentences, recruiter-friendly"\n'
-        "  },\n"
-        '  "projects_summary": {\n'
-        '    "score": 0-100,\n'
-        '    "summary": "2 short sentences, practical focus"\n'
-        "  },\n"
-        '  "work_experience_summary": {\n'
-        '    "score": 0-100,\n'
-        '    "summary": "2 short sentences, role relevance"\n'
-        "  },\n"
-        '  "overall_match_score": 0-100\n'
-        "}\n\n"
-        "Rules:\n"
-        "- Be concise.\n"
-        "- Avoid long explanations.\n"
-        "- Write like a hiring manager, not a professor.\n"
-        "- No markdown. JSON only.\n"
-        "- Use resume evidence; do not hallucinate.\n\n"
-        "Job title:\n"
-        f"{job_title or ''}\n\n"
-        "Job description:\n"
-        f"{job_description or ''}\n\n"
-        "Resume text:\n"
-        "-----\n"
-        f"{resume_text or ''}\n"
-        "-----\n"
-    )
 
