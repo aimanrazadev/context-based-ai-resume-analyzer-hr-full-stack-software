@@ -17,7 +17,7 @@
 .candidates-panel-header h2 {
   color: #111827;
   font-size: 18px;
-  font-weight: 650;
+  font-weight: 400;
   letter-spacing: -0.02em;
   margin: 0 0 5px;
 }
@@ -45,7 +45,7 @@
 .candidate-filter-field span {
   color: #64748b;
   font-size: 11px;
-  font-weight: 560;
+  font-weight: 400;
 }
 
 .candidate-filter-field select,
@@ -76,7 +76,7 @@
   cursor: pointer;
   display: inline-flex;
   font-size: 12.5px;
-  font-weight: 560;
+  font-weight: 400;
   gap: 8px;
   height: 36px;
   justify-content: center;
@@ -119,6 +119,7 @@
   border: 1px solid #e5e7eb;
   border-radius: 13px;
   box-shadow: 0 7px 20px rgba(15, 23, 42, 0.045);
+  cursor: pointer;
   display: grid;
   gap: 14px;
   grid-template-columns: 40px minmax(180px, 0.9fr) minmax(260px, 1.6fr) 74px 132px;
@@ -132,7 +133,7 @@
   color: #4f46e5;
   display: flex;
   font-size: 14px;
-  font-weight: 650;
+  font-weight: 400;
   height: 34px;
   justify-content: center;
   width: 34px;
@@ -156,7 +157,7 @@
 .candidate-name-line h3 {
   color: #111827;
   font-size: 14.5px;
-  font-weight: 650;
+  font-weight: 400;
   margin: 0;
 }
 
@@ -191,7 +192,7 @@
   color: #64748b;
   display: block;
   font-size: 11px;
-  font-weight: 560;
+  font-weight: 400;
   margin-bottom: 6px;
 }
 
@@ -230,7 +231,7 @@
 .candidate-score-block span {
   color: #64748b;
   font-size: 11px;
-  font-weight: 560;
+  font-weight: 400;
 }
 
 .candidate-actions-block {
@@ -247,7 +248,7 @@
   cursor: pointer;
   display: inline-flex;
   font-size: 12.5px;
-  font-weight: 600;
+  font-weight: 400;
   gap: 6px;
   height: 34px;
   justify-content: center;
@@ -262,31 +263,13 @@
   align-items: center;
   display: grid;
   gap: 6px;
-  grid-template-columns: 1fr 24px;
+  grid-template-columns: 1fr;
 }
 
 .candidate-status-menu select {
-  font-weight: 500;
+  font-weight: 400;
   height: 32px;
   min-width: 0;
-}
-
-.candidate-menu-btn {
-  align-items: center;
-  background: transparent;
-  border: 0;
-  border-radius: 8px;
-  color: #64748b;
-  cursor: pointer;
-  display: inline-flex;
-  height: 28px;
-  justify-content: center;
-  width: 24px;
-}
-
-.candidate-menu-btn:hover {
-  background: #fee2e2;
-  color: #b91c1c;
 }
 
 .candidate-list-footer {
@@ -353,5 +336,59 @@
 }
 
 .candidates-panel .ds-score-ring__value {
-  font-weight: 650;
+  font-weight: 400;
+}
+
+/* Candidate ranking design-system pass */
+.candidates-panel {
+  max-width: 1280px;
+  margin: 0 auto;
+  border-color: #e2e8f0;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.055);
+}
+
+.candidate-row-card {
+  border-color: #e2e8f0;
+  grid-template-columns: 42px minmax(200px, 1fr) minmax(320px, 1.55fr) 82px 150px;
+}
+
+.candidate-row-card:hover {
+  border-color: #cbd5e1;
+}
+
+.candidate-name-line h3 {
+  color: #0f172a;
+  font-weight: 400;
+}
+
+.candidate-skills-block {
+  border-left-color: #e2e8f0;
+}
+
+.candidate-view-btn {
+  border-color: #4f46e5;
+  color: #4f46e5;
+}
+
+.candidate-view-btn:hover {
+  background: #eef2ff;
+}
+
+.candidate-row-skeleton {
+  pointer-events: none;
+}
+
+.candidate-row-skeleton .candidate-rank {
+  background: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 45%, #f8fafc 90%);
+  background-size: 220% 100%;
+}
+
+.candidate-score-skeleton {
+  width: 58px;
+  min-height: 58px;
+  border-radius: 999px;
+}
+
+.candidate-action-skeleton {
+  min-height: 34px;
 }

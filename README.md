@@ -81,13 +81,13 @@ Backend only (port 8002):
 python -m uvicorn --app-dir . backend.app.main:app --reload --host 127.0.0.1 --port 8002
 ```
 
-Frontend only (port 5190):
+Frontend only (port 5173):
 
 ```bash
 cd frontend
 npm install
 $env:VITE_API_BASE_URL="http://127.0.0.1:8002"
-npm run dev -- --host 127.0.0.1 --port 5190 --strictPort
+npm run dev
 ```
 
 ## GitHub Actions

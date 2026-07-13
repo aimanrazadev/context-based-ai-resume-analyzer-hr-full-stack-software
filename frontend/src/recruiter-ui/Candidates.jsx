@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { Eye, Mail, MoreVertical, SlidersHorizontal, Sparkles } from "lucide-react";
+import { Mail, SlidersHorizontal, Sparkles, Trash2 } from "lucide-react";
 import { jobAPI } from "../utils/api";
-import { ScoreRing, SkillPill, StatusBadge } from "../components/ui";
+import { PageTransition, ScoreRing, SkeletonBlock, SkeletonText, SkillPill, StatusBadge } from "../components/ui";
 import "./Candidates.css";
 
 const ALL_JOBS_ID = "all";
 const ALL_STATUSES = "all";
-const STATUS_OPTIONS = ["submitted", "shortlisted", "rejected", "on-hold", "accepted"];
+const STATUS_OPTIONS = ["shortlisted", "on-hold", "rejected"];
 const SORT_OPTIONS = {
   SCORE_DESC: "score_desc",
   SCORE_ASC: "score_asc",
@@ -14,7 +14,13 @@ const SORT_OPTIONS = {
   OLDEST: "oldest",
 };
 
-const getStatusValue = (status) => String(status || "submitted").toLowerCase();
+const getStatusValue = (status) => {
+  const value = String(status || "on-hold").toLowerCase();
+  if (value === "submitted" || value === "accepted" || value === "applied" || value === "pending") {
+    return "on-hold";
+  }
+  return STATUS_OPTIONS.includes(value) ? value : "on-hold";
+};
 const getScore = (row) => Math.round(Number(row?.final_score) || 0);
 
 const getTopSkills = (row) => {
@@ -36,6 +42,14 @@ const getCandidateSummary = (row) => {
     "Resume analysis is available in the application details."
   );
 };
+
+const openApplicationDetails = (applicationId) => {
+  if (!applicationId) return;
+  window.location.assign(`/applications/${applicationId}`);
+};
+
+const isInteractiveTarget = (target) =>
+  Boolean(target?.closest?.("button, select, input, textarea, a"));
 
 export default function Candidates() {
   const [jobs, setJobs] = useState([]);
@@ -198,7 +212,30 @@ export default function Candidates() {
   const renderCandidateRows = () => {
     if (error) return <div className="candidate-error">{error}</div>;
 
-    if (loading) return <div className="candidate-state">Loading candidates...</div>;
+    if (loading) {
+      return (
+        <div className="candidate-list" aria-label="Loading candidates">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <article key={index} className="candidate-row-card candidate-row-skeleton">
+              <SkeletonBlock className="candidate-rank" />
+              <div className="candidate-profile-block">
+                <SkeletonText lines={3} />
+              </div>
+              <div className="candidate-skills-block">
+                <SkeletonText lines={3} />
+              </div>
+              <div className="candidate-score-block">
+                <SkeletonBlock className="candidate-score-skeleton" />
+              </div>
+              <div className="candidate-actions-block">
+                <SkeletonBlock className="candidate-action-skeleton" />
+                <SkeletonBlock className="candidate-action-skeleton" />
+              </div>
+            </article>
+          ))}
+        </div>
+      );
+    }
 
     if (visibleRows.length === 0) {
       return (
@@ -219,7 +256,23 @@ export default function Candidates() {
             const currentStatus = getStatusValue(row?.status);
 
             return (
-              <article key={row.application_id} className="candidate-row-card">
+              <article
+                key={row.application_id}
+                className="candidate-row-card"
+                role="button"
+                tabIndex={0}
+                onClick={(e) => {
+                  if (isInteractiveTarget(e.target)) return;
+                  openApplicationDetails(row.application_id);
+                }}
+                onKeyDown={(e) => {
+                  if (isInteractiveTarget(e.target)) return;
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    openApplicationDetails(row.application_id);
+                  }
+                }}
+              >
                 <div className="candidate-rank">#{index + 1}</div>
 
                 <div className="candidate-profile-block">
@@ -262,18 +315,23 @@ export default function Candidates() {
                   <button
                     type="button"
                     className="candidate-view-btn"
-                    onClick={() => {
-                      window.location.assign(`/applications/${row.application_id}`);
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteCandidate(row);
                     }}
                   >
-                    <Eye size={15} />
-                    View Application
+                    <Trash2 size={15} />
+                    Delete
                   </button>
 
                   <div className="candidate-status-menu">
                     <select
                       value={currentStatus}
-                      onChange={(e) => handleStatusChange(row, e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        handleStatusChange(row, e.target.value);
+                      }}
                       disabled={updatingStatusId === row.application_id}
                       aria-label="Update application status"
                     >
@@ -281,14 +339,6 @@ export default function Candidates() {
                         <option key={status} value={status}>{status}</option>
                       ))}
                     </select>
-                    <button
-                      type="button"
-                      className="candidate-menu-btn"
-                      aria-label="Delete candidate application"
-                      onClick={() => handleDeleteCandidate(row)}
-                    >
-                      <MoreVertical size={18} />
-                    </button>
                   </div>
                 </div>
               </article>
@@ -304,7 +354,7 @@ export default function Candidates() {
   };
 
   return (
-    <section className="candidates-panel">
+    <PageTransition className="candidates-panel">
       <div className="candidates-panel-header">
         <div>
           <h2>{title}</h2>
@@ -369,6 +419,6 @@ export default function Candidates() {
       </div>
 
       {renderCandidateRows()}
-    </section>
+    </PageTransition>
   );
 }

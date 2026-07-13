@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { jobAPI } from "../utils/api";
-import { ErrorState, LoadingState, ScoreRing, SkillPill, StatusBadge } from "./ui";
+import { ErrorState, PageTransition, ScoreRing, SkeletonBlock, SkeletonText, SkillPill, StatusBadge } from "./ui";
 import "./AppliedJobDetails.css";
 
 const cleanList = (items = [], limit = 6) => {
@@ -255,13 +255,23 @@ export default function AppliedJobDetails({ applicationId, onBack }) {
   };
 
   return (
-    <div className="ajd-wrap">
+    <PageTransition className="ajd-wrap">
       <button type="button" className="ajd-back" onClick={() => onBack?.()}>
         ← Back to applied jobs
       </button>
 
       {loading ? (
-        <div className="ajd-card"><LoadingState message="Loading application…" /></div>
+        <div className="ajd-card ajd-detail-skeleton">
+          <SkeletonText lines={2} className="ajd-head-skeleton" />
+          <SkeletonBlock className="ajd-note-skeleton" />
+          <SkeletonBlock className="ajd-resume-skeleton" />
+          <SkeletonBlock className="ajd-score-skeleton" />
+          <SkeletonBlock className="ajd-summary-skeleton" />
+          <div className="ajd-insight-grid">
+            <SkeletonBlock className="ajd-panel-skeleton" />
+            <SkeletonBlock className="ajd-panel-skeleton" />
+          </div>
+        </div>
       ) : error ? (
         <div className="ajd-card"><ErrorState message={error} /></div>
       ) : (
@@ -306,11 +316,11 @@ export default function AppliedJobDetails({ applicationId, onBack }) {
           )}
 
           <div className="ajd-note">
-            <div className="ajd-note-title">Application submitted</div>
+            <div className="ajd-note-title">Application status</div>
             <div className="ajd-note-text">
               Your resume has been saved. <span className="ajd-muted">Waiting for recruiter to review it.</span>
             </div>
-            <StatusBadge status={app?.status || "submitted"} />
+            <StatusBadge status={app?.status || "on-hold"} />
           </div>
 
           {applicationId && (
@@ -431,7 +441,7 @@ export default function AppliedJobDetails({ applicationId, onBack }) {
         </div>
       )}
 
-    </div>
+    </PageTransition>
   );
 }
 

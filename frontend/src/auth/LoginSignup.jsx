@@ -96,11 +96,16 @@ export default function LoginSignup({ onLoginSuccess }) {
       const token = result?.access_token;
       const role = result?.user?.role || userType;
       const id = result?.user?.id;
+      const email = result?.user?.email || formData.email;
+      const name =
+        result?.user?.name ||
+        formData.name ||
+        (email ? email.split("@")[0] : "Candidate");
 
       const user = {
         id: id ?? Math.random().toString(36).slice(2),
-        email: formData.email,
-        name: formData.name || "User",
+        email,
+        name,
         role,
         userType: role, // backwards compatibility with older UI state
         token: token ?? null

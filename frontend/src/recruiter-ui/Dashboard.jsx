@@ -1,10 +1,7 @@
 import "./Dashboard.css";
 import { useEffect, useState } from "react";
 import { jobAPI } from "../utils/api";
-import { getRingMetrics } from "../utils/matchScore";
-
-const ringSize = 60;
-const ringRadius = 26;
+import { PageTransition, SkeletonBlock, SkeletonText } from "../components/ui";
 
 const getStartOfDay = (d) => {
   const x = new Date(d);
@@ -15,7 +12,7 @@ const getStartOfDay = (d) => {
 const getStartOfWeek = (d) => {
   const x = getStartOfDay(d);
   const day = x.getDay();
-  const diff = (day + 6) % 7; // Monday as start
+  const diff = (day + 6) % 7;
   x.setDate(x.getDate() - diff);
   return x;
 };
@@ -33,15 +30,16 @@ const pctChange = (current, previous) => {
   return ((cur - prev) / prev) * 100;
 };
 
-const clampPct = (n) => Math.max(0, Math.min(100, Math.round(Math.abs(Number(n) || 0))));
+const statusIncludes = (app, keyword) => String(app?.status || "").toLowerCase().includes(keyword);
 
-// Fetch live counts for dashboard cards
 const useDashboardCounts = () => {
+  const [loading, setLoading] = useState(true);
   const [metrics, setMetrics] = useState({
     newApplicants: { current: 0, previous: 0, change: 0, rangeLabel: "vs yesterday" },
     applications: { current: 0, previous: 0, change: 0, rangeLabel: "vs last week" },
     shortlisted: { current: 0, previous: 0, change: 0, rangeLabel: "vs last month" },
-    onHold: { current: 0, previous: 0, change: 0, rangeLabel: "vs last month" }
+    onHold: { current: 0, previous: 0, change: 0, rangeLabel: "vs last month" },
+    rejected: { current: 0, previous: 0, change: 0, rangeLabel: "vs last month" }
   });
   const [recent, setRecent] = useState([]);
 
@@ -49,6 +47,7 @@ const useDashboardCounts = () => {
     let alive = true;
     (async () => {
       try {
+        setLoading(true);
         const allRes = await jobAPI.getAll({});
         if (!alive) return;
         const jobs = allRes?.jobs || [];
@@ -83,35 +82,22 @@ const useDashboardCounts = () => {
         const inRange = (ts, start, end) => {
           if (!ts) return false;
           const t = new Date(ts).getTime();
-          const s = start.getTime();
-          const e = end.getTime();
-          return t >= s && t < e;
-        };
-
-        const isShortlisted = (app) => {
-          const status = String(app?.status || "").toLowerCase();
-          return status.includes("shortlist");
-        };
-
-        const isOnHold = (app) => {
-          const status = String(app?.status || "").toLowerCase();
-          return status.includes("hold");
+          return t >= start.getTime() && t < end.getTime();
         };
 
         const todayApps = applications.filter((a) => inRange(a?.created_at, startToday, now));
         const yesterdayApps = applications.filter((a) => inRange(a?.created_at, startYesterday, startToday));
-
         const weekApps = applications.filter((a) => inRange(a?.created_at, startWeek, now));
         const lastWeekApps = applications.filter((a) => inRange(a?.created_at, startLastWeek, startWeek));
-
         const monthApps = applications.filter((a) => inRange(a?.created_at, startMonth, now));
         const lastMonthApps = applications.filter((a) => inRange(a?.created_at, startLastMonth, startMonth));
 
-        const monthShortlisted = monthApps.filter(isShortlisted);
-        const lastMonthShortlisted = lastMonthApps.filter(isShortlisted);
-
-        const monthOnHold = monthApps.filter(isOnHold);
-        const lastMonthOnHold = lastMonthApps.filter(isOnHold);
+        const monthShortlisted = monthApps.filter((a) => statusIncludes(a, "shortlist"));
+        const lastMonthShortlisted = lastMonthApps.filter((a) => statusIncludes(a, "shortlist"));
+        const monthOnHold = monthApps.filter((a) => statusIncludes(a, "hold"));
+        const lastMonthOnHold = lastMonthApps.filter((a) => statusIncludes(a, "hold"));
+        const monthRejected = monthApps.filter((a) => statusIncludes(a, "reject"));
+        const lastMonthRejected = lastMonthApps.filter((a) => statusIncludes(a, "reject"));
 
         setMetrics({
           newApplicants: {
@@ -137,6 +123,12 @@ const useDashboardCounts = () => {
             previous: lastMonthOnHold.length,
             change: pctChange(monthOnHold.length, lastMonthOnHold.length),
             rangeLabel: "vs last month"
+          },
+          rejected: {
+            current: monthRejected.length,
+            previous: lastMonthRejected.length,
+            change: pctChange(monthRejected.length, lastMonthRejected.length),
+            rangeLabel: "vs last month"
           }
         });
 
@@ -146,7 +138,9 @@ const useDashboardCounts = () => {
             .slice(0, 6)
         );
       } catch {
-        // ignore — dashboard is non-critical
+        // Dashboard metrics are non-critical; keep fallback values visible.
+      } finally {
+        if (alive) setLoading(false);
       }
     })();
     return () => {
@@ -154,17 +148,15 @@ const useDashboardCounts = () => {
     };
   }, []);
 
-  return { metrics, recent };
+  return { metrics, recent, loading };
 };
 
 export default function Dashboard({ onNavigate }) {
-  const handleCardClick = (view) => {
-    if (onNavigate) {
-      onNavigate(view);
-    }
-  };
+  const { metrics, recent, loading } = useDashboardCounts();
 
-  const { metrics, recent } = useDashboardCounts();
+  const handleCardClick = (view) => {
+    onNavigate?.(view);
+  };
 
   const renderChange = (change, rangeLabel) => {
     const value = Math.round(change || 0);
@@ -173,85 +165,70 @@ export default function Dashboard({ onNavigate }) {
     return <div className={cls}>{`${sign}${value}% ${rangeLabel}`}</div>;
   };
 
-  const renderRing = (change, color) => {
-    const pct = clampPct(change);
-    const ring = getRingMetrics(pct, ringRadius);
-    return (
-      <div className="circular-progress">
-        <svg className="progress-ring" width={ringSize} height={ringSize}>
-          <circle
-            className="progress-ring-circle"
-            stroke={color}
-            strokeWidth="4"
-            fill="transparent"
-            r={ring.radius}
-            cx={ringSize / 2}
-            cy={ringSize / 2}
-            strokeDasharray={ring.strokeDasharray}
-            strokeDashoffset={ring.strokeDashoffset}
-          />
-        </svg>
-        <span className="progress-percent">{`${ring.score}%`}</span>
-      </div>
-    );
-  };
+  const renderMetricCard = ({ className, title, label, metric }) => (
+    <div
+      className={`summary-card ${className} clickable-card`}
+      onClick={() => handleCardClick("candidates")}
+      title={title}
+    >
+      <div className="summary-label">{label}</div>
+      <div className="summary-value">{metric.current ?? "-"}</div>
+      {renderChange(metric.change, metric.rangeLabel)}
+      <div className="card-hover-effect">View Details →</div>
+    </div>
+  );
+
+  const renderMetricSkeletons = () => (
+    <div className="summary-cards" aria-label="Loading dashboard metrics">
+      {Array.from({ length: 5 }).map((_, index) => (
+        <div key={index} className="summary-card dashboard-skeleton-card">
+          <SkeletonText lines={1} className="dashboard-skeleton-label" />
+          <SkeletonBlock className="dashboard-skeleton-number" />
+          <SkeletonText lines={1} className="dashboard-skeleton-change" />
+        </div>
+      ))}
+    </div>
+  );
 
   return (
-    <div className="dashboard-container">
-      {/* Top Summary Cards */}
-      <div className="summary-cards">
-        <div 
-          className="summary-card new-applicants clickable-card"
-          onClick={() => handleCardClick("candidates")}
-          title="View new applicants"
-        >
-          <div className="summary-label">NEW APPLICANTS</div>
-          <div className="summary-value">{metrics.newApplicants.current ?? "-"}</div>
-          {renderChange(metrics.newApplicants.change, metrics.newApplicants.rangeLabel)}
-          {renderRing(metrics.newApplicants.change, "#4caf50")}
-          <div className="card-hover-effect">View Details →</div>
+    <PageTransition className="dashboard-container">
+      {loading ? renderMetricSkeletons() : (
+        <div className="summary-cards">
+          {renderMetricCard({
+            className: "new-applicants",
+            title: "View new applicants",
+            label: "New Applicants",
+            metric: metrics.newApplicants,
+          })}
+          {renderMetricCard({
+            className: "applications",
+            title: "View all applications",
+            label: "Applications",
+            metric: metrics.applications,
+          })}
+          {renderMetricCard({
+            className: "shortlisted",
+            title: "View shortlisted candidates",
+            label: "Shortlisted",
+            metric: metrics.shortlisted,
+          })}
+          {renderMetricCard({
+            className: "onhold",
+            title: "View on-hold candidates",
+            label: "On-Hold",
+            metric: metrics.onHold,
+          })}
+          {renderMetricCard({
+            className: "rejected",
+            title: "View rejected candidates",
+            label: "Rejected",
+            metric: metrics.rejected,
+          })}
         </div>
+      )}
 
-        <div 
-          className="summary-card applications clickable-card"
-          onClick={() => handleCardClick("candidates")}
-          title="View all applications"
-        >
-          <div className="summary-label">APPLICATIONS</div>
-          <div className="summary-value">{metrics.applications.current ?? "-"}</div>
-          {renderChange(metrics.applications.change, metrics.applications.rangeLabel)}
-          {renderRing(metrics.applications.change, "#9c27b0")}
-          <div className="card-hover-effect">View Details →</div>
-        </div>
-
-        <div 
-          className="summary-card shortlisted clickable-card"
-          onClick={() => handleCardClick("candidates")}
-          title="View shortlisted candidates"
-        >
-          <div className="summary-label">SHORTLISTED</div>
-          <div className="summary-value">{metrics.shortlisted.current ?? "-"}</div>
-          {renderChange(metrics.shortlisted.change, metrics.shortlisted.rangeLabel)}
-          {renderRing(metrics.shortlisted.change, "#03a9f4")}
-          <div className="card-hover-effect">View Details →</div>
-        </div>
-
-        <div 
-          className="summary-card onhold clickable-card"
-          onClick={() => handleCardClick("candidates")}
-          title="View on-hold candidates"
-        >
-          <div className="summary-label">ON-HOLD</div>
-          <div className="summary-value">{metrics.onHold.current ?? "-"}</div>
-          {renderChange(metrics.onHold.change, metrics.onHold.rangeLabel)}
-          {renderRing(metrics.onHold.change, "#ff9800")}
-          <div className="card-hover-effect">View Details →</div>
-        </div>
-      </div>
-
-      {/* Recent candidates */}
       <div className="dashboard-main-grid">
-        <div 
+        <div
           className="dashboard-card clickable-card"
           onClick={() => handleCardClick("candidates")}
           title="View recent candidates"
@@ -260,7 +237,17 @@ export default function Dashboard({ onNavigate }) {
             <div className="card-title">Recent Candidates</div>
           </div>
           <div className="recent-candidates-list">
-            {recent.length > 0 ? (
+            {loading ? (
+              Array.from({ length: 3 }).map((_, index) => (
+                <div key={index} className="recent-candidate-item">
+                  <SkeletonBlock className="recent-candidate-avatar is-skeleton" />
+                  <div className="recent-candidate-info">
+                    <SkeletonText lines={2} />
+                  </div>
+                  <SkeletonBlock className="recent-candidate-score-skeleton" />
+                </div>
+              ))
+            ) : recent.length > 0 ? (
               recent.map((c) => {
                 const name = c?.candidate?.name || "Candidate";
                 const avatar = name.trim().slice(0, 1).toUpperCase();
@@ -289,6 +276,6 @@ export default function Dashboard({ onNavigate }) {
           </div>
         </div>
       </div>
-    </div>
+    </PageTransition>
   );
 }

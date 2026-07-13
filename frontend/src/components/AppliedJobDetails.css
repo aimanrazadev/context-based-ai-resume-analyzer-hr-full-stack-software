@@ -21,7 +21,7 @@
   color: #2563eb;
   cursor: pointer;
   font-size: 17px;
-  font-weight: 650;
+  font-weight: 400;
   line-height: 1;
 }
 
@@ -63,7 +63,7 @@
   max-width: 1180px;
   color: #07142f;
   font-size: clamp(34px, 3.4vw, 46px);
-  font-weight: 780;
+  font-weight: 400;
   letter-spacing: -0.045em;
   line-height: 1.08;
 }
@@ -71,7 +71,7 @@
 .ajd-sub {
   color: #50617d;
   font-size: 18px;
-  font-weight: 520;
+  font-weight: 400;
 }
 
 .ajd-sub::before {
@@ -114,7 +114,7 @@
   margin: 0 0 22px;
   color: #243552;
   font-size: 18px;
-  font-weight: 780;
+  font-weight: 400;
   letter-spacing: 0.035em;
   line-height: 1.2;
   text-transform: uppercase;
@@ -133,7 +133,7 @@
   margin-bottom: 22px;
   color: #243552;
   font-size: 18px;
-  font-weight: 780;
+  font-weight: 400;
   letter-spacing: 0.035em;
   text-transform: uppercase;
 }
@@ -152,7 +152,7 @@
   background: #f3fcf7;
   color: #16a34a;
   font-size: 20px;
-  font-weight: 780;
+  font-weight: 400;
   text-transform: capitalize;
 }
 
@@ -220,7 +220,7 @@
 .ajd-resume-name {
   color: #101b35;
   font-size: 19px;
-  font-weight: 620;
+  font-weight: 400;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -229,7 +229,7 @@
 .ajd-resume-hint {
   color: #2563eb;
   font-size: 16px;
-  font-weight: 720;
+  font-weight: 400;
 }
 
 .ajd-score-ring-wrap {
@@ -246,7 +246,7 @@
   margin-bottom: 40px;
   color: #243552;
   font-size: 18px;
-  font-weight: 780;
+  font-weight: 400;
   letter-spacing: 0.035em;
   text-transform: uppercase;
 }
@@ -264,7 +264,7 @@
 .ajd-score-ring-wrap .ds-score-ring__value {
   color: #0c1833;
   font-size: 50px !important;
-  font-weight: 800;
+  font-weight: 400;
 }
 
 .ajd-score-sub {
@@ -274,7 +274,7 @@
   margin: 0 0 132px;
   color: #50617d;
   font-size: 20px;
-  font-weight: 550;
+  font-weight: 400;
   text-align: center;
   z-index: 1;
 }
@@ -295,7 +295,7 @@
   content: "Recommendation";
   color: #243552;
   font-size: 18px;
-  font-weight: 780;
+  font-weight: 400;
   letter-spacing: 0.035em;
   text-transform: uppercase;
 }
@@ -312,14 +312,14 @@
   background: #f4fcf7;
   color: #16a34a;
   font-size: 19px;
-  font-weight: 780;
+  font-weight: 400;
 }
 
 .ajd-recommendation-pill::after {
   content: "Great alignment with the role requirements.";
   color: #546582;
   font-size: 17px;
-  font-weight: 520;
+  font-weight: 400;
 }
 
 .ajd-insights {
@@ -422,7 +422,7 @@
   color: #0d1b35;
   cursor: pointer;
   font-size: 18px;
-  font-weight: 760;
+  font-weight: 400;
   list-style: none;
 }
 
@@ -525,7 +525,7 @@
   border: 1px solid #d7e0ed;
   border-radius: 999px;
   color: #2563eb;
-  font-weight: 700;
+  font-weight: 400;
   text-decoration: none;
 }
 
@@ -1014,7 +1014,7 @@
   margin: 0 0 6px;
   color: #172443;
   font-size: 12px;
-  font-weight: 780;
+  font-weight: 400;
   letter-spacing: 0.02em;
   text-align: left;
 }
@@ -1051,7 +1051,7 @@
 
 .ajd-resume-hint {
   color: #2563eb;
-  font-weight: 780;
+  font-weight: 400;
 }
 
 .ajd-score-ring-wrap {
@@ -1219,4 +1219,42 @@
     width: auto;
     margin: 0;
   }
+}
+
+/* Loading skeletons for the final detail layout */
+.ajd-detail-skeleton {
+  grid-template-areas:
+    "head head"
+    "note verdict"
+    "resume verdict"
+    "score insights";
+}
+
+.ajd-head-skeleton {
+  grid-area: head;
+  max-width: 760px;
+}
+
+.ajd-note-skeleton {
+  grid-area: note;
+  min-height: 148px;
+}
+
+.ajd-resume-skeleton {
+  grid-area: resume;
+  min-height: 96px;
+}
+
+.ajd-score-skeleton {
+  grid-area: score;
+  min-height: 178px;
+}
+
+.ajd-summary-skeleton {
+  grid-area: verdict;
+  min-height: 148px;
+}
+
+.ajd-panel-skeleton {
+  min-height: 132px;
 }

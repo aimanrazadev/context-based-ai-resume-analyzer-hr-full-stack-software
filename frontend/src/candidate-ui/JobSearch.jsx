@@ -3,6 +3,7 @@ import { Calendar, DollarSign, MapPin } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import "./JobSearch.css";
 import { jobAPI } from "../utils/api";
+import { PageTransition, SkeletonBlock, SkeletonText } from "../components/ui";
 
 const SORT_OPTIONS = {
   RELEVANCE: "relevance",
@@ -95,7 +96,7 @@ export default function JobSearch() {
   const total = useMemo(() => filteredJobs.length, [filteredJobs]);
 
   return (
-    <div className="job-search-container">
+    <PageTransition className="job-search-container">
       {/* Top Header (spans filters + results) */}
       <div className="job-search-topbar">
         <h2 className="job-search-topbar-title">
@@ -170,7 +171,28 @@ export default function JobSearch() {
       <div className="job-listings">
         <div className="jobs-list">
           {loading ? (
-            <div className="job-search-state">Loading jobs...</div>
+            Array.from({ length: 3 }).map((_, index) => (
+              <div className="job-card job-card-skeleton" key={`job-skeleton-${index}`}>
+                <div className="job-card-header">
+                  <SkeletonBlock className="job-logo" />
+                  <div className="job-title-section">
+                    <SkeletonText lines={2} />
+                  </div>
+                </div>
+                <div className="job-details">
+                  <SkeletonBlock className="job-meta-skeleton" />
+                  <SkeletonBlock className="job-meta-skeleton" />
+                  <SkeletonBlock className="job-meta-skeleton" />
+                </div>
+                <SkeletonBlock className="job-pill-skeleton" />
+                <div className="job-mini-card">
+                  <SkeletonText lines={2} />
+                  <SkeletonBlock className="job-mini-chip-skeleton" />
+                </div>
+                <SkeletonText lines={2} />
+                <SkeletonBlock className="job-action-skeleton" />
+              </div>
+            ))
           ) : error ? (
             <div className="job-search-state is-error">{error}</div>
           ) : filteredJobs.length === 0 ? (
@@ -250,7 +272,7 @@ export default function JobSearch() {
           )}
         </div>
       </div>
-    </div>
+    </PageTransition>
   );
 }
 

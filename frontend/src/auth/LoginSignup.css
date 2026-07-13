@@ -33,7 +33,7 @@
 
 .auth-title {
   font-size: 32px;
-  font-weight: 700;
+  font-weight: 400;
   color: #212529;
   margin: 0 0 12px 0;
   text-align: left;
@@ -98,14 +98,14 @@
 
 .user-type-option span {
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 400;
   color: #495057;
   pointer-events: none;
 }
 
 .user-type-option.active span {
   color: #007bff;
-  font-weight: 600;
+  font-weight: 400;
 }
 
 /* Form */
@@ -176,7 +176,7 @@
 .auth-link {
   color: #007bff;
   text-decoration: none;
-  font-weight: 600;
+  font-weight: 400;
   transition: all 0.2s;
   cursor: pointer;
 }
@@ -219,7 +219,7 @@
   border: none;
   border-radius: 8px;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 400;
   cursor: pointer;
   transition: all 0.3s ease;
   margin-top: 8px;
@@ -288,7 +288,7 @@
   border-radius: 8px;
   background: #ffffff;
   font-size: 20px;
-  font-weight: 600;
+  font-weight: 400;
   cursor: pointer;
   transition: all 0.3s ease;
   display: flex;
@@ -369,7 +369,7 @@
 
 .auth-title {
   font-size: 30px;
-  font-weight: 650;
+  font-weight: 400;
 }
 
 .auth-subtitle {
@@ -396,7 +396,7 @@
 
 .auth-submit-btn {
   padding: 12px 22px;
-  font-weight: 560;
+  font-weight: 400;
 }
 
 .auth-switch {

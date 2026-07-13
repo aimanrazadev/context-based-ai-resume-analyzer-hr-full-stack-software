@@ -1,7 +1,8 @@
 import { useEffect, useCallback, useMemo, useState } from "react";
-import { Calendar, DollarSign, MapPin } from "lucide-react";
+import { BriefcaseBusiness, Calendar, DollarSign, Eye, MapPin, Trash2 } from "lucide-react";
 import "./Jobs.css";
 import { jobAPI } from "../utils/api";
+import { PageTransition, SkeletonBlock, SkeletonText } from "../components/ui";
 
 export default function Jobs({ onViewJob, initialFilter = "all" }) {
   const [jobs, setJobs] = useState([]);
@@ -132,7 +133,7 @@ export default function Jobs({ onViewJob, initialFilter = "all" }) {
   const fmtCount = (n) => (typeof n === "number" ? n : "…");
   const fmtStat = (n) => (typeof n === "number" ? n : "—");
   return (
-    <div className="jobs-page">
+    <PageTransition className="jobs-page">
       <div className="jobs-header">
         <h2>
           {title} {loading ? "" : `(${fmtCount(headerCount)})`}
@@ -175,7 +176,23 @@ export default function Jobs({ onViewJob, initialFilter = "all" }) {
 
       {/* Loading State */}
       {loading ? (
-        <div className="loading-state">Loading jobs...</div>
+        <div className="jobs-list" aria-label="Loading jobs">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="job-card-item job-card-skeleton">
+              <SkeletonBlock className="job-card-logo" />
+              <div className="job-card-header">
+                <SkeletonText lines={3} />
+              </div>
+              <div className="job-card-meta">
+                <SkeletonText lines={4} />
+              </div>
+              <div className="job-card-actions">
+                <SkeletonBlock className="job-action-skeleton" />
+                <SkeletonBlock className="job-action-skeleton" />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : (
         /* Jobs List */
         <div className="jobs-list">
@@ -186,24 +203,13 @@ export default function Jobs({ onViewJob, initialFilter = "all" }) {
           ) : (
             jobs.map((job) => (
               <div key={job.id} className="job-card-item">
+                <div className="job-card-logo" aria-hidden="true">
+                  {(job.title || "J").trim().charAt(0).toUpperCase()}
+                </div>
                 <div className="job-card-header">
                   <div className="job-card-title-section">
                     <h3 className="job-card-title">{job.title}</h3>
                     {getStatusBadge(job.status)}
-                  </div>
-                  <div className="job-card-actions">
-                    <button
-                      className="btn-view"
-                      onClick={() => onViewJob?.(job.id)}
-                    >
-                      View
-                    </button>
-                    <button
-                      className="btn-delete"
-                      onClick={() => handleDelete(job.id)}
-                    >
-                      Delete
-                    </button>
                   </div>
                 </div>
                 <div className="job-card-details">
@@ -224,6 +230,7 @@ export default function Jobs({ onViewJob, initialFilter = "all" }) {
                 </div>
                 <div className="job-card-meta">
                   <div className="job-card-meta-item">
+                    <BriefcaseBusiness className="job-card-meta-icon" aria-hidden="true" />
                     <span className="job-card-meta-label">Opportunity Type</span>
                     <span className="job-card-meta-value">{job.opportunity_type || "Not specified"}</span>
                   </div>
@@ -252,11 +259,27 @@ export default function Jobs({ onViewJob, initialFilter = "all" }) {
                 <div className="job-card-description">
                   <p>{job.description?.substring(0, 150)}...</p>
                 </div>
+                <div className="job-card-actions">
+                  <button
+                    className="btn-view"
+                    onClick={() => onViewJob?.(job.id)}
+                  >
+                    <Eye size={14} aria-hidden="true" />
+                    View Job
+                  </button>
+                  <button
+                    className="btn-delete"
+                    onClick={() => handleDelete(job.id)}
+                  >
+                    <Trash2 size={14} aria-hidden="true" />
+                    Delete
+                  </button>
+                </div>
               </div>
             ))
           )}
         </div>
       )}
-    </div>
+    </PageTransition>
   );
 }

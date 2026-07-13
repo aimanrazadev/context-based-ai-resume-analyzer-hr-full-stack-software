@@ -1,62 +1,80 @@
 import "./AppliedJobsPage.css";
-import { useEffect, useState } from "react";
-import { Calendar, MapPin } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Calendar, Eye, MapPin, Trash2 } from "lucide-react";
 import { jobAPI } from "../utils/api";
-import { ScoreRing, StatusBadge } from "./ui";
+import { PageTransition, ScoreRing, SkeletonBlock, SkeletonText, StatusBadge } from "./ui";
 
-export default function AppliedJobsPage({ onViewDetails }) {
+export default function AppliedJobsPage({ onCountChange, onViewDetails }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [rows, setRows] = useState([]);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
       const res = await jobAPI.myApplications();
-      setRows(Array.isArray(res?.applications) ? res.applications : []);
+      const applications = Array.isArray(res?.applications) ? res.applications : [];
+      setRows(applications);
+      onCountChange?.(applications.length);
     } catch (e) {
       setError(e?.message || "Failed to load applied jobs");
+      onCountChange?.(0);
     } finally {
       setLoading(false);
     }
-  };
+  }, [onCountChange]);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
   return (
-    <div className="applied-jobs-container">
-      <div className="applied-jobs-header">
-        <h2>Applied Jobs ({rows.length})</h2>
-      </div>
-
+    <PageTransition className="applied-jobs-container">
       <div className="applied-jobs-list">
         {loading ? (
-          <div className="applied-job-card">Loading…</div>
+          Array.from({ length: 2 }).map((_, index) => (
+            <div className="applied-job-card applied-job-card-v2 applied-job-skeleton" key={`applied-skeleton-${index}`}>
+              <SkeletonBlock className="applied-job-rank" />
+              <div className="applied-job-main">
+                <div className="applied-job-info">
+                  <SkeletonText lines={2} />
+                </div>
+              </div>
+              <div className="applied-job-context">
+                <SkeletonBlock className="applied-meta-skeleton" />
+                <SkeletonBlock className="applied-meta-skeleton" />
+              </div>
+              <SkeletonBlock className="applied-score-skeleton" />
+              <div className="applied-job-actions">
+                <SkeletonBlock className="applied-action-skeleton" />
+                <SkeletonBlock className="applied-action-skeleton" />
+              </div>
+            </div>
+          ))
         ) : error ? (
           <div className="applied-job-card">{error}</div>
         ) : rows.length === 0 ? (
           <div className="applied-job-card">No applications yet.</div>
         ) : (
-          rows.map((row) => {
+          rows.map((row, index) => {
             const job = row?.job || {};
             const finalScore = Number(row?.final_score ?? 0);
             return (
               <div key={row.application_id} className="applied-job-card applied-job-card-v2">
-                <div className="applied-job-header-v2">
+                <div className="applied-job-rank" aria-hidden="true">#{index + 1}</div>
+
+                <div className="applied-job-main">
                   <div className="applied-job-info">
-                    <h3 className="applied-job-title">{job?.title || "Job"}</h3>
+                    <div className="applied-job-title-row">
+                      <h3 className="applied-job-title">{job?.title || "Job"}</h3>
+                      <StatusBadge status={row?.status || "on-hold"} />
+                    </div>
                     <div className="applied-job-location">{job?.location || "Location not specified"}</div>
-                  </div>
-                  <div className="applied-card-right">
-                    <StatusBadge status={row?.status || "submitted"} />
-                    <ScoreRing score={finalScore} size={54} />
                   </div>
                 </div>
 
-                <div className="applied-job-meta-row">
+                <div className="applied-job-context">
                   <div className="applied-meta-item">
                     <Calendar className="applied-meta-icon" aria-hidden="true" />
                     <span>
@@ -76,8 +94,14 @@ export default function AppliedJobsPage({ onViewDetails }) {
                   </div>
                 </div>
 
+                <div className="applied-card-score">
+                  <ScoreRing score={finalScore} size={58} label="Final score" />
+                  <span>Final Score</span>
+                </div>
+
                 <div className="applied-job-actions">
                   <button className="btn-view-details" onClick={() => onViewDetails?.(row.application_id)}>
+                    <Eye size={14} aria-hidden="true" />
                     View Details
                   </button>
                   <button
@@ -92,6 +116,7 @@ export default function AppliedJobsPage({ onViewDetails }) {
                       }
                     }}
                   >
+                    <Trash2 size={14} aria-hidden="true" />
                     Withdraw
                   </button>
                 </div>
@@ -100,7 +125,7 @@ export default function AppliedJobsPage({ onViewDetails }) {
           })
         )}
       </div>
-    </div>
+    </PageTransition>
   );
 }
 

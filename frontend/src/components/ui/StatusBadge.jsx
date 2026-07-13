@@ -1,13 +1,18 @@
-export default function StatusBadge({ status = "submitted" }) {
-  const normalized = String(status || "submitted").toLowerCase();
+const normalizeApplicationStatus = (status) => {
+  const value = String(status || "on-hold").toLowerCase();
+  if (value === "submitted" || value === "accepted" || value === "applied" || value === "pending") {
+    return "on-hold";
+  }
+  return value;
+};
+
+export default function StatusBadge({ status = "on-hold" }) {
+  const normalized = normalizeApplicationStatus(status);
   const toneClass = {
-    submitted: "ds-tone-primary",
-    applied: "ds-tone-primary",
     shortlisted: "ds-tone-positive",
     rejected: "ds-tone-negative",
     "on-hold": "ds-tone-warning",
-    accepted: "ds-tone-positive",
-  }[normalized] || "ds-tone-primary";
+  }[normalized] || "ds-tone-warning";
 
   return (
     <span className={`ds-status-badge ${toneClass}`}>

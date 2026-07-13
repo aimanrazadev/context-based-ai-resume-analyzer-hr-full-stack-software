@@ -192,7 +192,8 @@ class ApplyFromScanRequest(BaseModel):
     task_id: str = Field(..., min_length=8, max_length=120)
 
 
-ALLOWED_APPLICATION_STATUSES = {"submitted", "shortlisted", "rejected", "on-hold", "accepted"}
+DEFAULT_APPLICATION_STATUS = "on-hold"
+ALLOWED_APPLICATION_STATUSES = {"shortlisted", "on-hold", "rejected"}
 
 
 def _create_job_embedding_background(job_id: int) -> None:
@@ -336,7 +337,7 @@ def _safe_application_status(db: Session, desired: str) -> str | None:
 
             if desired in vals:
                 return desired
-            for cand in ("applied", "pending", "submitted"):
+            for cand in (DEFAULT_APPLICATION_STATUS, "pending", "applied"):
                 if cand in vals:
                     return cand
             return vals[0] if vals else None
@@ -913,7 +914,7 @@ async def _analyze_and_persist_application(
 
     application.resume_id = resume.id
     application.ai_explanation = explanation
-    application.status = _safe_application_status(db, "submitted")
+    application.status = _safe_application_status(db, DEFAULT_APPLICATION_STATUS)
 
     application.semantic_score = round(float(semantic_score or 0.0) * 100.0, 2)
     application.skills_score = float(skills_score or 0.0)
@@ -1308,7 +1309,7 @@ async def _analyze_and_update_existing_application(
     ai_analysis["matched_skills"] = live_matched
     ai_analysis["missing_skills"] = live_missing
     a.ai_explanation = explanation
-    a.status = _safe_application_status(db, "submitted")
+    a.status = _safe_application_status(db, DEFAULT_APPLICATION_STATUS)
     a.semantic_score = round(float(semantic_score or 0.0) * 100.0, 2)
     a.skills_score = float(skills_score or 0.0)
     a.experience_score = float(breakdown.get("experience_score") or 0.0)
@@ -1350,7 +1351,7 @@ async def _run_apply_save_analysis_task(*, application_id: int) -> None:
                     ensure_ascii=False,
                 )
                 a.score_updated_at = datetime.now(timezone.utc)
-                a.status = _safe_application_status(db, "submitted")
+                a.status = _safe_application_status(db, DEFAULT_APPLICATION_STATUS)
                 db.add(a)
                 db.commit()
             logger.exception("apply_save analysis failed application_id=%s", application_id)
@@ -1458,7 +1459,7 @@ async def apply_save_only(
         created = True
 
     application.resume_id = int(resume_id)
-    application.status = _safe_application_status(db, "submitted")
+    application.status = _safe_application_status(db, DEFAULT_APPLICATION_STATUS)
     db.add(application)
     db.commit()
     db.refresh(application)
@@ -1750,7 +1751,7 @@ async def apply_from_scan(
         application = Application(job_id=job.id, candidate_id=candidate.id)
         application.resume_id = int(resume.id)
         application.ai_explanation = str(result.get("ai_explanation") or ai_analysis.get("reasoning") or "")
-        application.status = _safe_application_status(db, "submitted")
+        application.status = _safe_application_status(db, DEFAULT_APPLICATION_STATUS)
         application.semantic_score = float(result.get("semantic_score") or 0.0)
         application.skills_score = float(result.get("skills_score") or 0.0)
         application.experience_score = float(breakdown.get("experience_score") or 0.0)
@@ -2025,7 +2026,7 @@ def update_application_status(
     if status not in ALLOWED_APPLICATION_STATUSES:
         raise HTTPException(
             status_code=400,
-            detail="Invalid application status. Use submitted, shortlisted, rejected, on-hold, or accepted.",
+            detail="Invalid application status. Use shortlisted, on-hold, or rejected.",
         )
 
     application = db.query(Application).filter(Application.id == int(application_id)).first()

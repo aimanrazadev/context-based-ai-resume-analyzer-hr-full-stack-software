@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { jobAPI } from "../utils/api";
 import { getRingMetrics } from "../utils/matchScore";
-import { ScoreRing, SkillPill } from "./ui";
+import { ScoreRing, SkeletonBlock, SkeletonText, SkillPill } from "./ui";
 import "./JobDetailModal.css";
 
 function getStoredRole() {
@@ -441,7 +441,21 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
         {isCandidate && !isEditing ? (
           <>
             {loading ? (
-              <div className="jd-card jd-loading">Loading…</div>
+              <div className="jd-card jd-main-card jd-loading-skeleton">
+                <div className="jd-top">
+                  <div className="jd-top-left">
+                    <SkeletonBlock className="jd-badge-skeleton" />
+                    <SkeletonText lines={3} />
+                  </div>
+                  <SkeletonBlock className="jd-brand" />
+                </div>
+                <div className="jd-facts">
+                  <SkeletonBlock className="jd-fact-skeleton" />
+                  <SkeletonBlock className="jd-fact-skeleton" />
+                </div>
+                <SkeletonBlock className="jd-detail-skeleton-row" />
+                <SkeletonText lines={5} />
+              </div>
             ) : error ? (
               <div className="jd-card jd-main-card">
                 <div className="job-detail-error">{error}</div>
@@ -645,7 +659,7 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
                               <div className="jd-summary-card">
                                 <div className="jd-summary-card-title">{applyResult.ai_analysis.recommendation || "Review Manually"}</div>
                                 <div className="jd-summary-text">{applyResult.ai_analysis.candidate_summary || "—"}</div>
-                                <div className="jd-summary-text"><strong>Reasoning:</strong> {applyResult.ai_analysis.reasoning || "—"}</div>
+                                <div className="jd-summary-text"><span>Reasoning:</span> {applyResult.ai_analysis.reasoning || "—"}</div>
                                 {Array.isArray(applyResult.ai_analysis.strengths) && applyResult.ai_analysis.strengths.length > 0 && (
                                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
                                     {applyResult.ai_analysis.strengths.map((item) => <SkillPill key={item} tone="positive">{item}</SkillPill>)}
@@ -697,7 +711,15 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
           /* Recruiter + editing view (keep existing UI) */
           <div className="job-detail-card">
             {loading ? (
-              <div className="job-detail-loading">Loading…</div>
+              <div className="job-detail-loading job-detail-skeleton">
+                <SkeletonText lines={2} />
+                <div className="job-detail-info-grid">
+                  {Array.from({ length: 6 }).map((_, index) => (
+                    <SkeletonBlock className="job-detail-info-skeleton" key={index} />
+                  ))}
+                </div>
+                <SkeletonText lines={5} />
+              </div>
             ) : error ? (
               <div className="job-detail-error">{error}</div>
             ) : (

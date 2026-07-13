@@ -38,7 +38,12 @@ def signup_user(db: Session, *, email: str, password: str, role: str, name: str 
         db.rollback()
         raise handle_database_error(exc, "creating user")
     token = create_access_token({"sub": str(user.id), "role": user.role})
-    return {"message": "User created successfully", "user": {"id": user.id, "email": user.email, "role": user.role}, "access_token": token, "token_type": "bearer"}
+    return {
+        "message": "User created successfully",
+        "user": {"id": user.id, "name": user.name, "email": user.email, "role": user.role},
+        "access_token": token,
+        "token_type": "bearer",
+    }
 
 
 def login_user(db: Session, *, email: str, password: str, role: str | None) -> dict:
@@ -54,4 +59,8 @@ def login_user(db: Session, *, email: str, password: str, role: str | None) -> d
     if not verify_password(password, user.password):
         raise HTTPException(status_code=401, detail="Incorrect password. Please try again.")
     token = create_access_token({"sub": str(user.id), "role": user.role})
-    return {"access_token": token, "token_type": "bearer", "user": {"id": user.id, "email": user.email, "role": user.role}}
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "user": {"id": user.id, "name": user.name, "email": user.email, "role": user.role},
+    }

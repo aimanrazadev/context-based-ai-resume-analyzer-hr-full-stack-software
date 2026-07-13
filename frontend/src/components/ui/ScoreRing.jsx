@@ -13,9 +13,9 @@ export default function ScoreRing({ score = 0, size = 72, label = "Match score" 
           strokeDasharray={ring.strokeDasharray} strokeDashoffset={ring.strokeDashoffset} strokeLinecap="round"
           transform={`rotate(-90 ${size / 2} ${size / 2})`} />
       </svg>
-      <strong className="ds-score-ring__value" style={{ fontSize: size * 0.24 }}>
+      <span className="ds-score-ring__value" style={{ fontSize: size * 0.24 }}>
         {ring.score}%
-      </strong>
+      </span>
     </div>
   );
 }
