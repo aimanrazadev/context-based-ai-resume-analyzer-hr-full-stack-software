@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { jobAPI } from "../utils/api";
 import { getRingMetrics } from "../utils/matchScore";
-import { ScoreRing, SkeletonBlock, SkeletonText, SkillPill } from "./ui";
+import { BackButton, ScoreRing, SkeletonBlock, SkeletonText, SkillPill } from "./ui";
 import "./JobDetailModal.css";
 
 function getStoredRole() {
@@ -425,8 +425,7 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
   return (
     <div className="job-detail-overlay" role="dialog" aria-modal="true">
       <div className="job-detail-page">
-        <button
-          type="button"
+        <BackButton
           className="job-detail-back"
           onClick={(e) => {
             e.preventDefault();
@@ -434,8 +433,8 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
             handleBack();
           }}
         >
-          <span>←</span> Back
-        </button>
+          Back
+        </BackButton>
 
         {/* Candidate view (single-card Internshala-like layout) */}
         {isCandidate && !isEditing ? (
@@ -874,4 +873,5 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
     </div>
   );
 }
+
 

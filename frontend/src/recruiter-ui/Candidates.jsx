@@ -35,13 +35,7 @@ const getTopSkills = (row) => {
   return [...new Set(matchedSkills.map((skill) => String(skill || "").trim()).filter(Boolean))].slice(0, 5);
 };
 
-const getCandidateSummary = (row) => {
-  const insights = row?.insights && typeof row.insights === "object" ? row.insights : {};
-  return (
-    insights.candidate_summary ||
-    "Resume analysis is available in the application details."
-  );
-};
+const SUMMARY_CTA = "Click to View Complete Summary";
 
 const openApplicationDetails = (applicationId) => {
   if (!applicationId) return;
@@ -252,7 +246,6 @@ export default function Candidates() {
         <div className="candidate-list">
           {visibleRows.map((row, index) => {
             const topSkills = getTopSkills(row);
-            const summary = getCandidateSummary(row);
             const currentStatus = getStatusValue(row?.status);
 
             return (
@@ -302,13 +295,12 @@ export default function Candidates() {
                   </div>
                   <p className="candidate-summary">
                     <Sparkles size={14} />
-                    <span>{summary}</span>
+                    <span>{SUMMARY_CTA}</span>
                   </p>
                 </div>
 
                 <div className="candidate-score-block">
-                  <ScoreRing score={getScore(row)} size={58} label="Final score" />
-                  <span>Final Score</span>
+                  <ScoreRing score={getScore(row)} size={58} label="Candidate score" />
                 </div>
 
                 <div className="candidate-actions-block">

@@ -122,8 +122,14 @@
   cursor: pointer;
   display: grid;
   gap: 14px;
-  grid-template-columns: 40px minmax(180px, 0.9fr) minmax(260px, 1.6fr) 74px 132px;
+  grid-template-columns: 40px minmax(180px, 0.9fr) minmax(260px, 1.6fr) 96px 132px;
   padding: 14px;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.candidate-row-card:hover {
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-1px);
 }
 
 .candidate-rank {
@@ -224,14 +230,12 @@
 .candidate-score-block {
   align-items: center;
   display: grid;
-  gap: 5px;
   justify-items: center;
+  margin-left: -10px;
 }
 
-.candidate-score-block span {
-  color: #64748b;
-  font-size: 11px;
-  font-weight: 400;
+.candidate-score-block > span {
+  display: none;
 }
 
 .candidate-actions-block {
@@ -349,11 +353,7 @@
 
 .candidate-row-card {
   border-color: #e2e8f0;
-  grid-template-columns: 42px minmax(200px, 1fr) minmax(320px, 1.55fr) 82px 150px;
-}
-
-.candidate-row-card:hover {
-  border-color: #cbd5e1;
+  grid-template-columns: 42px minmax(200px, 1fr) minmax(320px, 1.55fr) 106px 150px;
 }
 
 .candidate-name-line h3 {

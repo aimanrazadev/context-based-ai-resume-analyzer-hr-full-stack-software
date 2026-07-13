@@ -1,466 +1,379 @@
-/* Fullscreen page */
-.job-page {
+.create-job-modal-overlay .job-page {
   width: 100%;
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  position: relative;
-  background: #ffffff;
+  padding: 14px 18px 20px;
+  background: #f8fbff;
   font-family: inherit;
 }
 
-/* Back Button */
 .job-back-btn {
   position: fixed;
-  top: 24px;
-  left: 24px;
-  padding: 12px 20px;
-  background: #ffffff;
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 400;
-  color: #495057;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  top: 18px;
+  left: 28px;
   z-index: 1001;
-  transition: all 0.2s;
-  box-shadow: var(--shadow-card);
 }
 
-.job-back-btn:hover {
-  background: #f8f9fa;
-  border-color: #ced4da;
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-card-hover);
-}
-
-.job-back-btn span {
-  font-size: 18px;
-  line-height: 1;
-}
-
-/* Actual form card */
-.job-card {
-  width: 100%;
-  max-width: 1100px;
-  background: white;
-  border-radius: 16px;
-  padding: 40px;
-  box-shadow: var(--shadow-card);
+.create-job-modal-overlay .job-page > .job-card {
+  width: min(100%, 1220px);
+  max-width: 1220px;
   margin: 0 auto;
+  padding: 18px 24px 0;
+  border: 1px solid #d7e0ed;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.075);
 }
 
-/* Header */
-.form-header {
-  text-align: center;
-  margin-bottom: 32px;
+.create-job-modal-overlay .form-header {
+  margin: 6px 0 12px;
+  padding-left: 8px;
+  text-align: left;
 }
 
-.form-header h2 {
-  font-size: 28px;
-  font-weight: 400;
-  color: #212529;
+.create-job-modal-overlay .form-header::before {
+  content: "Jobs > Create New Job";
+  display: block;
+  margin-bottom: 6px;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.create-job-modal-overlay .form-header h2 {
   margin: 0;
-  line-height: 1.2;
+  color: #0f172a;
+  font-size: clamp(20px, 1.8vw, 25px);
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.15;
+}
+
+.create-job-modal-overlay .form-header::after {
+  content: "Provide the details to create a new job posting and attract the right candidates.";
+  display: block;
+  margin-top: 4px;
+  color: #475569;
+  font-size: 12.5px;
+}
+
+.create-job-modal-overlay .form-step {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.78fr) minmax(360px, 1.05fr) minmax(260px, 0.82fr);
+  grid-template-areas:
+    "section-title short-description job-description"
+    "job-title short-description job-description"
+    "apply-by min-experience job-description"
+    "work-mode salary job-description"
+    "work-mode location non-negotiables"
+    "required-skills required-skills non-negotiables";
+  gap: 9px 12px;
+  margin: 0;
+}
+
+.section-title,
+.form-group,
+.form-row,
+.requirements-section {
+  min-width: 0;
 }
 
 .section-title {
-  font-size: 18px;
+  grid-area: section-title;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #d7e0ed;
+  border-radius: 11px;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 13px;
   font-weight: 400;
-  color: #212529;
-  margin: 18px 0 12px;
 }
 
-/* Form Section */
-.form-step {
-  margin-bottom: 32px;
-  min-height: 0;
-}
-
-/* Form Groups */
-.form-group {
-  margin-bottom: 24px;
-}
-
-.form-group label {
+.section-title::after {
+  content: "Basic information about the role";
   display: block;
-  font-size: 14px;
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.form-group {
+  margin: 0;
+}
+
+.form-group label,
+.section-header h3 {
+  display: block;
+  margin: 0 0 5px;
+  color: #0f172a;
+  font-size: 11.5px;
   font-weight: 400;
-  color: #212529;
-  margin-bottom: 8px;
 }
 
 .required {
-  color: #dc3545;
+  color: #dc2626;
+}
+
+.optional {
+  color: #94a3b8;
+  font-weight: 400;
 }
 
 .form-group input,
-.form-group textarea {
+.form-group textarea,
+.form-group select,
+.currency-select,
+.skills-search-box,
+.requirement-input {
   width: 100%;
-  padding: 10px 14px;
-  border: 1px solid #ced4da;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid #d7e0ed;
   border-radius: 8px;
-  font-size: 14px;
+  background: #ffffff;
+  color: #172033;
   font-family: inherit;
-  transition: all 0.2s;
+  font-size: 12px;
+  font-weight: 400;
+  outline: none;
+  transition: border-color 0.18s, box-shadow 0.18s;
 }
 
 .form-group input:focus,
-.form-group textarea:focus {
-  outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+.form-group textarea:focus,
+.form-group select:focus,
+.currency-select:focus,
+.skills-search-box:focus,
+.requirement-input:focus {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
 .form-group textarea {
+  min-height: 132px;
+  padding: 8px 10px;
+  line-height: 1.4;
   resize: vertical;
-  min-height: 200px;
-  line-height: 1.5;
 }
 
 .form-row {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: 8px;
+}
+
+.form-row > .form-group {
+  margin: 0;
 }
 
 .option-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
 }
 
 .radio-option,
 .checkbox-option {
-  display: inline-flex;
+  position: relative;
+  display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  color: #495057;
+  min-height: 32px;
+  padding: 0 8px 0 30px;
+  border: 1px solid #d7e0ed;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #334155;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 400;
   white-space: nowrap;
 }
 
-/* Salary Input Group */
+.radio-option input,
+.checkbox-option input {
+  position: absolute;
+  left: 9px;
+  width: 13px;
+  height: 13px;
+  margin: 0;
+}
+
+.radio-option:has(input:checked),
+.checkbox-option:has(input:checked) {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
 .salary-input-group {
-  display: flex;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 7px;
 }
 
 .currency-select {
-  padding: 10px 14px;
-  border: 1px solid #ced4da;
-  border-radius: 8px;
-  background: white;
-  font-size: 14px;
+  padding: 0 8px;
   cursor: pointer;
-  min-width: 60px;
 }
 
-.salary-input {
-  flex: 1;
-}
-
-/* Requirements Section */
 .requirements-section {
-  margin-bottom: 32px;
+  margin: 0;
 }
 
 .section-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
-}
-
-.section-header h3 {
-  font-size: 16px;
-  font-weight: 400;
-  color: #212529;
-  margin: 0;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
 }
 
 .ai-badge {
-  font-size: 12px;
-  color: #6c757d;
-  font-style: italic;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 10.5px;
+  font-style: normal;
+  font-weight: 400;
+  white-space: nowrap;
 }
 
 .requirements-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 16px;
+  display: grid;
+  gap: 6px;
+  margin-bottom: 6px;
 }
 
 .requirement-item {
-  display: flex;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 26px;
+  gap: 6px;
   align-items: center;
 }
 
 .requirement-input {
-  flex: 1;
-  padding: 12px 16px;
-  border: 1px solid #ced4da;
-  border-radius: 8px;
-  font-size: 16px;
+  min-height: 30px;
 }
 
 .remove-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 1px solid #dc3545;
-  background: white;
-  color: #dc3545;
-  font-size: 20px;
-  font-weight: 400;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid #fecaca;
+  border-radius: 999px;
+  background: #fff5f5;
+  color: #dc2626;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
+  font-size: 16px;
+  font-weight: 400;
 }
 
 .remove-btn:hover {
-  background: #dc3545;
-  color: white;
+  background: #fee2e2;
 }
 
 .add-requirement-btn {
-  padding: 10px 16px;
-  border: none;
-  border-radius: 8px;
-  font-size: 16px;
-  font-weight: 400;
-  cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  transition: all 0.2s;
+  gap: 6px;
+  min-height: 26px;
+  padding: 0 2px;
+  border: 0;
+  background: transparent;
+  color: #2563eb;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 400;
 }
 
-.add-requirement-btn.blue {
-  background: #007bff;
-  color: white;
-}
-
-.add-requirement-btn.blue:hover {
-  background: #0056b3;
-}
-
-.add-requirement-btn.red {
-  background: #dc3545;
-  color: white;
-}
-
-.add-requirement-btn.red:hover {
-  background: #c82333;
+.add-requirement-btn:hover {
+  color: #1d4ed8;
 }
 
 .add-requirement-btn span {
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 400;
 }
 
-
-/* Form Actions */
-.form-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 32px;
-  padding-top: 24px;
-  border-top: 1px solid #e9ecef;
-}
-
-.form-actions-right {
-  display: flex;
-  gap: 12px;
-}
-
-.btn-cancel {
-  padding: 10px 20px;
-  border: 1px solid #dee2e6;
-  background: white;
-  color: #6c757d;
-  border-radius: 8px;
-  font-size: 16px;
-  font-weight: 400;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-cancel:hover {
-  background: #f8f9fa;
-  border-color: #adb5bd;
-}
-
-.btn-back {
-  padding: 10px 20px;
-  border: 1px solid #dee2e6;
-  background: white;
-  color: #6c757d;
-  border-radius: 8px;
-  font-size: 16px;
-  font-weight: 400;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  transition: all 0.2s;
-}
-
-.btn-back:hover {
-  background: #f8f9fa;
-  border-color: #adb5bd;
-}
-
-.btn-next,
-.btn-submit {
-  padding: 10px 20px;
-  border: none;
-  background: #007bff;
-  color: white;
-  border-radius: 8px;
-  font-size: 16px;
-  font-weight: 400;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  transition: all 0.2s;
-}
-
-.btn-next:hover,
-.btn-submit:hover {
-  background: #0056b3;
-  transform: translateY(-1px);
-}
-
-/* Required Skills Section */
 .skills-field {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  display: grid;
+  gap: 6px;
 }
 
-.skills-combobox {
-  display: block;
+.skills-combobox,
+.skills-dropdown-wrapper {
   position: relative;
 }
 
 .skills-display {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 
 .skill-tag {
-  padding: 8px 12px;
-  background: #e3f2fd;
-  color: #1976d2;
-  border-radius: 20px;
-  font-size: 14px;
-  font-weight: 400;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  min-height: 24px;
+  padding: 0 8px;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 11px;
+  font-weight: 400;
 }
 
 .skill-remove {
-  background: none;
-  border: none;
-  color: #1976d2;
-  cursor: pointer;
-  font-size: 18px;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
   padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  transition: all 0.2s;
+  border: 0;
+  background: transparent;
+  color: #1d4ed8;
+  cursor: pointer;
+  font-size: 14px;
 }
 
 .skill-remove:hover {
-  color: #d32f2f;
-  transform: scale(1.2);
-}
-
-/* Skills Dropdown */
-.skills-dropdown-wrapper {
-  position: relative;
-}
-
-.skills-search-box {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid #ced4da;
-  border-radius: 8px;
-  font-size: 16px;
-  font-family: inherit;
-  transition: all 0.2s;
-}
-
-.skills-search-box:focus {
-  outline: none;
-  border-color: #1976d2;
-  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+  color: #dc2626;
 }
 
 .skills-dropdown {
   position: absolute;
-  top: 100%;
+  top: calc(100% + 4px);
   left: 0;
   right: 0;
-  background: white;
-  border: 1px solid #ced4da;
-  border-top: none;
-  border-radius: 0 0 8px 8px;
-  max-height: 300px;
-  overflow-y: auto;
   z-index: 1000;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid #d7e0ed;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
 }
 
-.dropdown-empty {
-  padding: 16px;
-  text-align: center;
-  color: #adb5bd;
-  font-size: 14px;
-}
-
+.dropdown-empty,
 .dropdown-item {
   width: 100%;
-  padding: 12px;
-  border: none;
-  background: white;
-  text-align: left;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-bottom: 1px solid #eef2f7;
+  background: #ffffff;
+  color: #475569;
   cursor: pointer;
-  font-size: 16px;
-  color: #495057;
-  transition: all 0.2s;
-  display: block;
-  border-bottom: 1px solid #f1f3f5;
-}
-
-.dropdown-item:last-child {
-  border-bottom: none;
-  border-radius: 0 0 8px 8px;
+  font-size: 12px;
+  font-weight: 400;
+  text-align: left;
 }
 
 .dropdown-item:hover {
-  background: #e3f2fd;
-  color: #1976d2;
-  font-weight: 400;
+  background: #eff6ff;
+  color: #1d4ed8;
 }
 
 .dropdown-item.disabled,
@@ -468,494 +381,203 @@
   cursor: default;
   background: #f8fafc;
   color: #94a3b8;
-  font-weight: 400;
-}
-
-.optional {
-  color: #adb5bd;
-  font-weight: 400;
 }
 
 .skills-help-text {
-  font-size: 12px;
-  color: #6b7280;
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.4;
 }
 
 .skills-warning {
-  color: #b45309;
-  background: #fffbeb;
+  padding: 7px 9px;
   border: 1px solid #fde68a;
   border-radius: 8px;
-  font-size: 12px;
+  background: #fffbeb;
+  color: #b45309;
+  font-size: 11px;
   font-weight: 400;
-  padding: 8px 10px;
 }
 
 .form-error-message {
-  background: var(--color-danger-soft);
+  margin: 10px 0 0;
+  padding: 9px 10px;
   border: 1px solid #fecaca;
-  border-radius: var(--radius-md);
+  border-radius: 8px;
+  background: #fef2f2;
   color: #b91c1c;
-  font-size: 14px;
-  line-height: 1.5;
-  margin-bottom: 16px;
-  padding: 12px;
-}
-
-/* Visual consistency audit pass */
-.job-card {
-  padding: 28px;
-}
-
-.job-card h2,
-.form-section-title,
-.requirements-section h3 {
-  font-weight: 400;
-}
-
-.form-group label,
-.field-label,
-.radio-option,
-.checkbox-option {
-  font-weight: 400;
-}
-
-.form-group input,
-.form-group textarea,
-.form-group select {
-  font-weight: 400;
-}
-
-.form-row,
-.requirements-section {
-  gap: 12px;
-}
-
-.skill-tag,
-.non-negotiable-input,
-.skills-input {
-  font-weight: 400;
-}
-
-/* Create job visual rebuild — CSS only */
-.create-job-modal-overlay .job-page {
-  justify-content: flex-start;
-  align-items: stretch;
-  min-height: 100vh;
-  padding: 20px 22px;
-  background: #f8fafc;
-}
-
-.create-job-modal-overlay .job-back-btn {
-  position: absolute;
-  top: 26px;
-  left: 42px;
-  height: 38px;
-  padding: 0 14px;
-  border-radius: 10px;
-  border-color: #dce5f2;
-  background: #ffffff;
-  box-shadow: none;
-  color: #334155;
-  font-size: 13px;
-  z-index: 3;
-}
-
-.create-job-modal-overlay .job-card {
-  width: min(100%, 1140px);
-  max-width: 1140px;
-  margin: 0 auto;
-  padding: 26px 32px 0;
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  background: #ffffff;
-  box-shadow: 0 20px 55px rgba(15, 23, 42, 0.08);
-}
-
-.create-job-modal-overlay .form-header {
-  position: relative;
-  text-align: left;
-  margin: 36px 0 28px;
-  padding-right: 280px;
-}
-
-.create-job-modal-overlay .form-header::before {
-  content: "Jobs  ›  Create New Job";
-  display: block;
-  margin-bottom: 22px;
-  color: #475569;
   font-size: 12px;
-  font-weight: 400;
-  letter-spacing: 0.01em;
-}
-
-.create-job-modal-overlay .form-header::after {
-  content: "Provide the details to create a new job posting and attract the right candidates.";
-  display: block;
-  margin-top: 8px;
-  color: #475569;
-  font-size: 14px;
-  font-weight: 400;
-}
-
-.create-job-modal-overlay .form-header h2 {
-  color: #0f172a;
-  font-size: 30px;
-  font-weight: 400;
-  letter-spacing: -0.04em;
-}
-
-.create-job-modal-overlay .form-step {
-  display: grid;
-  grid-template-columns: 340px minmax(0, 1fr);
-  gap: 18px;
-  align-items: start;
-  margin: 0;
-}
-
-.create-job-modal-overlay .section-title {
-  grid-column: 1;
-  grid-row: 1;
-  min-height: 88px;
-  margin: 0;
-  padding: 24px 24px 6px 70px;
-  border: 1px solid #e2e8f0;
-  border-bottom: 0;
-  border-radius: 14px 14px 0 0;
-  background: #ffffff;
-  color: #0f172a;
-  font-size: 15px;
-  font-weight: 400;
-  position: relative;
-}
-
-.create-job-modal-overlay .section-title::before {
-  content: "▣";
-  position: absolute;
-  left: 24px;
-  top: 22px;
-  width: 34px;
-  height: 34px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: #dbeafe;
-  color: #2563eb;
-  font-size: 13px;
-}
-
-.create-job-modal-overlay .section-title::after {
-  content: "Basic information about the role";
-  display: block;
-  margin-top: 6px;
-  color: #64748b;
-  font-size: 12px;
-  font-weight: 400;
-}
-
-.create-job-modal-overlay .form-step > .form-group:nth-of-type(1),
-.create-job-modal-overlay .form-step > .form-row:nth-of-type(1),
-.create-job-modal-overlay .form-step > .form-row:nth-of-type(2),
-.create-job-modal-overlay .form-step > .form-row:nth-of-type(3),
-.create-job-modal-overlay .form-step > .form-group:nth-of-type(3),
-.create-job-modal-overlay .form-step > .form-group:nth-of-type(4) {
-  grid-column: 1;
-  margin: 0;
-  padding: 0 24px 20px;
-  border-left: 1px solid #e2e8f0;
-  border-right: 1px solid #e2e8f0;
-  background: #ffffff;
-}
-
-.create-job-modal-overlay .form-step > .form-group:nth-of-type(4) {
-  padding-bottom: 24px;
-  border-bottom: 1px solid #e2e8f0;
-  border-radius: 0 0 14px 14px;
-}
-
-.create-job-modal-overlay .form-step > .form-group:nth-of-type(2) {
-  grid-column: 2;
-  grid-row: 1;
-  margin: 0;
-  padding: 72px 24px 0;
-  border: 1px solid #e2e8f0;
-  border-bottom: 0;
-  border-radius: 14px 14px 0 0;
-  background: #ffffff;
-  position: relative;
-}
-
-.create-job-modal-overlay .form-step > .form-group:nth-of-type(2)::before {
-  content: "Job Description";
-  position: absolute;
-  left: 70px;
-  top: 24px;
-  color: #0f172a;
-  font-size: 15px;
-  font-weight: 400;
-}
-
-.create-job-modal-overlay .form-step > .form-group:nth-of-type(2)::after {
-  content: "Describe the role, responsibilities and expectations";
-  position: absolute;
-  left: 70px;
-  top: 48px;
-  color: #64748b;
-  font-size: 12px;
-  font-weight: 400;
-}
-
-.create-job-modal-overlay .form-step > .form-group:nth-of-type(5) {
-  grid-column: 2;
-  margin: -18px 0 0;
-  padding: 0 24px 24px;
-  border-left: 1px solid #e2e8f0;
-  border-right: 1px solid #e2e8f0;
-  background: #ffffff;
-}
-
-.create-job-modal-overlay .requirements-section {
-  grid-column: 2;
-  margin: -18px 0 0;
-  padding: 0 24px 24px;
-  border: 1px solid #e2e8f0;
-  border-top: 0;
-  border-radius: 0 0 14px 14px;
-  background: #ffffff;
-}
-
-.create-job-modal-overlay .form-step > .form-group:nth-of-type(6) {
-  grid-column: 1 / -1;
-  margin: 0;
-  padding: 24px;
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  background: #ffffff;
-}
-
-.create-job-modal-overlay .form-row {
-  display: block;
-}
-
-.create-job-modal-overlay .form-row > .form-group {
-  margin: 0;
-}
-
-.create-job-modal-overlay .form-row > .form-group + .form-group {
-  margin-top: 20px;
-}
-
-.create-job-modal-overlay .form-group label {
-  margin-bottom: 9px;
-  color: #0f172a;
-  font-size: 12.5px;
-  font-weight: 400;
-}
-
-.create-job-modal-overlay .form-group input,
-.create-job-modal-overlay .form-group textarea,
-.create-job-modal-overlay .currency-select,
-.create-job-modal-overlay .skills-search-box {
-  min-height: 46px;
-  border-color: #d8e0eb;
-  border-radius: 9px;
-  background: #ffffff;
-  color: #172033;
-  font-size: 13px;
-  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02);
-}
-
-.create-job-modal-overlay .form-group textarea {
-  min-height: 260px;
-  line-height: 1.65;
-}
-
-.create-job-modal-overlay .option-row {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.create-job-modal-overlay .form-row:nth-of-type(3) .form-group:nth-child(2) .option-row {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.create-job-modal-overlay .radio-option {
-  min-height: 56px;
-  padding: 0 14px;
-  border: 1px solid #d8e0eb;
-  border-radius: 9px;
-  color: #172033;
-  font-size: 13px;
-  font-weight: 400;
-  background: #ffffff;
-}
-
-.create-job-modal-overlay .radio-option:has(input:checked) {
-  border-color: #2563eb;
-  background: #eff6ff;
-  color: #1d4ed8;
-}
-
-.create-job-modal-overlay .salary-input-group {
-  gap: 8px;
-}
-
-.create-job-modal-overlay .currency-select {
-  width: 86px;
-  min-width: 86px;
-}
-
-.create-job-modal-overlay .section-header {
-  margin: 0 0 14px;
-}
-
-.create-job-modal-overlay .section-header h3 {
-  color: #0f172a;
-  font-size: 15px;
-  font-weight: 400;
-}
-
-.create-job-modal-overlay .ai-badge {
-  padding: 5px 10px;
-  border-radius: 999px;
-  background: #eaf2ff;
-  color: #2563eb;
-  font-size: 11px;
-  font-style: normal;
-  font-weight: 400;
-}
-
-.create-job-modal-overlay .requirements-list {
-  gap: 10px;
-  margin-bottom: 14px;
-}
-
-.create-job-modal-overlay .requirement-item {
-  gap: 10px;
-}
-
-.create-job-modal-overlay .requirement-item::before {
-  content: "⋮⋮";
-  color: #94a3b8;
-  font-size: 17px;
-  letter-spacing: -3px;
-}
-
-.create-job-modal-overlay .requirement-input {
-  min-height: 54px;
-  border-color: #d8e0eb;
-  border-radius: 9px;
-  color: #172033;
-  font-size: 13px;
-  line-height: 1.35;
-}
-
-.create-job-modal-overlay .remove-btn {
-  width: 28px;
-  height: 28px;
-  flex: 0 0 28px;
-  font-size: 18px;
-}
-
-.create-job-modal-overlay .add-requirement-btn.red {
-  padding: 8px 2px;
-  background: transparent;
-  color: #2563eb;
-  font-size: 13px;
-  font-weight: 400;
-}
-
-.create-job-modal-overlay .add-requirement-btn.red:hover {
-  background: transparent;
-  color: #1d4ed8;
-  transform: none;
-}
-
-.create-job-modal-overlay .skills-help-text {
-  margin-top: -2px;
-  color: #475569;
-  font-size: 12px;
-}
-
-.create-job-modal-overlay .skills-display {
-  order: 2;
-}
-
-.create-job-modal-overlay .skill-tag {
-  border: 1px solid #bfdbfe;
-  background: #eff6ff;
-  color: #1d4ed8;
-  border-radius: 999px;
-  font-size: 12px;
+  line-height: 1.4;
 }
 
 .create-job-modal-overlay .form-actions {
   position: sticky;
   bottom: 0;
-  z-index: 2;
-  margin: 28px -32px 0;
-  padding: 18px 32px;
-  border-top: 1px solid #e2e8f0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 12px -24px 0;
+  padding: 10px 24px;
+  border-top: 1px solid #d7e0ed;
   border-radius: 0 0 14px 14px;
   background: rgba(255, 255, 255, 0.96);
   backdrop-filter: blur(12px);
 }
 
-.create-job-modal-overlay .btn-cancel,
-.create-job-modal-overlay .btn-back,
-.create-job-modal-overlay .btn-submit {
-  min-height: 42px;
-  padding: 0 22px;
-  border-radius: 9px;
-  font-size: 13px;
-  font-weight: 400;
+.form-actions-right {
+  display: flex;
+  gap: 10px;
 }
 
-.create-job-modal-overlay .btn-submit {
-  min-width: 158px;
-  background: linear-gradient(135deg, #2563eb, #0b76ff);
-  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.2);
+.btn-cancel,
+.btn-back,
+.btn-next,
+.btn-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 400;
+  transition: box-shadow 0.2s, transform 0.2s, background 0.2s;
+}
+
+.btn-cancel,
+.btn-back {
+  border: 1px solid #d7e0ed;
+  background: #ffffff;
+  color: #64748b;
+}
+
+.btn-submit,
+.btn-next {
+  min-width: 128px;
+  border: 0;
+  background: #2563eb;
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.2);
+}
+
+.btn-cancel:hover,
+.btn-back:hover,
+.btn-submit:hover,
+.btn-next:hover {
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-1px);
+}
+
+.btn-submit:disabled,
+.btn-back:disabled,
+.btn-cancel:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+  transform: none;
+}
+
+.job-title-field {
+  grid-area: job-title;
+}
+
+.short-description-field {
+  grid-area: short-description;
+}
+
+.apply-by-field {
+  grid-area: apply-by;
+}
+
+.min-experience-field {
+  grid-area: min-experience;
+}
+
+.work-mode-field {
+  grid-area: work-mode;
+}
+
+.salary-field {
+  grid-area: salary;
+}
+
+.location-field {
+  grid-area: location;
+}
+
+.job-description-field {
+  grid-area: job-description;
+}
+
+.non-negotiables-field {
+  grid-area: non-negotiables;
+}
+
+.required-skills-field {
+  grid-area: required-skills;
+  padding: 10px 12px;
+  border: 1px solid #d7e0ed;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.job-description-field textarea {
+  min-height: 352px;
 }
 
 @media (max-width: 980px) {
-  .create-job-modal-overlay .job-card {
-    padding-inline: 20px;
+  .create-job-modal-overlay .job-page {
+    padding: 12px;
   }
 
-  .create-job-modal-overlay .form-header {
-    padding-right: 0;
+  .job-back-btn {
+    position: static;
+    margin-bottom: 10px;
+  }
+
+  .create-job-modal-overlay .job-page > .job-card {
+    padding: 18px 18px 0;
   }
 
   .create-job-modal-overlay .form-step {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      "section-title"
+      "job-title"
+      "short-description"
+      "apply-by"
+      "min-experience"
+      "work-mode"
+      "salary"
+      "location"
+      "job-description"
+      "non-negotiables"
+      "required-skills";
   }
 
-  .create-job-modal-overlay .section-title,
-  .create-job-modal-overlay .form-step > .form-group:nth-of-type(1),
-  .create-job-modal-overlay .form-step > .form-row:nth-of-type(1),
-  .create-job-modal-overlay .form-step > .form-row:nth-of-type(2),
-  .create-job-modal-overlay .form-step > .form-row:nth-of-type(3),
-  .create-job-modal-overlay .form-step > .form-group:nth-of-type(3),
-  .create-job-modal-overlay .form-step > .form-group:nth-of-type(4),
-  .create-job-modal-overlay .form-step > .form-group:nth-of-type(2),
-  .create-job-modal-overlay .form-step > .form-group:nth-of-type(5),
-  .create-job-modal-overlay .requirements-section,
-  .create-job-modal-overlay .form-step > .form-group:nth-of-type(6) {
+  .section-title,
+  .job-title-field,
+  .short-description-field,
+  .apply-by-field,
+  .min-experience-field,
+  .work-mode-field,
+  .salary-field,
+  .location-field,
+  .job-description-field,
+  .non-negotiables-field,
+  .required-skills-field {
     grid-column: 1;
-    margin: 0;
-    border-radius: 0;
+    grid-row: auto;
   }
 
-  .create-job-modal-overlay .section-title,
-  .create-job-modal-overlay .form-step > .form-group:nth-of-type(2),
-  .create-job-modal-overlay .form-step > .form-group:nth-of-type(6) {
-    border-radius: 14px 14px 0 0;
+  .job-description-field textarea {
+    min-height: 150px;
   }
 
-  .create-job-modal-overlay .form-step > .form-group:nth-of-type(4),
-  .create-job-modal-overlay .requirements-section,
-  .create-job-modal-overlay .form-step > .form-group:nth-of-type(6) {
-    border-radius: 0 0 14px 14px;
+  .create-job-modal-overlay .form-actions {
+    margin-inline: -18px;
+    padding-inline: 18px;
   }
 }

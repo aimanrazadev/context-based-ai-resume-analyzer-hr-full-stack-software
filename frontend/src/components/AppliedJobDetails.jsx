@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { jobAPI } from "../utils/api";
-import { ErrorState, PageTransition, ScoreRing, SkeletonBlock, SkeletonText, SkillPill, StatusBadge } from "./ui";
+import { BackButton, ErrorState, PageTransition, ScoreRing, SkeletonBlock, SkeletonText, SkillPill, StatusBadge } from "./ui";
 import "./AppliedJobDetails.css";
 
 const cleanList = (items = [], limit = 6) => {
@@ -256,9 +256,9 @@ export default function AppliedJobDetails({ applicationId, onBack }) {
 
   return (
     <PageTransition className="ajd-wrap">
-      <button type="button" className="ajd-back" onClick={() => onBack?.()}>
-        ← Back to applied jobs
-      </button>
+      <BackButton className="ajd-back" onClick={() => onBack?.()}>
+        Back to applied jobs
+      </BackButton>
 
       {loading ? (
         <div className="ajd-card ajd-detail-skeleton">
@@ -444,4 +444,5 @@ export default function AppliedJobDetails({ applicationId, onBack }) {
     </PageTransition>
   );
 }
+
 

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import "./CreateJob.css";
+import { BackButton } from "../components/ui";
 import { jobAPI } from "../utils/api";
 import { ALL_SKILLS } from "../utils/skillsList";
 
@@ -370,9 +371,7 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
   return (
     <div className="job-page">
       {/* Back Button */}
-      <button type="button" className="job-back-btn" onClick={onClose}>
-        <span>{"<-"}</span> Back
-      </button>
+      <BackButton className="job-back-btn" onClick={onClose} />
       
       <div className="job-card">
         {/* Header */}
@@ -384,7 +383,7 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
 
         <div className="form-step">
           <h3 className="section-title">Job Details</h3>
-          <div className="form-group">
+          <div className="form-group job-title-field">
             <label>Job Title <span className="required">*</span></label>
             <input
               type="text"
@@ -394,7 +393,7 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
             />
           </div>
 
-          <div className="form-group">
+          <div className="form-group short-description-field">
             <label>Short Description</label>
             <input
               type="text"
@@ -404,7 +403,7 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
             />
           </div>
 
-          <div className="form-row">
+          <div className="form-row apply-by-field">
             <div className="form-group">
               <label>Apply By</label>
               <input
@@ -415,7 +414,7 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
             </div>
           </div>
 
-          <div className="form-row">
+          <div className="form-row min-experience-field">
             <div className="form-group">
               <label>Minimum Experience (years)</label>
               <input
@@ -429,7 +428,7 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
             </div>
           </div>
 
-          <div className="form-row">
+          <div className="form-row work-mode-field">
             <div className="form-group">
               <label>Job Type</label>
               <div className="option-row">
@@ -512,7 +511,7 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
             </div>
           </div>
 
-          <div className="form-group">
+          <div className="form-group salary-field">
             <label>{formData.jobType === "internship" ? "Stipend" : "CTC"} <span className="required">*</span></label>
             <div className="salary-input-group">
               <select
@@ -535,7 +534,7 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
             </div>
           </div>
 
-          <div className="form-group">
+          <div className="form-group location-field">
             <label>Location <span className="required">*</span></label>
             <input
               type="text"
@@ -545,7 +544,7 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
             />
           </div>
 
-          <div className="form-group">
+          <div className="form-group job-description-field">
             <label>Job Description <span className="required">*</span></label>
             <textarea
               value={formData.jobDescription}
@@ -556,7 +555,7 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
             />
           </div>
 
-          <div className="requirements-section">
+          <div className="requirements-section non-negotiables-field">
             <div className="section-header">
               <h3>Non-Negotiables</h3>
               <span className="ai-badge">AI-extracted and editable</span>
@@ -590,7 +589,7 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
 
           </div>
 
-          <div className="form-group">
+          <div className="form-group required-skills-field">
             <label>Required Skills <span className="optional">(Optional)</span></label>
             
             <div className="skills-field">
