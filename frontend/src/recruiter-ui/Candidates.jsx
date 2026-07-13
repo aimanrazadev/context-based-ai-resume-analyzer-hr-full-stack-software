@@ -74,18 +74,16 @@ export default function Candidates({ initialStatusFilter = ALL_STATUSES }) {
     setError("");
     (async () => {
       try {
-        const [activeRes, closedRes, draftRes, deletedRes] = await Promise.all([
+        const [activeRes, closedRes, draftRes] = await Promise.all([
           jobAPI.getAll({ status: "active" }),
           jobAPI.getAll({ status: "closed" }),
           jobAPI.getAll({ status: "draft" }),
-          jobAPI.getAll({ status: "deleted" }),
         ]);
         if (!alive) return;
         const all = [
           ...(activeRes?.jobs || []),
           ...(closedRes?.jobs || []),
           ...(draftRes?.jobs || []),
-          ...(deletedRes?.jobs || []),
         ];
         const unique = new Map();
         all.forEach((job) => {
@@ -93,7 +91,11 @@ export default function Candidates({ initialStatusFilter = ALL_STATUSES }) {
         });
         const list = Array.from(unique.values());
         setJobs(list);
-        setJobId((prev) => (prev ? prev : list.length ? ALL_JOBS_ID : null));
+        setJobId((prev) => {
+          if (!list.length) return null;
+          if (prev === ALL_JOBS_ID) return prev;
+          return list.some((job) => job.id === prev) ? prev : ALL_JOBS_ID;
+        });
       } catch (e) {
         if (!alive) return;
         setError(e?.message || "Failed to load jobs");
