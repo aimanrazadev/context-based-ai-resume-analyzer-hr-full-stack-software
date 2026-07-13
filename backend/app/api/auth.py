@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from ..database import get_db
@@ -15,8 +15,3 @@ def signup(payload: SignupRequest, db: Session = Depends(get_db)):
 @router.post("/login")
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
     return login_user(db, email=payload.email, password=payload.password, role=payload.role)
-
-
-@router.post("/logout")
-def logout():
-    return {"message": "Logged out successfully"}

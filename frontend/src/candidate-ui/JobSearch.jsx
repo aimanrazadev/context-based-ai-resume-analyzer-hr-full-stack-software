@@ -205,10 +205,7 @@ export default function JobSearch() {
               const logoLetter = title.trim().slice(0, 1).toUpperCase() || "J";
               const opportunity = String(job.opportunity_type || "").toLowerCase();
               const rawJobType = String(job.job_type || "").trim().toLowerCase();
-              const inferredJobType = rawJobType || (opportunity === "internship" ? "internship" : "full-time");
-              const supportedJobTypes = new Set(["full-time", "part-time", "contract", "internship"]);
-              const variant = supportedJobTypes.has(inferredJobType) ? inferredJobType : "full-time";
-              const label = variant;
+              const jobType = rawJobType || (opportunity === "internship" ? "internship" : "full-time");
               const existingApplicationId = appliedByJobId[job.id];
               const alreadyApplied = Number.isFinite(existingApplicationId) && existingApplicationId > 0;
               const isClosed = String(job.status || "").toLowerCase() === "closed";
@@ -241,14 +238,16 @@ export default function JobSearch() {
                     </div>
                   </div>
 
-                  <div className="job-type-row">
-                    <span className={`job-type-pill job-type-pill--${variant}`}>{label}</span>
+                  <div className="job-meta-chips">
+                    <span className="job-meta-chip job-meta-chip--type">{jobType}</span>
+                    <span className="job-meta-chip job-meta-chip--site">{job.job_site || "Not specified"}</span>
+                    <span className="job-meta-chip job-meta-chip--experience">
+                      {job.min_experience_years != null ? `${job.min_experience_years} years` : "Not specified"}
+                    </span>
                   </div>
 
                   <div className="job-mini-card">
                     <div className="job-mini-title">{job.short_description || title}</div>
-                    <div className="job-mini-sub">Experience: {job.min_experience_years != null ? `${job.min_experience_years} yrs` : "Not specified"}</div>
-                    <span className="job-mini-chip">{job.job_site || "Not specified"}</span>
                   </div>
 
                   <p className="job-description">{job.description || "No description provided."}</p>

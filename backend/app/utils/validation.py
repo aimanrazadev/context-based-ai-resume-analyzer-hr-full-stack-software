@@ -141,31 +141,3 @@ def validate_job_status(status: str | None) -> str:
         )
     
     return status
-
-
-def sanitize_filename(filename: str) -> str:
-    """Sanitize filename to prevent directory traversal and other attacks."""
-    if not filename:
-        raise HTTPException(status_code=400, detail="Filename is required")
-    
-    # Remove any path separators
-    filename = filename.replace("/", "_").replace("\\", "_")
-    
-    # Remove any null bytes
-    filename = filename.replace("\x00", "")
-    
-    # Remove directory traversal sequences
-    filename = filename.replace("..", "_")
-    
-    # Remove leading dots to prevent hidden files
-    filename = filename.lstrip(".")
-    
-    # Ensure it's not too long
-    if len(filename) > 255:
-        raise HTTPException(status_code=400, detail="Filename too long")
-    
-    # Ensure it has some content
-    if not filename or filename == "_":
-        raise HTTPException(status_code=400, detail="Invalid filename")
-    
-    return filename

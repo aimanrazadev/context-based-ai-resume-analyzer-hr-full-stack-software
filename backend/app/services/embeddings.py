@@ -225,16 +225,3 @@ def get_or_create_embedding(
         model=model,
     )
     return row
-
-
-def vector_from_row(row: Embedding) -> list[float]:
-    """
-    Deserialize an embedding vector from a database row.
-    """
-    try:
-        data: Any = json.loads(row.vector_json or "[]")
-        if isinstance(data, list):
-            return [float(x) for x in data]
-    except Exception:
-        pass
-    return []

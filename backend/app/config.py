@@ -12,11 +12,6 @@ if os.getenv("DISABLE_DOTENV") != "1":
 _raw_database_url = (os.getenv("DATABASE_URL") or "").strip()
 DATABASE_URL = _raw_database_url
 
-# -------------------- Module 8: AI (Gemini) --------------------
-# Keep old AI_API_KEY for backward compatibility with any older modules, but Module 8
-# uses GEMINI_* variables.
-AI_API_KEY = os.getenv("AI_API_KEY")
-
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
 GEMINI_BASE_URL = os.getenv("GEMINI_BASE_URL", "https://generativelanguage.googleapis.com")

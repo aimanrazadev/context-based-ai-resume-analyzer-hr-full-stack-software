@@ -382,7 +382,6 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
         </div>
 
         <div className="form-step">
-          <h3 className="section-title">Job Details</h3>
           <div className="form-group job-title-field">
             <label>Job Title <span className="required">*</span></label>
             <input
@@ -558,7 +557,6 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
           <div className="requirements-section non-negotiables-field">
             <div className="section-header">
               <h3>Non-Negotiables</h3>
-              <span className="ai-badge">AI-extracted and editable</span>
             </div>
             <div className="requirements-list">
               {formData.nonNegotiables.map((req, index) => (
@@ -655,10 +653,6 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
                   ))}
                 </div>
               )}
-
-              <div className="skills-help-text">
-                These skills directly control resume matching and the green/red skill snapshot. Add only real must-check technical skills; keep soft skills in non-negotiables.
-              </div>
 
               {skillWarning && <div className="skills-warning">{skillWarning}</div>}
 

@@ -190,7 +190,7 @@ export default function AppliedJobDetails({ applicationId, onBack }) {
     fetchOnce()
       .then((res) => {
         if (!alive) return;
-        // If analysis is still running (apply_save background task), poll briefly.
+        // If analysis is still running, poll briefly.
         const a = res?.application || null;
         const pending = !a?.score_updated_at && !a?.ai_analysis && !a?.ai_explanation;
         if (!pending) return;

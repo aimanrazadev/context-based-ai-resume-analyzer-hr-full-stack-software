@@ -18,6 +18,8 @@ export default function RecruiterApp({ onLogout }) {
   const [activeView, setActiveView] = useState("dashboard");
   const [jobDetailId, setJobDetailId] = useState(null);
   const [jobsInitialFilter, setJobsInitialFilter] = useState("all");
+  const [jobListingCount, setJobListingCount] = useState(null);
+  const [jobListingsTitle, setJobListingsTitle] = useState("All Jobs (...)");
   const [candidatesInitialStatus, setCandidatesInitialStatus] = useState("all");
   const [draftEditing, setDraftEditing] = useState(null); // { jobId, initialDraft }
 
@@ -113,7 +115,7 @@ export default function RecruiterApp({ onLogout }) {
           <div className="topbar">
             <h1 className="page-title">
               {activeView === "dashboard" && "Dashboard"}
-              {activeView === "jobs" && "Jobs"}
+              {activeView === "jobs" && jobListingsTitle}
               {activeView === "candidates" && "Candidates"}
               {activeView === "create-job" && "Create Job"}
             </h1>
@@ -142,6 +144,8 @@ export default function RecruiterApp({ onLogout }) {
             {activeView === "jobs" && (
               <Jobs
                 initialFilter={jobsInitialFilter}
+                onAllJobCountChange={setJobListingCount}
+                onTopbarTitleChange={setJobListingsTitle}
                 onViewJob={(id) => {
                   setJobDetailId(id);
                   setActiveView("job-detail");

@@ -195,45 +195,6 @@
   margin-bottom: 12px;
 }
 
-.job-type-row {
-  margin: 4px 0 12px;
-}
-
-.job-type-pill {
-  border-radius: 999px;
-  padding: 6px 12px;
-  font-size: 13px;
-  font-weight: 400;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  border: 1px solid transparent;
-  white-space: nowrap;
-}
-
-.job-type-pill--full-time {
-  background: #e0f2fe;
-  color: #075985;
-  border-color: #bae6fd;
-}
-
-.job-type-pill--part-time {
-  background: #dcfce7;
-  color: #166534;
-  border-color: #86efac;
-}
-
-.job-type-pill--contract {
-  background: #fee2e2;
-  color: #991b1b;
-  border-color: #fca5a5;
-}
-
-.job-type-pill--internship {
-  background: #fef9c3;
-  color: #854d0e;
-  border-color: #fde68a;
-}
-
 .job-detail-item {
   display: flex;
   align-items: center;
@@ -262,38 +223,6 @@
 .job-mini-title {
   font-weight: 400;
   color: #1f2937;
-}
-
-.job-mini-sub {
-  color: #6b7280;
-  font-size: 13px;
-}
-
-.job-mini-chip {
-  margin-left: auto;
-  background: #eef2ff;
-  color: #4338ca;
-  border: 1px solid #c7d2fe;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 400;
-}
-
-.job-stats {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  color: #6b7280;
-  font-size: 13px;
-  margin-bottom: 14px;
-  flex-wrap: wrap;
-}
-
-.job-stat {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
 }
 
 .job-description {
@@ -330,23 +259,6 @@
   transform: translateY(-1px);
 }
 
-.btn-save {
-  padding: 10px 20px;
-  background: white;
-  color: #495057;
-  border: 1px solid #ced4da;
-  border-radius: 8px;
-  font-size: 15px;
-  font-weight: 400;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-save:hover {
-  background: #f8f9fa;
-  border-color: #adb5bd;
-}
-
 .btn-view {
   padding: 10px 20px;
   background: transparent;
@@ -370,7 +282,6 @@
 .sort-select,
 .job-description,
 .btn-apply,
-.btn-save,
 .btn-view {
   font-size: 14px;
 }
@@ -379,8 +290,7 @@
   line-height: 1.5;
 }
 
-.job-detail-item,
-.job-stats {
+.job-detail-item {
   font-size: 13px;
 }
 
@@ -409,8 +319,7 @@
   margin-bottom: 12px;
 }
 
-.job-details,
-.job-stats {
+.job-details {
   gap: 10px 14px;
 }
 
@@ -489,17 +398,7 @@
   margin-bottom: 9px;
 }
 
-.job-type-row {
-  margin: 3px 0 9px;
-}
-
-.job-type-pill {
-  padding: 4px 10px;
-  font-size: 11.5px;
-}
-
-.job-detail-item,
-.job-stats {
+.job-detail-item {
   font-size: 12.5px;
 }
 
@@ -513,15 +412,6 @@
   font-size: 13px;
 }
 
-.job-mini-sub {
-  font-size: 12px;
-}
-
-.job-stats {
-  gap: 12px;
-  margin-bottom: 10px;
-}
-
 .job-description {
   font-size: 13.5px;
   line-height: 1.45;
@@ -533,7 +423,6 @@
 }
 
 .btn-apply,
-.btn-save,
 .btn-view {
   padding: 8px 16px;
   font-size: 13.5px;

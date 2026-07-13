@@ -25,17 +25,9 @@
 }
 
 .create-job-modal-overlay .form-header {
-  margin: 6px 0 12px;
+  margin: 2px 0 14px;
   padding-left: 8px;
   text-align: left;
-}
-
-.create-job-modal-overlay .form-header::before {
-  content: "Jobs > Create New Job";
-  display: block;
-  margin-bottom: 6px;
-  color: #64748b;
-  font-size: 11px;
 }
 
 .create-job-modal-overlay .form-header h2 {
@@ -48,53 +40,24 @@
   line-height: var(--leading-title);
 }
 
-.create-job-modal-overlay .form-header::after {
-  content: "Provide the details to create a new job posting and attract the right candidates.";
-  display: block;
-  margin-top: 4px;
-  color: #475569;
-  font-size: 12.5px;
-}
-
 .create-job-modal-overlay .form-step {
   display: grid;
-  grid-template-columns: minmax(260px, 0.78fr) minmax(360px, 1.05fr) minmax(260px, 0.82fr);
+  grid-template-columns: minmax(250px, 0.86fr) minmax(340px, 1.08fr) minmax(300px, 0.98fr);
   grid-template-areas:
-    "section-title short-description job-description"
     "job-title short-description job-description"
-    "apply-by min-experience job-description"
+    "location min-experience job-description"
+    "apply-by salary job-description"
     "work-mode salary job-description"
-    "work-mode location non-negotiables"
+    "work-mode salary non-negotiables"
     "required-skills required-skills non-negotiables";
-  gap: 9px 12px;
+  gap: 10px 14px;
   margin: 0;
 }
 
-.section-title,
 .form-group,
 .form-row,
 .requirements-section {
   min-width: 0;
-}
-
-.section-title {
-  grid-area: section-title;
-  margin: 0;
-  padding: 10px 12px;
-  border: 1px solid #d7e0ed;
-  border-radius: 11px;
-  background: #ffffff;
-  color: #0f172a;
-  font-size: 13px;
-  font-weight: 400;
-}
-
-.section-title::after {
-  content: "Basic information about the role";
-  display: block;
-  margin-top: 4px;
-  color: #64748b;
-  font-size: 11px;
 }
 
 .form-group {
@@ -107,7 +70,7 @@
   margin: 0 0 5px;
   color: #0f172a;
   font-size: 11.5px;
-  font-weight: 400;
+  font-weight: 600;
 }
 
 .required {
@@ -167,40 +130,34 @@
 
 .option-row {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 7px;
+  gap: 6px;
 }
 
-.radio-option,
-.checkbox-option {
+.radio-option {
   position: relative;
   display: flex;
-  align-items: center;
-  min-height: 32px;
-  padding: 0 8px 0 30px;
-  border: 1px solid #d7e0ed;
-  border-radius: 8px;
-  background: #ffffff;
+  align-items: flex-start;
+  min-height: 22px;
+  padding: 0 0 0 23px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: #334155;
   cursor: pointer;
   font-size: 12px;
   font-weight: 400;
-  white-space: nowrap;
 }
 
-.radio-option input,
-.checkbox-option input {
+.radio-option input {
   position: absolute;
-  left: 9px;
+  top: 2px;
+  left: 0;
   width: 13px;
   height: 13px;
   margin: 0;
 }
 
-.radio-option:has(input:checked),
-.checkbox-option:has(input:checked) {
-  border-color: #2563eb;
-  background: #eff6ff;
+.radio-option:has(input:checked) {
   color: #1d4ed8;
 }
 
@@ -225,17 +182,6 @@
   justify-content: space-between;
   gap: 10px;
   margin-bottom: 6px;
-}
-
-.ai-badge {
-  padding: 4px 8px;
-  border-radius: 999px;
-  background: #eff6ff;
-  color: #2563eb;
-  font-size: 10.5px;
-  font-style: normal;
-  font-weight: 400;
-  white-space: nowrap;
 }
 
 .requirements-list {
@@ -357,7 +303,6 @@
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
 }
 
-.dropdown-empty,
 .dropdown-item {
   width: 100%;
   min-height: 32px;
@@ -434,7 +379,6 @@
 
 .btn-cancel,
 .btn-back,
-.btn-next,
 .btn-submit {
   display: inline-flex;
   align-items: center;
@@ -455,8 +399,7 @@
   color: #64748b;
 }
 
-.btn-submit,
-.btn-next {
+.btn-submit {
   min-width: 128px;
   border: 0;
   background: #2563eb;
@@ -466,8 +409,7 @@
 
 .btn-cancel:hover,
 .btn-back:hover,
-.btn-submit:hover,
-.btn-next:hover {
+.btn-submit:hover {
   box-shadow: var(--shadow-card-hover);
   transform: translateY(-1px);
 }
@@ -486,6 +428,10 @@
 
 .short-description-field {
   grid-area: short-description;
+}
+
+.short-description-field input {
+  min-height: 36px;
 }
 
 .apply-by-field {
@@ -545,7 +491,6 @@
   .create-job-modal-overlay .form-step {
     grid-template-columns: 1fr;
     grid-template-areas:
-      "section-title"
       "job-title"
       "short-description"
       "apply-by"
@@ -558,7 +503,6 @@
       "required-skills";
   }
 
-  .section-title,
   .job-title-field,
   .short-description-field,
   .apply-by-field,

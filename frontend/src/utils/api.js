@@ -95,8 +95,7 @@ async function apiFetch(path, options = {}) {
   const isAuthEndpoint =
     path === "/health" ||
     path.startsWith("/auth/login") ||
-    path.startsWith("/auth/signup") ||
-    path.startsWith("/auth/logout");
+    path.startsWith("/auth/signup");
   const isFormData =
     typeof FormData !== "undefined" && fetchOptions?.body && fetchOptions.body instanceof FormData;
 
@@ -257,13 +256,6 @@ export const jobAPI = {
     apiFetch(`/jobs/${id}`, {
       method: "DELETE"
     }),
-
-  // Candidate: save application (no scoring). Optionally include a resume file.
-  applySaveOnly: async (jobId, file) => {
-    const form = new FormData();
-    if (file) form.append("file", file);
-    return apiFetch(`/jobs/${jobId}/apply_save`, { method: "POST", body: form, timeoutMs: 60000 });
-  },
 
   applyStatus: async (taskId) => apiFetch(`/jobs/apply_status/${taskId}`, { timeoutMs: 20000 }),
 

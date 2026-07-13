@@ -149,12 +149,6 @@ export default function Candidates({ initialStatusFilter = ALL_STATUSES }) {
     };
   }, [jobId, jobs]);
 
-  const title = useMemo(() => {
-    if (jobId === ALL_JOBS_ID) return "All Candidates";
-    const job = jobs.find((item) => item.id === jobId);
-    return job?.title ? `Candidates - ${job.title}` : "Candidates";
-  }, [jobs, jobId]);
-
   const visibleRows = useMemo(() => {
     const filtered = rows.filter((row) => {
       if (statusFilter === ALL_STATUSES) return true;
@@ -375,13 +369,6 @@ export default function Candidates({ initialStatusFilter = ALL_STATUSES }) {
 
   return (
     <PageTransition className="candidates-panel">
-      <div className="candidates-panel-header">
-        <div>
-          <h2>{title}</h2>
-          <p>Ranked by the final score stored when each candidate applied.</p>
-        </div>
-      </div>
-
       <div className="candidates-filters" aria-label="Candidate filters">
         <label className="candidate-filter-field">
           <span>Job</span>

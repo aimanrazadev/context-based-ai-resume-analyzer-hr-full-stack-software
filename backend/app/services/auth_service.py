@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from ..models.candidate import Candidate
 from ..models.user import User
-from ..utils.error_handlers import get_error_message, handle_database_error
+from ..utils.error_handlers import handle_database_error
 from ..utils.jwt import create_access_token
 from ..utils.security import hash_password, verify_password
 from ..utils.validation import validate_email, validate_password, validate_role

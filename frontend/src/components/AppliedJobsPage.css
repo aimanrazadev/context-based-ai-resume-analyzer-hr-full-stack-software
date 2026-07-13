@@ -2,20 +2,6 @@
   width: 100%;
 }
 
-.applied-jobs-header {
-  margin-bottom: 24px;
-}
-
-.applied-jobs-header h2 {
-  font-family: var(--font-heading);
-  font-size: var(--type-page-title);
-  font-weight: var(--type-weight-regular);
-  letter-spacing: var(--tracking-title);
-  line-height: var(--leading-title);
-  color: #212529;
-  margin: 0;
-}
-
 .applied-jobs-list {
   display: flex;
   flex-direction: column;
@@ -54,32 +40,6 @@
 /* v2 layout (like Interviews card) */
 .applied-job-card-v2 {
   padding: 20px;
-}
-
-.applied-job-header-v2 {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-  margin-bottom: 14px;
-}
-
-.applied-card-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.applied-job-meta-row {
-  background: #f8f9fa;
-  border-radius: 10px;
-  padding: 12px 14px;
-  display: flex;
-  gap: 18px;
-  flex-wrap: wrap;
-  margin-bottom: 14px;
 }
 
 .applied-meta-item {
@@ -135,18 +95,6 @@
 }
 
 /* UI consistency audit pass */
-.applied-jobs-header {
-  margin-bottom: 18px;
-}
-
-.applied-jobs-header h2 {
-  font-family: var(--font-heading);
-  font-size: var(--type-page-title);
-  font-weight: var(--type-weight-regular);
-  letter-spacing: var(--tracking-title);
-  line-height: var(--leading-title);
-}
-
 .applied-jobs-list {
   gap: 14px;
 }
@@ -164,16 +112,6 @@
 .applied-job-location,
 .applied-meta-item {
   font-weight: 400;
-}
-
-.applied-job-header-v2 {
-  margin-bottom: 12px;
-}
-
-.applied-job-meta-row {
-  padding: 10px 12px;
-  gap: 12px;
-  margin-bottom: 12px;
 }
 
 .applied-job-actions {

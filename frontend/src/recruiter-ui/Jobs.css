@@ -60,13 +60,6 @@
   margin-bottom: 24px;
 }
 
-/* Loading State */
-.loading-state {
-  text-align: center;
-  padding: 48px;
-  color: #6c757d;
-}
-
 /* Empty State */
 .empty-state {
   text-align: center;
@@ -206,15 +199,6 @@
   font-size: 14px;
   color: #1f2937;
   word-break: break-word;
-}
-
-.job-card-link {
-  color: #2563eb;
-  text-decoration: none;
-}
-
-.job-card-link:hover {
-  text-decoration: underline;
 }
 
 .job-card-metrics {
@@ -607,12 +591,16 @@
 
 .jobs-page .job-card-meta {
   grid-area: meta;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   padding: 10px 0 0;
   border-left: 0;
   border-top: 1px solid #e2e8f0;
+}
+
+.jobs-page .job-card-meta-value {
+  color: currentColor;
 }
 
 .jobs-page .job-card-metrics {
@@ -683,10 +671,6 @@
       "logo details actions"
       ". meta actions"
       ". metrics actions";
-  }
-
-  .jobs-page .job-card-meta {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .jobs-page .job-card-actions {

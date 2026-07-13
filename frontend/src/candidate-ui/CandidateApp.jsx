@@ -122,7 +122,6 @@ export default function CandidateApp({ onLogout }) {
                   />
                 }
               />
-              <Route path="profile" element={<Navigate to="../jobs" replace />} />
               <Route path="*" element={<Navigate to="jobs" replace />} />
             </Routes>
           </div>

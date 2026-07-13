@@ -1,10 +1,10 @@
 import { useEffect, useCallback, useMemo, useState } from "react";
-import { BriefcaseBusiness, Calendar, DollarSign, Eye, Lock, MapPin, Trash2 } from "lucide-react";
+import { Calendar, DollarSign, Eye, Lock, MapPin, Trash2 } from "lucide-react";
 import "./Jobs.css";
 import { jobAPI } from "../utils/api";
 import { PageTransition, SkeletonBlock, SkeletonText } from "../components/ui";
 
-export default function Jobs({ onViewJob, initialFilter = "all" }) {
+export default function Jobs({ onViewJob, initialFilter = "all", onAllJobCountChange, onTopbarTitleChange }) {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -70,18 +70,20 @@ export default function Jobs({ onViewJob, initialFilter = "all" }) {
         }
       }
 
+      const allCount = (allRes?.jobs || []).length;
       setCounts({
-        all: (allRes?.jobs || []).length,
+        all: allCount,
         active: (activeRes?.jobs || []).length,
         closed: (closedRes?.jobs || []).length,
         draft: (draftRes?.jobs || []).length,
       });
+      onAllJobCountChange?.(allCount);
     } catch (err) {
       setError(err.message || "Failed to load jobs");
     } finally {
       setLoading(false);
     }
-  }, [filter]);
+  }, [filter, onAllJobCountChange]);
 
   useEffect(() => {
     loadJobsAndCounts();
@@ -125,33 +127,24 @@ export default function Jobs({ onViewJob, initialFilter = "all" }) {
     return <span className={`status-badge ${config.className}`}>{config.label}</span>;
   };
 
-  const title = useMemo(() => {
-    if (filter === "all") return "All Job Listings";
-    if (filter === "active") return "Active Jobs";
-    if (filter === "closed") return "Closed Jobs";
-    if (filter === "draft") return "Drafts";
-    return "Job Listings";
-  }, [filter]);
-
-  const headerCount = useMemo(() => {
-    if (filter === "all") return counts.all;
-    if (filter === "active") return counts.active;
-    if (filter === "closed") return counts.closed;
-    if (filter === "draft") return counts.draft;
-    return null;
-  }, [counts, filter]);
-
   const fmtCount = (n) => (typeof n === "number" ? n : "…");
   const fmtStat = (n) => (typeof n === "number" ? n : "—");
+  const topbarTitle = useMemo(() => {
+    const labels = {
+      all: "All Jobs",
+      active: "Active Jobs",
+      closed: "Closed Jobs",
+      draft: "Drafts",
+    };
+    return `${labels[filter] || "Job Listings"} (${fmtCount(counts[filter])})`;
+  }, [counts, filter]);
+
+  useEffect(() => {
+    onTopbarTitleChange?.(topbarTitle);
+  }, [onTopbarTitleChange, topbarTitle]);
+
   return (
     <PageTransition className="jobs-page">
-      <div className="jobs-header">
-        <h2>
-          {title} {loading ? "" : `(${fmtCount(headerCount)})`}
-        </h2>
-        <p>Manage and view all your job postings</p>
-      </div>
-
       {/* Filter Tabs */}
       <div className="jobs-filters">
         <button
@@ -239,22 +232,14 @@ export default function Jobs({ onViewJob, initialFilter = "all" }) {
                     <span>{new Date(job.created_at).toLocaleDateString()}</span>
                   </div>
                 </div>
-                <div className="job-card-meta">
-                  <div className="job-card-meta-item">
-                    <BriefcaseBusiness className="job-card-meta-icon" aria-hidden="true" />
-                    <span className="job-card-meta-label">Opportunity Type</span>
-                    <span className="job-card-meta-value">{job.opportunity_type || "Not specified"}</span>
-                  </div>
-                  <div className="job-card-meta-item">
-                    <span className="job-card-meta-label">Job Type</span>
+                <div className="job-card-meta job-meta-chips">
+                  <div className="job-card-meta-item job-meta-chip job-meta-chip--type">
                     <span className="job-card-meta-value">{job.job_type || "Not specified"}</span>
                   </div>
-                  <div className="job-card-meta-item">
-                    <span className="job-card-meta-label">Job Site</span>
+                  <div className="job-card-meta-item job-meta-chip job-meta-chip--site">
                     <span className="job-card-meta-value">{job.job_site || "Not specified"}</span>
                   </div>
-                  <div className="job-card-meta-item">
-                    <span className="job-card-meta-label">Min Experience</span>
+                  <div className="job-card-meta-item job-meta-chip job-meta-chip--experience">
                     <span className="job-card-meta-value">
                       {job.min_experience_years != null ? `${job.min_experience_years} years` : "Not specified"}
                     </span>

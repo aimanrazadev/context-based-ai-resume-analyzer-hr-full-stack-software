@@ -309,25 +309,6 @@
   gap: 12px;
 }
 
-.candidate-logout-btn {
-  width: 100%;
-  border: 1px solid rgba(239, 68, 68, 0.5);
-  background: rgba(239, 68, 68, 0.08);
-  color: #fecaca;
-  border-radius: 12px;
-  padding: 10px 12px;
-  font-size: 13px;
-  font-weight: 400;
-  cursor: pointer;
-  transition: background 0.2s, border-color 0.2s, transform 0.2s;
-}
-
-.candidate-logout-btn:hover {
-  background: rgba(239, 68, 68, 0.16);
-  border-color: rgba(239, 68, 68, 0.7);
-  transform: translateY(-1px);
-}
-
 /* Final compact scale pass for normal 100% browser zoom */
 .candidate-sidebar {
   width: 200px;
@@ -455,7 +436,6 @@
   height: 8px;
 }
 
-.candidate-logout-btn,
 .candidate-sidebar-logout {
   padding: 8px 10px;
   font-size: 12.5px;
