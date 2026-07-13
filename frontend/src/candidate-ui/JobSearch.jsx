@@ -32,7 +32,7 @@ export default function JobSearch() {
     let alive = true;
 
     Promise.all([
-      jobAPI.getAll({ status: "active" }),
+      jobAPI.getAll(),
       jobAPI.myApplications().catch(() => ({ applications: [] })),
     ])
       .then(([jobsRes, appsRes]) => {
@@ -211,6 +211,7 @@ export default function JobSearch() {
               const label = variant;
               const existingApplicationId = appliedByJobId[job.id];
               const alreadyApplied = Number.isFinite(existingApplicationId) && existingApplicationId > 0;
+              const isClosed = String(job.status || "").toLowerCase() === "closed";
 
               return (
                 <div key={job.id} className="job-card">
@@ -254,8 +255,10 @@ export default function JobSearch() {
 
                   <div className="job-card-actions">
                     <button
-                      className="btn-apply"
+                      className={`btn-apply ${isClosed ? "is-closed" : ""}`}
+                      disabled={isClosed}
                       onClick={() => {
+                        if (isClosed) return;
                         if (alreadyApplied) {
                           navigate(`/applications/${existingApplicationId}`);
                           return;
@@ -263,7 +266,7 @@ export default function JobSearch() {
                         navigate(`/candidate/jobs/${job.id}`);
                       }}
                     >
-                      {alreadyApplied ? "View Application" : "Apply Now"}
+                      {isClosed ? "Closed" : alreadyApplied ? "View Application" : "Apply Now"}
                     </button>
                   </div>
                 </div>

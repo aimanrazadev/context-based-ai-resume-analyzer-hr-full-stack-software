@@ -247,9 +247,12 @@
 }
 
 .candidate-page-title {
-  font-size: 24px;
-  font-weight: 400;
-  color: #212529;
+  font-family: var(--font-heading);
+  font-size: var(--type-page-title);
+  font-weight: var(--type-weight-regular);
+  letter-spacing: var(--tracking-title);
+  line-height: var(--leading-title);
+  color: var(--color-text);
   margin: 0;
 }
 
@@ -361,8 +364,8 @@
 }
 
 .candidate-page-title {
-  font-size: 22px;
-  font-weight: 400;
+  font-size: var(--type-page-title);
+  font-weight: var(--type-weight-regular);
 }
 
 .candidate-search {

@@ -30,13 +30,24 @@ const pctChange = (current, previous) => {
   return ((cur - prev) / prev) * 100;
 };
 
-const statusIncludes = (app, keyword) => String(app?.status || "").toLowerCase().includes(keyword);
+const getApplicationStatus = (app) => {
+  const value = String(app?.status || "not-reviewed").toLowerCase().trim().replaceAll("_", "-").replace(/\s+/g, "-");
+  if (value === "submitted" || value === "accepted" || value === "applied" || value === "pending") {
+    return "not-reviewed";
+  }
+  if (value === "hold" || value === "onhold") return "on-hold";
+  return value;
+};
+
+const statusIncludes = (app, keyword) => getApplicationStatus(app).includes(keyword);
+const statusEquals = (app, status) => getApplicationStatus(app) === status;
 
 const useDashboardCounts = () => {
   const [loading, setLoading] = useState(true);
   const [metrics, setMetrics] = useState({
     newApplicants: { current: 0, previous: 0, change: 0, rangeLabel: "vs yesterday" },
     applications: { current: 0, previous: 0, change: 0, rangeLabel: "vs last week" },
+    notReviewed: { current: 0, previous: 0, change: 0, rangeLabel: "vs last month" },
     shortlisted: { current: 0, previous: 0, change: 0, rangeLabel: "vs last month" },
     onHold: { current: 0, previous: 0, change: 0, rangeLabel: "vs last month" },
     rejected: { current: 0, previous: 0, change: 0, rangeLabel: "vs last month" }
@@ -94,8 +105,10 @@ const useDashboardCounts = () => {
 
         const monthShortlisted = monthApps.filter((a) => statusIncludes(a, "shortlist"));
         const lastMonthShortlisted = lastMonthApps.filter((a) => statusIncludes(a, "shortlist"));
-        const monthOnHold = monthApps.filter((a) => statusIncludes(a, "hold"));
-        const lastMonthOnHold = lastMonthApps.filter((a) => statusIncludes(a, "hold"));
+        const monthNotReviewed = monthApps.filter((a) => statusEquals(a, "not-reviewed"));
+        const lastMonthNotReviewed = lastMonthApps.filter((a) => statusEquals(a, "not-reviewed"));
+        const monthOnHold = monthApps.filter((a) => statusEquals(a, "on-hold"));
+        const lastMonthOnHold = lastMonthApps.filter((a) => statusEquals(a, "on-hold"));
         const monthRejected = monthApps.filter((a) => statusIncludes(a, "reject"));
         const lastMonthRejected = lastMonthApps.filter((a) => statusIncludes(a, "reject"));
 
@@ -116,6 +129,12 @@ const useDashboardCounts = () => {
             current: monthShortlisted.length,
             previous: lastMonthShortlisted.length,
             change: pctChange(monthShortlisted.length, lastMonthShortlisted.length),
+            rangeLabel: "vs last month"
+          },
+          notReviewed: {
+            current: monthNotReviewed.length,
+            previous: lastMonthNotReviewed.length,
+            change: pctChange(monthNotReviewed.length, lastMonthNotReviewed.length),
             rangeLabel: "vs last month"
           },
           onHold: {
@@ -154,8 +173,8 @@ const useDashboardCounts = () => {
 export default function Dashboard({ onNavigate }) {
   const { metrics, recent, loading } = useDashboardCounts();
 
-  const handleCardClick = (view) => {
-    onNavigate?.(view);
+  const handleCardClick = (view, options = {}) => {
+    onNavigate?.(view, options);
   };
 
   const renderChange = (change, rangeLabel) => {
@@ -165,10 +184,10 @@ export default function Dashboard({ onNavigate }) {
     return <div className={cls}>{`${sign}${value}% ${rangeLabel}`}</div>;
   };
 
-  const renderMetricCard = ({ className, title, label, metric }) => (
+  const renderMetricCard = ({ className, title, label, metric, statusFilter }) => (
     <div
       className={`summary-card ${className} clickable-card`}
-      onClick={() => handleCardClick("candidates")}
+      onClick={() => handleCardClick("candidates", { statusFilter })}
       title={title}
     >
       <div className="summary-label">{label}</div>
@@ -180,7 +199,7 @@ export default function Dashboard({ onNavigate }) {
 
   const renderMetricSkeletons = () => (
     <div className="summary-cards" aria-label="Loading dashboard metrics">
-      {Array.from({ length: 5 }).map((_, index) => (
+      {Array.from({ length: 6 }).map((_, index) => (
         <div key={index} className="summary-card dashboard-skeleton-card">
           <SkeletonText lines={1} className="dashboard-skeleton-label" />
           <SkeletonBlock className="dashboard-skeleton-number" />
@@ -207,22 +226,32 @@ export default function Dashboard({ onNavigate }) {
             metric: metrics.applications,
           })}
           {renderMetricCard({
+            className: "not-reviewed",
+            title: "View not reviewed candidates",
+            label: "Not Reviewed",
+            metric: metrics.notReviewed,
+            statusFilter: "not-reviewed",
+          })}
+          {renderMetricCard({
             className: "shortlisted",
             title: "View shortlisted candidates",
             label: "Shortlisted",
             metric: metrics.shortlisted,
+            statusFilter: "shortlisted",
           })}
           {renderMetricCard({
             className: "onhold",
             title: "View on-hold candidates",
             label: "On-Hold",
             metric: metrics.onHold,
+            statusFilter: "on-hold",
           })}
           {renderMetricCard({
             className: "rejected",
             title: "View rejected candidates",
             label: "Rejected",
             metric: metrics.rejected,
+            statusFilter: "rejected",
           })}
         </div>
       )}

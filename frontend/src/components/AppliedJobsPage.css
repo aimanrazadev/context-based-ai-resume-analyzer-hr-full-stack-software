@@ -7,8 +7,11 @@
 }
 
 .applied-jobs-header h2 {
-  font-size: 24px;
-  font-weight: 400;
+  font-family: var(--font-heading);
+  font-size: var(--type-page-title);
+  font-weight: var(--type-weight-regular);
+  letter-spacing: var(--tracking-title);
+  line-height: var(--leading-title);
   color: #212529;
   margin: 0;
 }
@@ -137,7 +140,11 @@
 }
 
 .applied-jobs-header h2 {
-  font-weight: 400;
+  font-family: var(--font-heading);
+  font-size: var(--type-page-title);
+  font-weight: var(--type-weight-regular);
+  letter-spacing: var(--tracking-title);
+  line-height: var(--leading-title);
 }
 
 .applied-jobs-list {

@@ -14,6 +14,13 @@ const getShortVerdict = (analysis) => {
   return text;
 };
 
+const getScoreTone = (score) => {
+  const safeScore = Number(score) || 0;
+  if (safeScore >= 75) return { color: "#16a34a", border: "#c7ecd6", background: "#f8fffb" };
+  if (safeScore >= 50) return { color: "#f59e0b", border: "#fde68a", background: "#fffbeb" };
+  return { color: "#ef4444", border: "#fecaca", background: "#fff5f5" };
+};
+
 const SKILL_ALIASES = {
   fastapi: "fastapi",
   "fast api": "fastapi",
@@ -233,6 +240,7 @@ export default function AppliedJobDetails({ applicationId, onBack }) {
   const resume = app?.resume || null;
   const resumeName = resume?.original_filename || "Resume";
   const analysisPending = !app?.score_updated_at && !analysis && !app?.ai_explanation;
+  const scoreTone = getScoreTone(overallScore);
 
   const downloadResume = async () => {
     if (!applicationId || downloading) return;
@@ -276,10 +284,67 @@ export default function AppliedJobDetails({ applicationId, onBack }) {
         <div className="ajd-card"><ErrorState message={error} /></div>
       ) : (
         <div className="ajd-card">
-          <div className="ajd-head">
-            <div className="ajd-title">{job?.title || "Job"}</div>
-            <div className="ajd-sub">{job?.location || ""}</div>
-          </div>
+          <aside className="ajd-side-column" aria-label="Application match summary">
+            <div className="ajd-side-rail">
+              <div className="ajd-score-ring-wrap"><ScoreRing score={overallScore} size={116} /></div>
+              <div className="ajd-score-sub">
+                <span>Overall Match</span>
+                <span>Strong alignment with the role requirements.</span>
+              </div>
+
+              {analysis && (
+                <div
+                  className="ajd-recommendation-pill"
+                  style={{
+                    "--ajd-score-color": scoreTone.color,
+                    "--ajd-score-border": scoreTone.border,
+                    "--ajd-score-bg": scoreTone.background,
+                  }}
+                >
+                  {analysis.recommendation || "Review Manually"}
+                </div>
+              )}
+            </div>
+
+            {applicationId && (
+              <div
+                className={`ajd-resume ${downloading ? "is-downloading" : ""}`}
+                role="button"
+                tabIndex={0}
+                aria-label="Download resume"
+                onClick={downloadResume}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    downloadResume();
+                  }
+                }}
+              >
+                <div className="ajd-expl-title">Your resume</div>
+                <div className="ajd-resume-row">
+                  <div className="ajd-resume-name">{resumeName}</div>
+                  {downloading && <div className="ajd-resume-hint">Downloadingâ€¦</div>}
+                </div>
+              </div>
+            )}
+
+          </aside>
+
+          <main className="ajd-main">
+            <div className="ajd-top-row">
+              <div className="ajd-head">
+                <div className="ajd-title">{job?.title || "Job"}</div>
+                <div className="ajd-sub">{job?.location || ""}</div>
+              </div>
+
+              <div className="ajd-note">
+                <div className="ajd-note-title">Application status</div>
+                <div className="ajd-note-text">
+                  Your resume has been saved. <span className="ajd-muted">Waiting for recruiter to review it.</span>
+                </div>
+                <StatusBadge status={app?.status || "not-reviewed"} />
+              </div>
+            </div>
 
           {/* Candidate Information Section */}
           {app?.candidate && (
@@ -315,14 +380,6 @@ export default function AppliedJobDetails({ applicationId, onBack }) {
             </div>
           )}
 
-          <div className="ajd-note">
-            <div className="ajd-note-title">Application status</div>
-            <div className="ajd-note-text">
-              Your resume has been saved. <span className="ajd-muted">Waiting for recruiter to review it.</span>
-            </div>
-            <StatusBadge status={app?.status || "on-hold"} />
-          </div>
-
           {applicationId && (
             <div
               className={`ajd-resume ${downloading ? "is-downloading" : ""}`}
@@ -345,10 +402,6 @@ export default function AppliedJobDetails({ applicationId, onBack }) {
             </div>
           )}
 
-          <div className="ajd-score-ring-wrap"><ScoreRing score={overallScore} size={116} /></div>
-
-          <div className="ajd-score-sub">Overall Match</div>
-
           {analysisPending && (
             <div className="ajd-pending">
               <div className="ajd-pending-row">
@@ -365,11 +418,6 @@ export default function AppliedJobDetails({ applicationId, onBack }) {
                   <div className="ajd-expl-title">Candidate Summary</div>
                   <div className="ajd-verdict-text">{getShortVerdict(analysis)}</div>
                 </div>
-              </div>
-
-              <div className="ajd-recommendation-row">
-                <span>Recommendation</span>
-                <div className="ajd-recommendation-pill">{analysis.recommendation || "Review Manually"}</div>
               </div>
 
               <div className="ajd-insight-grid">
@@ -438,6 +486,7 @@ export default function AppliedJobDetails({ applicationId, onBack }) {
               )) || "—"}
             </div>
           </div>
+          </main>
         </div>
       )}
 

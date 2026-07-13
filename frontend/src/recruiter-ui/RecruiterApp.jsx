@@ -18,6 +18,7 @@ export default function RecruiterApp({ onLogout }) {
   const [activeView, setActiveView] = useState("dashboard");
   const [jobDetailId, setJobDetailId] = useState(null);
   const [jobsInitialFilter, setJobsInitialFilter] = useState("all");
+  const [candidatesInitialStatus, setCandidatesInitialStatus] = useState("all");
   const [draftEditing, setDraftEditing] = useState(null); // { jobId, initialDraft }
 
   const user = useMemo(() => {
@@ -43,6 +44,13 @@ export default function RecruiterApp({ onLogout }) {
     setActiveView("create-job");
   };
 
+  const handleNavigate = (view, options = {}) => {
+    if (view === "candidates") {
+      setCandidatesInitialStatus(options.statusFilter || "all");
+    }
+    setActiveView(view);
+  };
+
   return (
     <div className="viewport">
       <div className="app-shell">
@@ -56,21 +64,21 @@ export default function RecruiterApp({ onLogout }) {
           <nav className="nav-menu">
             <div
               className={`nav-item ${activeView === "dashboard" ? "active" : ""}`}
-              onClick={() => setActiveView("dashboard")}
+              onClick={() => handleNavigate("dashboard")}
             >
               <LayoutDashboard className="nav-icon" aria-hidden="true" />
               <span>Dashboard</span>
             </div>
             <div
               className={`nav-item ${activeView === "jobs" ? "active" : ""}`}
-              onClick={() => setActiveView("jobs")}
+              onClick={() => handleNavigate("jobs")}
             >
               <Briefcase className="nav-icon" aria-hidden="true" />
               <span>Jobs</span>
             </div>
             <div
               className={`nav-item ${activeView === "candidates" ? "active" : ""}`}
-              onClick={() => setActiveView("candidates")}
+              onClick={() => handleNavigate("candidates")}
             >
               <Users className="nav-icon" aria-hidden="true" />
               <span>Candidates</span>
@@ -81,7 +89,7 @@ export default function RecruiterApp({ onLogout }) {
             <button
               type="button"
               className="sidebar-profile"
-              onClick={() => setActiveView("dashboard")}
+              onClick={() => handleNavigate("dashboard")}
               title="Profile"
             >
               <div className="sidebar-profile-avatar">{initials}</div>
@@ -130,7 +138,7 @@ export default function RecruiterApp({ onLogout }) {
 
           {/* Content Grid */}
           <div className="content-grid">
-            {activeView === "dashboard" && <Dashboard onNavigate={setActiveView} />}
+            {activeView === "dashboard" && <Dashboard onNavigate={handleNavigate} />}
             {activeView === "jobs" && (
               <Jobs
                 initialFilter={jobsInitialFilter}
@@ -140,7 +148,7 @@ export default function RecruiterApp({ onLogout }) {
                 }}
               />
             )}
-            {activeView === "candidates" && <Candidates />}
+            {activeView === "candidates" && <Candidates initialStatusFilter={candidatesInitialStatus} />}
           </div>
         </div>
       </div>

@@ -5,9 +5,10 @@
 }
 
 .ajd-wrap {
-  width: min(100%, 1420px);
+  width: min(calc(100% / 1.1), 1072px);
   margin: 0 auto;
   color: #0f1f3d;
+  zoom: 1.1;
 }
 
 .ajd-back {
@@ -16,43 +17,43 @@
 
 .ajd-card {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 220px;
-  grid-template-areas:
-    "head note"
-    "resume resume"
-    "score score"
-    "verdict verdict"
-    "insights insights"
-    "reasoning reasoning"
-    "skills skills"
-    "job job";
+  grid-template-columns: 168px minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+}
+
+.ajd-main {
+  display: grid;
+  min-width: 0;
   gap: 10px;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  box-shadow: none;
+}
+
+.ajd-top-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 210px;
+  align-items: start;
+  gap: 18px;
 }
 
 .ajd-head {
-  grid-area: head;
   display: grid;
   align-self: center;
-  gap: 4px;
+  gap: 5px;
   min-width: 0;
 }
 
 .ajd-title {
   color: #07142f;
-  font-size: clamp(19px, 1.7vw, 25px);
-  font-weight: 400;
-  letter-spacing: 0;
-  line-height: 1.12;
+  font-family: var(--font-heading);
+  font-size: clamp(20px, 1.9vw, 28px);
+  font-weight: var(--type-weight-regular);
+  letter-spacing: var(--tracking-title);
+  line-height: var(--leading-title);
 }
 
 .ajd-sub {
   color: #50617d;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 400;
 }
 
@@ -68,8 +69,7 @@
 
 .ajd-note,
 .ajd-resume,
-.ajd-score-ring-wrap,
-.ajd-recommendation-row,
+.ajd-side-rail,
 .ajd-verdict-card,
 .ajd-insight-box,
 .ajd-job,
@@ -81,11 +81,16 @@
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.045);
 }
 
+.ajd-side-column {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-width: 0;
+}
+
 .ajd-note {
-  grid-area: note;
   justify-self: end;
-  width: 220px;
-  min-height: 0;
+  width: 100%;
   padding: 0;
   border: 0;
   background: transparent;
@@ -93,17 +98,12 @@
 }
 
 .ajd-note-title {
-  display: none;
-}
-
-.ajd-note::before {
-  content: "Application Status";
-  display: block;
   margin: 0 0 5px;
   color: #172443;
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 400;
-  letter-spacing: 0.025em;
+  letter-spacing: 0.035em;
+  line-height: 1.2;
   text-transform: uppercase;
 }
 
@@ -119,12 +119,9 @@
   min-height: 30px;
   margin: 0;
   padding: 0 10px;
-  border: 1px solid #bce8d0;
   border-radius: 8px;
-  background: #f3fcf7;
-  color: #16a34a;
-  font-size: 11.5px;
-  font-weight: 400;
+  font-size: 11px;
+  font-weight: 500;
   text-transform: capitalize;
 }
 
@@ -134,25 +131,172 @@
   height: 7px;
   margin-right: 8px;
   border-radius: 999px;
-  background: #22c55e;
+  background: currentColor;
+}
+
+.ajd-note .ds-status-badge.ds-tone-positive {
+  border-color: #bce8d0;
+  background: #f3fcf7;
+  color: #16a34a;
+}
+
+.ajd-note .ds-status-badge.ds-tone-warning {
+  border-color: #fde68a;
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.ajd-note .ds-status-badge.ds-tone-negative {
+  border-color: #ffc9c9;
+  background: #fff5f5;
+  color: #dc2626;
+}
+
+.ajd-note .ds-status-badge.ds-tone-neutral {
+  border-color: #d7e0ed;
+  background: #f8fafc;
+  color: #475569;
 }
 
 .ajd-muted {
   color: inherit;
 }
 
+.ajd-side-rail {
+  display: grid;
+  align-content: start;
+  gap: 13px;
+  min-height: 0;
+  padding: 16px 14px;
+  background: #ffffff;
+  border-color: #d7e8df;
+}
+
+.ajd-score-ring-wrap {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 4px 0 0;
+}
+
+.ajd-score-ring-wrap::before,
+.ajd-expl-title {
+  margin: 0 0 7px;
+  color: #243552;
+  font-size: 10.5px;
+  font-weight: 400;
+  letter-spacing: 0.035em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.ajd-score-ring-wrap::before {
+  content: "Match Score";
+}
+
+.ajd-score-ring-wrap .ds-score-ring {
+  width: 116px !important;
+  height: 116px !important;
+}
+
+.ajd-score-ring-wrap .ds-score-ring svg {
+  width: 116px;
+  height: 116px;
+}
+
+.ajd-score-ring-wrap .ds-score-ring__value {
+  color: #0c1833;
+  font-size: 23px !important;
+  font-weight: 400;
+}
+
+.ajd-score-sub {
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  padding: 0 8px 13px;
+  border-bottom: 1px solid #e8f0ea;
+  color: #50617d;
+  font-size: 10.5px;
+  font-weight: 400;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.ajd-score-sub span:first-child {
+  color: #07142f;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.ajd-score-sub span:last-child {
+  max-width: 128px;
+  color: #64748b;
+  font-size: 10px;
+}
+
+.ajd-recommendation-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: center;
+  min-height: 30px;
+  max-width: 100%;
+  padding: 0 12px;
+  border: 1px solid var(--ajd-score-border, #c7ecd6);
+  border-radius: 999px;
+  background: var(--ajd-score-bg, #f8fffb);
+  color: var(--ajd-score-color, #16a34a);
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.ajd-recommendation-pill::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  margin-right: 7px;
+  border-radius: 999px;
+  background: var(--ajd-score-color, #16a34a);
+}
+
+.ajd-recommendation-pill::after {
+  content: none;
+}
+
 .ajd-resume {
-  grid-area: resume;
   min-height: 58px;
-  padding: 10px 16px;
+  padding: 9px 12px;
   cursor: pointer;
   transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.ajd-main > .ajd-resume {
+  display: none;
+}
+
+.ajd-side-column > .ajd-resume {
+  display: grid;
+  gap: 7px;
+  min-height: 0;
+  padding: 10px;
+  border-color: #dbe8f4;
+  box-shadow: none;
 }
 
 .ajd-resume:hover {
   border-color: #93c5fd;
   box-shadow: var(--shadow-card-hover);
   transform: translateY(-1px);
+}
+
+.ajd-side-column > .ajd-resume:hover {
+  border-color: #b8d3f4;
+  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.07);
 }
 
 .ajd-resume:focus {
@@ -171,9 +315,37 @@
 
 .ajd-resume-row {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-items: center;
+  gap: 12px;
   min-height: 26px;
+}
+
+.ajd-side-column > .ajd-resume .ajd-resume-row {
+  grid-template-columns: 1fr;
+  justify-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+}
+
+.ajd-resume-row::after {
+  content: "Download";
+  min-width: 78px;
+  padding: 7px 10px;
+  border: 1px solid #d7e0ed;
+  border-radius: 7px;
+  color: #253754;
+  font-size: 11px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.ajd-side-column > .ajd-resume .ajd-resume-row::after {
+  min-width: 0;
+  width: auto;
+  justify-self: stretch;
+  padding: 7px 8px;
 }
 
 .ajd-resume-name {
@@ -182,8 +354,14 @@
   font-size: 12px;
   font-weight: 400;
   overflow: hidden;
+  text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.ajd-side-column > .ajd-resume .ajd-resume-name {
+  max-width: 100%;
+  font-size: 10.5px;
 }
 
 .ajd-resume-hint {
@@ -192,139 +370,32 @@
   font-weight: 400;
 }
 
-.ajd-score-ring-wrap {
-  grid-area: score;
-  display: grid;
-  grid-template-columns: 150px minmax(0, 1fr) 360px;
-  grid-template-areas:
-    "ring label rec"
-    "ring value rec";
-  align-items: center;
-  min-height: 118px;
-  padding: 12px 20px;
-  border-color: #aee6c6;
-}
-
-.ajd-score-ring-wrap::before,
-.ajd-expl-title,
-.ajd-recommendation-row::before {
-  margin: 0 0 7px;
-  color: #243552;
-  font-size: 11px;
-  font-weight: 400;
-  letter-spacing: 0.025em;
-  line-height: 1.2;
-  text-transform: uppercase;
-}
-
-.ajd-score-ring-wrap::before {
-  grid-area: label;
-  content: "Match Score";
-  align-self: end;
-  margin: 0 0 2px;
-}
-
-.ajd-score-ring-wrap .ds-score-ring {
-  grid-area: ring;
-  width: 104px !important;
-  height: 104px !important;
-}
-
-.ajd-score-ring-wrap .ds-score-ring svg {
-  width: 104px;
-  height: 104px;
-}
-
-.ajd-score-ring-wrap .ds-score-ring__value {
-  color: #0c1833;
-  font-size: 24px !important;
-  font-weight: 400;
-}
-
-.ajd-score-sub {
-  grid-area: score;
-  align-self: center;
-  justify-self: start;
-  margin: 42px 0 0 170px;
-  color: #50617d;
-  font-size: 12px;
-  font-weight: 400;
-  text-align: center;
-  z-index: 2;
-}
-
-.ajd-recommendation-row {
-  grid-area: score;
-  align-self: center;
-  justify-self: end;
-  width: min(360px, 42%);
-  min-height: 0;
-  margin-right: 16px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  box-shadow: none;
-  z-index: 2;
-}
-
-.ajd-recommendation-row > span {
-  display: none;
-}
-
-.ajd-recommendation-row::before {
-  content: "Recommendation";
-  display: block;
-}
-
-.ajd-recommendation-pill {
-  display: grid;
-  align-content: center;
-  gap: 3px;
-  width: 100%;
-  min-height: 52px;
-  padding: 0 14px;
-  border: 1px solid #bce8d0;
-  border-radius: 9px;
-  background: #f4fcf7;
-  color: #16a34a;
-  font-size: 12.5px;
-  font-weight: 400;
-}
-
-.ajd-recommendation-pill::after {
-  content: "Great alignment with the role requirements.";
-  color: #546582;
-  font-size: 10.5px;
-  font-weight: 400;
-}
-
 .ajd-insights {
-  display: contents;
+  display: grid;
+  gap: 10px;
 }
 
 .ajd-verdict-card {
-  grid-area: verdict;
-  min-height: 66px;
-  padding: 12px 16px;
+  min-height: 58px;
+  padding: 11px 13px;
 }
 
 .ajd-verdict-text,
 .ajd-expl-text {
   color: #172443;
-  font-size: 12.5px;
-  line-height: 1.42;
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .ajd-insight-grid {
-  grid-area: insights;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
 .ajd-insight-grid > .ajd-insight-box {
-  min-height: 110px;
-  padding: 12px 16px;
+  min-height: 112px;
+  padding: 11px 13px;
 }
 
 .ajd-pill-list,
@@ -342,19 +413,19 @@
 .ajd-pill-list .ds-skill-pill {
   justify-content: flex-start;
   width: 100%;
-  min-height: 26px;
+  min-height: 25px;
   padding: 5px 9px;
   border-radius: 8px;
-  font-size: 11px;
+  font-size: 10.5px;
   line-height: 1.3;
   white-space: normal;
 }
 
 .ajd-skill-snapshot .ds-skill-pill {
-  min-height: 24px;
-  padding: 0 9px;
+  min-height: 23px;
+  padding: 0 8px;
   border-radius: 999px;
-  font-size: 10.5px;
+  font-size: 10px;
 }
 
 .ds-skill-pill.ds-tone-positive {
@@ -371,18 +442,13 @@
 
 .ajd-empty-text {
   color: #64748b;
-  font-size: 11.5px;
+  font-size: 11px;
 }
 
 .ajd-reasoning-card {
-  grid-area: reasoning;
-  min-height: 38px;
+  min-height: 36px;
   padding: 0;
   overflow: hidden;
-}
-
-.ajd-reasoning-card .ajd-expl-title {
-  margin-bottom: 0;
 }
 
 .ajd-reasoning-details {
@@ -393,12 +459,11 @@
 .ajd-reasoning-details summary {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  min-height: 38px;
-  padding: 0 14px;
+  min-height: 36px;
+  padding: 0 13px;
   color: #0d1b35;
   cursor: pointer;
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 400;
   list-style: none;
 }
@@ -411,7 +476,7 @@
   content: ">";
   margin-right: 10px;
   color: #0d1b35;
-  font-size: 17px;
+  font-size: 15px;
 }
 
 .ajd-reasoning-details[open] summary::before {
@@ -422,22 +487,20 @@
   content: "v";
   margin-left: auto;
   color: #0d1b35;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .ajd-reasoning-details .ajd-expl-text {
-  padding: 0 14px 12px;
+  padding: 0 13px 12px;
   white-space: pre-line;
 }
 
 .ajd-insights > .ajd-insight-box:not(.ajd-reasoning-card) {
-  grid-area: skills;
-  padding: 12px 16px;
+  padding: 11px 13px;
 }
 
 .ajd-job {
-  grid-area: job;
-  padding: 12px 16px;
+  padding: 11px 13px;
 }
 
 .ajd-job .ajd-expl-text {
@@ -467,8 +530,7 @@
 }
 
 .ajd-pending {
-  grid-area: verdict;
-  padding: 12px 16px;
+  padding: 11px 13px;
   color: #64748b;
   font-size: 12px;
 }
@@ -495,6 +557,7 @@
   margin: 0 0 3px;
   color: #0f172a;
   font-size: 13px;
+  font-weight: 500;
 }
 
 .candidate-name-section p,
@@ -523,36 +586,24 @@
 }
 
 .ajd-detail-skeleton {
-  grid-template-areas:
-    "head head"
-    "note verdict"
-    "resume verdict"
-    "score insights";
+  grid-template-columns: 168px minmax(0, 1fr);
 }
 
 .ajd-head-skeleton {
-  grid-area: head;
+  grid-column: 2;
   max-width: 760px;
 }
 
-.ajd-note-skeleton {
-  grid-area: note;
-  min-height: 96px;
-}
-
-.ajd-resume-skeleton {
-  grid-area: resume;
-  min-height: 58px;
-}
-
+.ajd-note-skeleton,
 .ajd-score-skeleton {
-  grid-area: score;
-  min-height: 118px;
+  grid-column: 1;
+  min-height: 120px;
 }
 
+.ajd-resume-skeleton,
 .ajd-summary-skeleton {
-  grid-area: verdict;
-  min-height: 96px;
+  grid-column: 2;
+  min-height: 58px;
 }
 
 .ajd-panel-skeleton {
@@ -564,49 +615,53 @@
     padding: 14px;
   }
 
-  .ajd-card {
+  .ajd-card,
+  .ajd-detail-skeleton {
     grid-template-columns: 1fr;
-    grid-template-areas:
-      "head"
-      "note"
-      "resume"
-      "score"
-      "recommendation"
-      "verdict"
-      "insights"
-      "reasoning"
-      "skills"
-      "job";
+  }
+
+  .ajd-side-rail {
+    grid-template-columns: 116px minmax(0, 1fr) minmax(140px, 0.7fr);
+    align-items: center;
+    min-height: 0;
+  }
+
+  .ajd-score-ring-wrap {
+    align-self: center;
+  }
+
+  .ajd-top-row {
+    grid-template-columns: 1fr;
   }
 
   .ajd-note {
     justify-self: stretch;
-    width: 100%;
-  }
-
-  .ajd-score-ring-wrap {
-    grid-template-columns: 110px minmax(0, 1fr);
-    grid-template-areas:
-      "ring label"
-      "ring value";
-  }
-
-  .ajd-score-sub {
-    margin-left: 126px;
-  }
-
-  .ajd-recommendation-row {
-    grid-area: recommendation;
-    justify-self: stretch;
-    width: auto;
-    margin: 0;
-    padding: 12px 16px;
-    border: 1px solid #d7e0ed;
-    background: #ffffff;
-    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.045);
+    max-width: 240px;
   }
 
   .ajd-insight-grid {
     grid-template-columns: 1fr;
+  }
+
+  .ajd-head-skeleton,
+  .ajd-note-skeleton,
+  .ajd-score-skeleton,
+  .ajd-resume-skeleton,
+  .ajd-summary-skeleton {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .ajd-side-rail {
+    grid-template-columns: 1fr;
+  }
+
+  .ajd-resume-row {
+    grid-template-columns: 1fr;
+  }
+
+  .ajd-resume-name {
+    text-align: left;
   }
 }

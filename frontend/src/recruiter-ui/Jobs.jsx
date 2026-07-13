@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useMemo, useState } from "react";
-import { BriefcaseBusiness, Calendar, DollarSign, Eye, MapPin, Trash2 } from "lucide-react";
+import { BriefcaseBusiness, Calendar, DollarSign, Eye, Lock, MapPin, Trash2 } from "lucide-react";
 import "./Jobs.css";
 import { jobAPI } from "../utils/api";
 import { PageTransition, SkeletonBlock, SkeletonText } from "../components/ui";
@@ -56,13 +56,11 @@ export default function Jobs({ onViewJob, initialFilter = "all" }) {
                 const res = await jobAPI.rankedCandidates(job.id);
                 const candidates = res?.candidates || [];
                 const count = candidates.length;
-                const sum = candidates.reduce((acc, c) => acc + (Number(c?.final_score) || 0), 0);
-                const avg = count ? Math.round(sum / count) : 0;
                 const top = count ? Math.max(...candidates.map((c) => Number(c?.final_score) || 0)) : 0;
                 const shortlisted = candidates.filter((c) => (Number(c?.final_score) || 0) >= 70).length;
-                return [job.id, { count, avg, top, shortlisted }];
+                return [job.id, { count, top, shortlisted }];
               } catch {
-                return [job.id, { count: null, avg: null, top: null, shortlisted: null }];
+                return [job.id, { count: null, top: null, shortlisted: null }];
               }
             })
           );
@@ -99,6 +97,19 @@ export default function Jobs({ onViewJob, initialFilter = "all" }) {
       loadJobsAndCounts(); // Reload jobs + counts
     } catch (err) {
       alert(err.message || "Failed to delete job");
+    }
+  };
+
+  const handleCloseJob = async (jobId) => {
+    if (!window.confirm("Close this job posting? Candidates will no longer be able to apply.")) {
+      return;
+    }
+
+    try {
+      await jobAPI.update(jobId, { status: "closed" });
+      loadJobsAndCounts();
+    } catch (err) {
+      alert(err.message || "Failed to close job");
     }
   };
 
@@ -251,13 +262,9 @@ export default function Jobs({ onViewJob, initialFilter = "all" }) {
                 </div>
                 <div className="job-card-metrics">
                   <div className="metric-pill">Applicants {fmtStat(jobStats?.[job.id]?.count)}</div>
-                  <div className="metric-pill">Avg score {fmtStat(jobStats?.[job.id]?.avg)}</div>
                   <div className="metric-pill">Top score {fmtStat(jobStats?.[job.id]?.top)}</div>
                   <div className="metric-pill">Shortlist 70+ {fmtStat(jobStats?.[job.id]?.shortlisted)}</div>
                   {statsLoading && <div className="metric-hint">Updating metrics…</div>}
-                </div>
-                <div className="job-card-description">
-                  <p>{job.description?.substring(0, 150)}...</p>
                 </div>
                 <div className="job-card-actions">
                   <button
@@ -267,6 +274,15 @@ export default function Jobs({ onViewJob, initialFilter = "all" }) {
                     <Eye size={14} aria-hidden="true" />
                     View Job
                   </button>
+                  {job.status !== "closed" && (
+                    <button
+                      className="btn-close-job"
+                      onClick={() => handleCloseJob(job.id)}
+                    >
+                      <Lock size={14} aria-hidden="true" />
+                      Close
+                    </button>
+                  )}
                   <button
                     className="btn-delete"
                     onClick={() => handleDelete(job.id)}

@@ -556,6 +556,23 @@ def on_startup() -> None:
                         if exists == 0:
                             conn.execute(text(ddl))
 
+                    def _mysql_modify_column_if_type_differs(*, table: str, column: str, expected: str, ddl: str) -> None:
+                        row = conn.execute(
+                            text(
+                                """
+                                SELECT COLUMN_TYPE
+                                FROM information_schema.COLUMNS
+                                WHERE TABLE_SCHEMA = DATABASE()
+                                  AND TABLE_NAME = :table
+                                  AND COLUMN_NAME = :column
+                                """
+                            ),
+                            {"table": table, "column": column},
+                        ).fetchone()
+                        column_type = str(row[0] if row else "").lower()
+                        if column_type and column_type != expected.lower():
+                            conn.execute(text(ddl))
+
                     _mysql_add_column_if_missing(
                         table="applications",
                         column="resume_id",
@@ -570,6 +587,12 @@ def on_startup() -> None:
                         table="applications",
                         column="status",
                         ddl="ALTER TABLE applications ADD COLUMN status VARCHAR(50) NULL",
+                    )
+                    _mysql_modify_column_if_type_differs(
+                        table="applications",
+                        column="status",
+                        expected="varchar(50)",
+                        ddl="ALTER TABLE applications MODIFY COLUMN status VARCHAR(50) NULL",
                     )
                     _mysql_add_column_if_missing(
                         table="applications",

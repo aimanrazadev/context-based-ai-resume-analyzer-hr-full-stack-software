@@ -289,10 +289,12 @@
 .jd-page-title {
   margin: 10px 0 18px;
   text-align: center;
-  font-size: 31px;
-  font-weight: 400;
+  font-family: var(--font-heading);
+  font-size: var(--type-title);
+  font-weight: var(--type-weight-regular);
   color: #111827;
-  letter-spacing: -0.2px;
+  letter-spacing: var(--tracking-title);
+  line-height: var(--leading-title);
 }
 
 .jd-card {
@@ -912,8 +914,11 @@
 }
 
 .jd-page-title {
-  font-weight: 400;
-  font-size: clamp(23px, 2vw, 30px);
+  font-family: var(--font-heading);
+  font-size: var(--type-title);
+  font-weight: var(--type-weight-regular);
+  letter-spacing: var(--tracking-title);
+  line-height: var(--leading-title);
 }
 
 .jd-title,

@@ -19,8 +19,11 @@
 }
 
 .job-search-topbar-title {
-  font-size: 24px;
-  font-weight: 400;
+  font-family: var(--font-heading);
+  font-size: var(--type-page-title);
+  font-weight: var(--type-weight-regular);
+  letter-spacing: var(--tracking-title);
+  line-height: var(--leading-title);
   padding-left: 280px;
   color: #212529;
   margin: 2px;
@@ -425,7 +428,11 @@
 }
 
 .job-search-topbar-title {
-  font-size: 21px;
+  font-family: var(--font-heading);
+  font-size: var(--type-page-title);
+  font-weight: var(--type-weight-regular);
+  letter-spacing: var(--tracking-title);
+  line-height: var(--leading-title);
   padding-left: 238px;
 }
 
@@ -567,5 +574,15 @@
 .job-action-skeleton {
   width: 132px;
   height: 36px;
+}
+
+.btn-apply.is-closed,
+.btn-apply.is-closed:hover {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  box-shadow: none;
+  color: #64748b;
+  cursor: not-allowed;
+  transform: none;
 }
 

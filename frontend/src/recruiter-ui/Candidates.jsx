@@ -6,7 +6,8 @@ import "./Candidates.css";
 
 const ALL_JOBS_ID = "all";
 const ALL_STATUSES = "all";
-const STATUS_OPTIONS = ["shortlisted", "on-hold", "rejected"];
+const STATUS_OPTIONS = ["not-reviewed", "shortlisted", "on-hold", "rejected"];
+const ACTION_STATUS_OPTIONS = ["shortlisted", "on-hold", "rejected"];
 const SORT_OPTIONS = {
   SCORE_DESC: "score_desc",
   SCORE_ASC: "score_asc",
@@ -15,12 +16,20 @@ const SORT_OPTIONS = {
 };
 
 const getStatusValue = (status) => {
-  const value = String(status || "on-hold").toLowerCase();
+  const value = String(status || "not-reviewed").toLowerCase().trim().replaceAll("_", "-").replace(/\s+/g, "-");
   if (value === "submitted" || value === "accepted" || value === "applied" || value === "pending") {
-    return "on-hold";
+    return "not-reviewed";
   }
-  return STATUS_OPTIONS.includes(value) ? value : "on-hold";
+  if (value === "hold" || value === "onhold") return "on-hold";
+  return STATUS_OPTIONS.includes(value) ? value : "not-reviewed";
 };
+
+const getStatusLabel = (status) =>
+  String(status || "")
+    .split("-")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 const getScore = (row) => Math.round(Number(row?.final_score) || 0);
 
 const getTopSkills = (row) => {
@@ -45,7 +54,7 @@ const openApplicationDetails = (applicationId) => {
 const isInteractiveTarget = (target) =>
   Boolean(target?.closest?.("button, select, input, textarea, a"));
 
-export default function Candidates() {
+export default function Candidates({ initialStatusFilter = ALL_STATUSES }) {
   const [jobs, setJobs] = useState([]);
   const [jobId, setJobId] = useState(ALL_JOBS_ID);
   const [loading, setLoading] = useState(true);
@@ -54,6 +63,10 @@ export default function Candidates() {
   const [statusFilter, setStatusFilter] = useState(ALL_STATUSES);
   const [sortBy, setSortBy] = useState(SORT_OPTIONS.SCORE_DESC);
   const [updatingStatusId, setUpdatingStatusId] = useState(null);
+
+  useEffect(() => {
+    setStatusFilter(STATUS_OPTIONS.includes(initialStatusFilter) ? initialStatusFilter : ALL_STATUSES);
+  }, [initialStatusFilter]);
 
   useEffect(() => {
     let alive = true;
@@ -188,15 +201,26 @@ export default function Candidates() {
     if (!appId) return;
     const nextStatus = getStatusValue(status);
     setUpdatingStatusId(appId);
+    setRows((prev) =>
+      prev.map((item) =>
+        item?.application_id === appId ? { ...item, status: nextStatus } : item
+      )
+    );
     try {
       const res = await jobAPI.updateApplicationStatus(appId, nextStatus);
-      const savedStatus = res?.application?.status || nextStatus;
+      const savedStatus = getStatusValue(res?.application?.status || nextStatus);
+      const finalStatus = savedStatus === nextStatus ? savedStatus : nextStatus;
       setRows((prev) =>
         prev.map((item) =>
-          item?.application_id === appId ? { ...item, status: savedStatus } : item
+          item?.application_id === appId ? { ...item, status: finalStatus } : item
         )
       );
     } catch (e) {
+      setRows((prev) =>
+        prev.map((item) =>
+          item?.application_id === appId ? { ...item, status: row?.status } : item
+        )
+      );
       alert(e?.message || "Failed to update application status");
     } finally {
       setUpdatingStatusId(null);
@@ -306,7 +330,7 @@ export default function Candidates() {
                 <div className="candidate-actions-block">
                   <button
                     type="button"
-                    className="candidate-view-btn"
+                    className="candidate-delete-btn"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDeleteCandidate(row);
@@ -318,17 +342,21 @@ export default function Candidates() {
 
                   <div className="candidate-status-menu">
                     <select
-                      value={currentStatus}
+                      value={ACTION_STATUS_OPTIONS.includes(currentStatus) ? currentStatus : ""}
                       onClick={(e) => e.stopPropagation()}
                       onChange={(e) => {
                         e.stopPropagation();
+                        if (!e.target.value) return;
                         handleStatusChange(row, e.target.value);
                       }}
                       disabled={updatingStatusId === row.application_id}
                       aria-label="Update application status"
                     >
-                      {STATUS_OPTIONS.map((status) => (
-                        <option key={status} value={status}>{status}</option>
+                      {!ACTION_STATUS_OPTIONS.includes(currentStatus) && (
+                        <option value="" disabled>-</option>
+                      )}
+                      {ACTION_STATUS_OPTIONS.map((status) => (
+                        <option key={status} value={status}>{getStatusLabel(status)}</option>
                       ))}
                     </select>
                   </div>
@@ -389,7 +417,7 @@ export default function Candidates() {
           <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} disabled={loading}>
             <option value={ALL_STATUSES}>All statuses</option>
             {STATUS_OPTIONS.map((status) => (
-              <option key={status} value={status}>{status}</option>
+              <option key={status} value={status}>{getStatusLabel(status)}</option>
             ))}
           </select>
         </label>

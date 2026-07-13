@@ -32,8 +32,11 @@
 }
 
 .auth-title {
-  font-size: 32px;
-  font-weight: 400;
+  font-family: var(--font-heading);
+  font-size: var(--type-title);
+  font-weight: var(--type-weight-regular);
+  letter-spacing: var(--tracking-title);
+  line-height: var(--leading-title);
   color: #212529;
   margin: 0 0 12px 0;
   text-align: left;
@@ -368,8 +371,11 @@
 }
 
 .auth-title {
-  font-size: 30px;
-  font-weight: 400;
+  font-family: var(--font-heading);
+  font-size: var(--type-title);
+  font-weight: var(--type-weight-regular);
+  letter-spacing: var(--tracking-title);
+  line-height: var(--leading-title);
 }
 
 .auth-subtitle {

@@ -68,7 +68,7 @@ export default function AppliedJobsPage({ onCountChange, onViewDetails }) {
                   <div className="applied-job-info">
                     <div className="applied-job-title-row">
                       <h3 className="applied-job-title">{job?.title || "Job"}</h3>
-                      <StatusBadge status={row?.status || "on-hold"} />
+                      <StatusBadge status={row?.status || "not-reviewed"} />
                     </div>
                     <div className="applied-job-location">{job?.location || "Location not specified"}</div>
                   </div>

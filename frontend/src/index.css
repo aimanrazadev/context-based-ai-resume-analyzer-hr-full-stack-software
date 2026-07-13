@@ -1,5 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400&display=swap");
-
 * {
   margin: 0;
   padding: 0;
@@ -49,8 +47,24 @@ body {
   --shadow-focus: 0 0 0 3px rgba(37, 99, 235, 0.16);
   --motion-fast: 160ms ease;
   --motion-page: 260ms cubic-bezier(0.22, 1, 0.36, 1);
-  --font-body: "Poppins", "Montserrat", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --font-heading: "Poppins", "Montserrat", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-heading: Montserrat, Inter, "Segoe UI", system-ui, sans-serif;
+  --font-body: Inter, "Segoe UI", system-ui, sans-serif;
+  --font-ui: Inter, "Segoe UI", system-ui, sans-serif;
+  --font-table: Inter, "Segoe UI", system-ui, sans-serif;
+  --type-weight-regular: 400;
+  --type-weight-medium: 500;
+  --type-title: clamp(24px, 2.35vw, 31px);
+  --type-page-title: clamp(22px, 2vw, 28px);
+  --type-section-title: clamp(14px, 1.15vw, 16px);
+  --type-card-title: 14.5px;
+  --type-label: 11.5px;
+  --type-body: 13px;
+  --type-meta: 12px;
+  --type-chip: 11.5px;
+  --leading-title: 1.12;
+  --leading-body: 1.55;
+  --tracking-title: -0.035em;
+  --tracking-label: 0.035em;
 }
 
 body {
@@ -68,7 +82,7 @@ button,
 input,
 textarea,
 select {
-  font-family: inherit;
+  font-family: var(--font-ui);
 }
 
 strong,
@@ -90,6 +104,7 @@ h6,
 .card-title {
   font-family: var(--font-heading);
   color: var(--color-text);
+  font-weight: var(--type-weight-regular);
   line-height: 1.2;
 }
 
@@ -104,12 +119,14 @@ a {
 
 button {
   font-size: 13.5px;
+  font-weight: var(--type-weight-medium);
 }
 
 input,
 textarea,
 select {
   font-size: 13.5px;
+  font-weight: var(--type-weight-regular);
   color: var(--color-text);
 }
 
@@ -487,19 +504,19 @@ select {
 .btn-view,
 .btn-apply,
 .btn-view-details {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
+  background: var(--color-purple);
+  border-color: var(--color-purple);
   color: #ffffff;
 }
 
 .btn-view:hover,
 .btn-apply:hover,
 .btn-view-details:hover {
-  background: var(--color-primary-dark);
-  border-color: var(--color-primary-dark);
+  background: #4338ca;
+  border-color: #4338ca;
   color: #ffffff;
   transform: translateY(-1px);
-  box-shadow: 0 10px 18px rgba(37, 99, 235, 0.18);
+  box-shadow: 0 10px 18px rgba(79, 70, 229, 0.18);
 }
 
 .btn-save,
@@ -966,4 +983,265 @@ h6,
 
 .ds-metric-card {
   min-height: 104px;
+}
+
+/* Shared typography hierarchy */
+body,
+input,
+textarea,
+select,
+button {
+  font-family: var(--font-body);
+  font-weight: var(--type-weight-regular);
+}
+
+button,
+.ds-btn,
+.auth-submit-btn,
+.topbar-create-btn,
+.candidate-view-btn,
+.candidate-clear-filters,
+.btn-next,
+.btn-submit,
+.btn-back,
+.btn-cancel,
+.btn-view,
+.btn-delete,
+.btn-apply,
+.btn-save,
+.btn-view-details,
+.btn-withdraw,
+.job-detail-btn,
+.jd-scan,
+.jd-apply,
+.ds-back-button {
+  font-family: var(--font-ui);
+  font-weight: var(--type-weight-medium);
+  letter-spacing: 0;
+}
+
+.page-title,
+.candidate-page-title,
+.ds-page-title,
+.job-search-topbar-title,
+.jobs-header h2,
+.applied-jobs-header h2,
+.candidates-panel-header h2,
+.auth-title,
+.create-job-modal-overlay .form-header h2,
+.jd-page-title,
+.ajd-title {
+  font-family: var(--font-heading);
+  font-size: var(--type-title);
+  font-weight: var(--type-weight-regular);
+  letter-spacing: var(--tracking-title);
+  line-height: var(--leading-title);
+  color: var(--color-text);
+}
+
+.page-title,
+.candidate-page-title,
+.job-search-topbar-title,
+.jobs-header h2,
+.applied-jobs-header h2,
+.candidates-panel-header h2 {
+  font-size: var(--type-page-title);
+}
+
+.ds-page-subtitle,
+.auth-subtitle,
+.create-job-modal-overlay .form-header::after,
+.jobs-header p,
+.candidates-panel-header p,
+.job-search-subtitle,
+.candidate-subtitle,
+.ajd-sub {
+  font-family: var(--font-body);
+  font-size: var(--type-body);
+  font-weight: var(--type-weight-regular);
+  line-height: var(--leading-body);
+  color: var(--color-text-muted);
+  letter-spacing: 0;
+}
+
+.section-title,
+.section-header h3,
+.card-title,
+.ds-card-title,
+.ajd-expl-title,
+.jd-section-h,
+.job-filters h3,
+.candidate-section-label,
+.summary-label,
+.job-card-meta-label,
+.job-detail-info-label,
+.jd-fact-k,
+.jd-detail-k,
+.ds-metric-card__label {
+  font-family: var(--font-heading);
+  font-size: var(--type-section-title);
+  font-weight: var(--type-weight-medium);
+  line-height: 1.25;
+  color: var(--color-text);
+  letter-spacing: 0;
+}
+
+.summary-label,
+.candidate-section-label,
+.job-card-meta-label,
+.job-detail-info-label,
+.jd-fact-k,
+.jd-detail-k,
+.ds-metric-card__label {
+  font-family: var(--font-ui);
+  font-size: var(--type-label);
+  color: var(--color-text-muted);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+
+.section-title::after,
+.create-job-modal-overlay .form-header::before,
+.skills-help-text,
+.job-detail-help,
+.metric-hint,
+.ds-metric-card__hint,
+.candidate-job-title,
+.candidate-email,
+.candidate-summary,
+.applied-job-location,
+.recent-candidate-role,
+.job-card-meta-value,
+.job-detail-desc,
+.job-detail-list,
+.jd-muted,
+.jd-company,
+.jd-summary-text,
+.ajd-expl-text,
+.ajd-verdict-text,
+.ajd-empty-text {
+  font-family: var(--font-body);
+  font-weight: var(--type-weight-regular);
+  line-height: var(--leading-body);
+  letter-spacing: 0;
+}
+
+.form-group label,
+.candidate-filter-field span,
+.filter-section label,
+.auth-label,
+.field-label {
+  font-family: var(--font-ui);
+  font-size: var(--type-label);
+  font-weight: var(--type-weight-medium);
+  color: var(--color-text);
+  line-height: 1.3;
+  letter-spacing: 0;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select,
+.auth-input,
+.search,
+.candidate-search-input,
+.candidate-filter-field select,
+.candidate-status-menu select,
+.filter-select,
+.sort-select,
+.skills-search-box,
+.requirement-input {
+  font-family: var(--font-ui);
+  font-weight: var(--type-weight-regular);
+  letter-spacing: 0;
+}
+
+.form-group input::placeholder,
+.form-group textarea::placeholder,
+.auth-input::placeholder,
+.search::placeholder,
+.candidate-search-input::placeholder,
+.skills-search-box::placeholder {
+  font-weight: var(--type-weight-regular);
+  color: var(--color-text-soft);
+}
+
+.summary-value,
+.ds-metric-card__value,
+.match-score,
+.ds-score-ring__value,
+.candidate-score-block .ds-score-ring__value,
+.ajd-score-ring-wrap .ds-score-ring__value,
+.jd-score-ring-num,
+.job-stat-value,
+.applied-score-value {
+  font-family: var(--font-heading);
+  font-weight: var(--type-weight-medium);
+  letter-spacing: -0.035em;
+}
+
+.job-card-title,
+.applied-job-title,
+.candidate-name-line h3,
+.recent-candidate-name,
+.jd-role,
+.job-detail-title,
+.ajd-recommendation-pill,
+.candidate-name,
+.candidate-name-section h4 {
+  font-family: var(--font-heading);
+  font-weight: var(--type-weight-medium);
+  letter-spacing: -0.015em;
+}
+
+.ds-badge,
+.ds-skill-pill,
+.ds-status-badge,
+.status-badge,
+.job-type-pill,
+.metric-pill,
+.ai-badge,
+.jd-badge,
+.jd-pill,
+.job-detail-skill-pill,
+.skill-tag {
+  font-family: var(--font-ui);
+  font-size: var(--type-chip);
+  font-weight: var(--type-weight-medium);
+  letter-spacing: 0;
+}
+
+.nav-item,
+.candidate-nav-item,
+.sidebar-profile-name,
+.candidate-sidebar-name,
+.sidebar-profile-role,
+.candidate-sidebar-role,
+.logo-text {
+  font-family: var(--font-ui);
+  font-weight: var(--type-weight-regular);
+  letter-spacing: 0;
+}
+
+.nav-item.active,
+.candidate-nav-item.active {
+  font-weight: var(--type-weight-medium);
+}
+
+.jobs-table-card,
+table,
+tbody,
+td,
+.job-card-item,
+.candidate-row-card,
+.applied-job-card-v2 {
+  font-family: var(--font-table);
+}
+
+th,
+thead {
+  font-family: var(--font-ui);
+  font-weight: var(--type-weight-medium);
+  color: var(--color-text-muted);
+  letter-spacing: var(--tracking-label);
 }

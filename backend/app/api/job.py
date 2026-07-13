@@ -192,8 +192,17 @@ class ApplyFromScanRequest(BaseModel):
     task_id: str = Field(..., min_length=8, max_length=120)
 
 
-DEFAULT_APPLICATION_STATUS = "on-hold"
-ALLOWED_APPLICATION_STATUSES = {"shortlisted", "on-hold", "rejected"}
+DEFAULT_APPLICATION_STATUS = "not-reviewed"
+ALLOWED_APPLICATION_STATUSES = {"not-reviewed", "shortlisted", "on-hold", "rejected"}
+
+
+def _normalize_application_status(status: str | None) -> str:
+    value = re.sub(r"[\s_]+", "-", (status or "").strip().lower())
+    if value in {"submitted", "accepted", "applied", "pending"}:
+        return DEFAULT_APPLICATION_STATUS
+    if value in {"hold", "onhold"}:
+        return "on-hold"
+    return value
 
 
 def _create_job_embedding_background(job_id: int) -> None:
@@ -336,6 +345,9 @@ def _safe_application_status(db: Session, desired: str) -> str | None:
                 vals.append(v)
 
             if desired in vals:
+                return desired
+            if desired in ALLOWED_APPLICATION_STATUSES:
+                db.execute(text("ALTER TABLE applications MODIFY COLUMN status VARCHAR(50) NULL"))
                 return desired
             for cand in (DEFAULT_APPLICATION_STATUS, "pending", "applied"):
                 if cand in vals:
@@ -2022,11 +2034,11 @@ def update_application_status(
     db: Session = Depends(get_db),
     user=Depends(recruiter_only),
 ):
-    status = (payload.status or "").strip().lower()
+    status = _normalize_application_status(payload.status)
     if status not in ALLOWED_APPLICATION_STATUSES:
         raise HTTPException(
             status_code=400,
-            detail="Invalid application status. Use shortlisted, on-hold, or rejected.",
+            detail="Invalid application status. Use not-reviewed, shortlisted, on-hold, or rejected.",
         )
 
     application = db.query(Application).filter(Application.id == int(application_id)).first()
