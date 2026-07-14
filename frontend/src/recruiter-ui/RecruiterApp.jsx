@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import "./RecruiterApp.css";
 import {
   Briefcase,
@@ -13,24 +14,34 @@ import CreateJob from "./CreateJob";
 import Dashboard from "./Dashboard";
 import Jobs from "./Jobs";
 import Candidates from "./Candidates";
+import { useAuth } from "../shared/auth/useAuth";
+
+function RecruiterJobDetailRoute({ onContinueDraft }) {
+  const navigate = useNavigate();
+  const { jobId } = useParams();
+  const parsedJobId = Number(jobId);
+
+  if (!Number.isFinite(parsedJobId) || parsedJobId <= 0) {
+    return <Navigate to="/recruiter/jobs" replace />;
+  }
+
+  return (
+    <JobDetailModal
+      jobId={parsedJobId}
+      onContinueDraft={onContinueDraft}
+      onClose={() => navigate("/recruiter/jobs")}
+    />
+  );
+}
 
 export default function RecruiterApp({ onLogout }) {
-  const [activeView, setActiveView] = useState("dashboard");
-  const [jobDetailId, setJobDetailId] = useState(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useAuth();
   const [jobsInitialFilter, setJobsInitialFilter] = useState("all");
-  const [jobListingCount, setJobListingCount] = useState(null);
   const [jobListingsTitle, setJobListingsTitle] = useState("All Jobs (...)");
   const [candidatesInitialStatus, setCandidatesInitialStatus] = useState("all");
   const [draftEditing, setDraftEditing] = useState(null); // { jobId, initialDraft }
-
-  const user = useMemo(() => {
-    try {
-      const raw = localStorage.getItem("user");
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
-    }
-  }, []);
 
   const displayName = user?.name || "Recruiter";
   const displayRole = (user?.role || user?.userType || "recruiter").replace(/(^|\s)\S/g, (m) => m.toUpperCase());
@@ -41,16 +52,30 @@ export default function RecruiterApp({ onLogout }) {
     return (a + b).toUpperCase();
   }, [displayName]);
 
+  const activeView = useMemo(() => {
+    const pathname = location?.pathname || "";
+    if (pathname.startsWith("/recruiter/jobs/new")) return "create-job";
+    if (pathname.startsWith("/recruiter/jobs")) return "jobs";
+    if (pathname.startsWith("/recruiter/candidates")) return "candidates";
+    return "dashboard";
+  }, [location?.pathname]);
+
   const handleCreateClick = () => {
     setDraftEditing(null);
-    setActiveView("create-job");
+    navigate("/recruiter/jobs/new");
   };
 
   const handleNavigate = (view, options = {}) => {
     if (view === "candidates") {
       setCandidatesInitialStatus(options.statusFilter || "all");
+      navigate("/recruiter/candidates");
+      return;
     }
-    setActiveView(view);
+    if (view === "jobs") {
+      navigate("/recruiter/jobs");
+      return;
+    }
+    navigate("/recruiter");
   };
 
   return (
@@ -140,19 +165,36 @@ export default function RecruiterApp({ onLogout }) {
 
           {/* Content Grid */}
           <div className="content-grid">
-            {activeView === "dashboard" && <Dashboard onNavigate={handleNavigate} />}
-            {activeView === "jobs" && (
-              <Jobs
-                initialFilter={jobsInitialFilter}
-                onAllJobCountChange={setJobListingCount}
-                onTopbarTitleChange={setJobListingsTitle}
-                onViewJob={(id) => {
-                  setJobDetailId(id);
-                  setActiveView("job-detail");
-                }}
+            <Routes>
+              <Route index element={<Dashboard onNavigate={handleNavigate} />} />
+              <Route
+                path="jobs"
+                element={
+                  <Jobs
+                    initialFilter={jobsInitialFilter}
+                    onTopbarTitleChange={setJobListingsTitle}
+                    onViewJob={(id) => navigate(`/recruiter/jobs/${id}`)}
+                  />
+                }
               />
-            )}
-            {activeView === "candidates" && <Candidates initialStatusFilter={candidatesInitialStatus} />}
+              <Route
+                path="jobs/:jobId"
+                element={
+                  <RecruiterJobDetailRoute
+                    onContinueDraft={(job) => {
+                      setDraftEditing({
+                        jobId: job?.id,
+                        initialDraft: job?.draft_data || { formData: {} },
+                      });
+                      navigate("/recruiter/jobs/new");
+                    }}
+                  />
+                }
+              />
+              <Route path="jobs/new" element={null} />
+              <Route path="candidates" element={<Candidates initialStatusFilter={candidatesInitialStatus} />} />
+              <Route path="*" element={<Navigate to="/recruiter" replace />} />
+            </Routes>
           </div>
         </div>
       </div>
@@ -161,7 +203,7 @@ export default function RecruiterApp({ onLogout }) {
       {activeView === "create-job" && (
         <div className="create-job-modal-overlay">
           <CreateJob
-            onClose={() => setActiveView("dashboard")}
+            onClose={() => navigate("/recruiter")}
             onCreated={(_job, meta) => {
               if (meta?.to === "drafts") {
                 setJobsInitialFilter("draft");
@@ -169,31 +211,12 @@ export default function RecruiterApp({ onLogout }) {
                 setJobsInitialFilter("all");
               }
               setDraftEditing(null);
-              setActiveView("jobs");
+              navigate("/recruiter/jobs");
             }}
             draftJobId={draftEditing?.jobId ?? null}
             initialDraft={draftEditing?.initialDraft ?? null}
           />
         </div>
-      )}
-
-      {activeView === "job-detail" && jobDetailId != null && (
-        <JobDetailModal
-          jobId={jobDetailId}
-          onContinueDraft={(job) => {
-            // Resume draft in the single-page CreateJob flow.
-            setDraftEditing({
-              jobId: job?.id,
-              initialDraft: job?.draft_data || { formData: {} }
-            });
-            setJobDetailId(null);
-            setActiveView("create-job");
-          }}
-          onClose={() => {
-            setJobDetailId(null);
-            setActiveView("jobs");
-          }}
-        />
       )}
     </div>
   );

@@ -30,8 +30,12 @@ def signup_user(db: Session, *, email: str, password: str, role: str, name: str 
     try:
         db.add(user)
         db.flush()
-        if role == "candidate" and not db.query(Candidate).filter(Candidate.email == email).first():
-            db.add(Candidate(name=name or email.split("@", 1)[0], email=email))
+        if role == "candidate":
+            candidate = db.query(Candidate).filter(Candidate.email == email).first()
+            if candidate:
+                candidate.user_id = user.id
+            else:
+                db.add(Candidate(name=name or email.split("@", 1)[0], email=email, user_id=user.id))
         db.commit()
         db.refresh(user)
     except SQLAlchemyError as exc:

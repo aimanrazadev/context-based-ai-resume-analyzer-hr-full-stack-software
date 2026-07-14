@@ -75,6 +75,13 @@ Explicitly excluded:
 
 ## Local Development
 
+Apply database migrations before starting the API:
+
+```bash
+cd backend
+alembic upgrade head
+```
+
 Backend only (port 8002):
 
 ```bash
@@ -103,6 +110,18 @@ It currently:
 - verifies the backend app imports successfully
 
 If you push this repo to GitHub, Actions should run automatically on pushes and pull requests.
+
+## Architecture Notes
+
+- Database schema changes are managed with Alembic in `backend/alembic/`; the FastAPI startup path does not create or alter tables at runtime.
+- Long-running resume analysis progress is persisted in the `analysis_tasks` table instead of process memory, so polling survives API restarts and multi-worker deployments.
+- Application statuses are normalized through canonical frontend and backend helpers. Valid statuses are `not-reviewed`, `shortlisted`, `on-hold`, and `rejected`.
+- Candidate matching enters through `backend/app/services/matching_pipeline.py`, which delegates final scoring to the shared 45/25/20/10 scoring weights in `scoring_service.py`.
+- Recruiter dashboard, jobs, and candidates screens use aggregate endpoints instead of per-job browser-side ranking loops:
+  - `GET /recruiter/dashboard`
+  - `GET /recruiter/jobs?include_stats=true`
+  - `GET /recruiter/candidates?job_id=&status=&sort=&page=`
+- Frontend shared helpers live under `frontend/src/shared/` for auth storage, status normalization, date formatting, score tones, polling, and skill display normalization.
 
 ## Environment Variables
 

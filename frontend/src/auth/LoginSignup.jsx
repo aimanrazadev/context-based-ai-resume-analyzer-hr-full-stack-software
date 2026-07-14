@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import "./LoginSignup.css";
 import { authAPI } from "../utils/api";
 
@@ -15,24 +15,6 @@ export default function LoginSignup({ onLoginSuccess }) {
   });
   const [message, setMessage] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [backendStatus, setBackendStatus] = useState("Checking...");
-
-  useEffect(() => {
-    let alive = true;
-    authAPI
-      .health()
-      .then((d) => {
-        if (!alive) return;
-        setBackendStatus(d?.status || "Connected");
-      })
-      .catch(() => {
-        if (!alive) return;
-        setBackendStatus("Backend not reachable");
-      });
-    return () => {
-      alive = false;
-    };
-  }, []);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -111,8 +93,6 @@ export default function LoginSignup({ onLoginSuccess }) {
         token: token ?? null
       };
 
-      localStorage.setItem("user", JSON.stringify(user));
-
       setAuthMessage("success", isLogin ? "Login successful!" : "Account created successfully!");
       onLoginSuccess(user);
     } catch (err) {
@@ -127,10 +107,6 @@ export default function LoginSignup({ onLoginSuccess }) {
     setMessage(null);
   };
 
-  const showComingSoon = (provider) => {
-    setAuthMessage("warning", `${provider} login is coming soon.`);
-  };
-
   return (
     <div className="auth-container">
       <div className="auth-card">
@@ -139,9 +115,6 @@ export default function LoginSignup({ onLoginSuccess }) {
           <h1 className="auth-title">Get Started Now</h1>
           <p className="auth-subtitle">
             It's free to join and gain full access to thousands of exciting {userType === "recruiter" ? "hiring" : "job"} opportunities.
-          </p>
-          <p className="auth-subtitle auth-status-line">
-            Backend status: {backendStatus}
           </p>
 
           {/* User Type Selection */}
@@ -283,33 +256,6 @@ export default function LoginSignup({ onLoginSuccess }) {
             )}
           </div>
 
-          <div className="auth-divider">
-            <span>OR Continue With</span>
-          </div>
-
-          <div className="auth-social-login">
-            <button 
-              type="button"
-              className="social-btn google"
-              onClick={() => showComingSoon("Google")}
-            >
-              G
-            </button>
-            <button 
-              type="button"
-              className="social-btn facebook"
-              onClick={() => showComingSoon("Facebook")}
-            >
-              f
-            </button>
-            <button 
-              type="button"
-              className="social-btn slack"
-              onClick={() => showComingSoon("Social")}
-            >
-              #
-            </button>
-          </div>
         </div>
       </div>
     </div>

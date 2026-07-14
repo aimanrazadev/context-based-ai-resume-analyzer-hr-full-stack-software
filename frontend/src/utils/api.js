@@ -5,20 +5,14 @@
  * - Jobs use the FastAPI backend
  */
 
+import { clearStoredUser, getStoredToken, getStoredUser } from "../shared/auth/storage";
+import { toJobApiPayload } from "../features/jobs/api/jobPayloadMapper";
+
 const DEFAULT_API_BASE_URL = import.meta.env.DEV ? "http://127.0.0.1:8002" : "";
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/$/, "");
 
-function getStoredUser() {
-  try {
-    const raw = localStorage.getItem("user");
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
-
 function getAuthToken() {
-  return getStoredUser()?.token || null;
+  return getStoredToken();
 }
 
 function normalizeApiErrorMessage(raw, status) {
@@ -136,11 +130,7 @@ async function apiFetch(path, options = {}) {
     // For /auth/login, a 401 typically means "invalid credentials".
     if (res.status === 401 && !isAuthEndpoint) {
       // Token expired/invalid: clear session and send user back to login.
-      try {
-        localStorage.removeItem("user");
-      } catch {
-        // ignore
-      }
+      clearStoredUser();
       try {
         if (window.location) {
           window.location.href = "/login";
@@ -189,29 +179,7 @@ export const jobAPI = {
   create: async (data) =>
     apiFetch("/jobs", {
       method: "POST",
-      body: JSON.stringify({
-        title: data?.title,
-        short_description: data?.shortDescription ?? data?.short_description ?? null,
-        description: data?.description,
-        location: data?.location ?? null,
-        salary_range: data?.salaryRange ?? data?.salary_range ?? null,
-        salary_currency: data?.salaryCurrency ?? data?.salary_currency ?? null,
-        salary_min: data?.salaryMin ?? data?.salary_min ?? null,
-        salary_max: data?.salaryMax ?? data?.salary_max ?? null,
-        variable_min: data?.variableMin ?? data?.variable_min ?? null,
-        variable_max: data?.variableMax ?? data?.variable_max ?? null,
-        opportunity_type: data?.opportunityType ?? data?.opportunity_type ?? null,
-        min_experience_years: data?.minExperienceYears ?? data?.min_experience_years ?? null,
-        job_type: data?.jobType ?? data?.job_type ?? null,
-        job_site: data?.jobSite ?? data?.job_site ?? null,
-        non_negotiables: data?.nonNegotiables ?? data?.non_negotiables ?? null,
-        additional_preferences: data?.additionalPreferences ?? data?.additional_preferences ?? null,
-        apply_by: data?.apply_by ?? data?.applyBy ?? null,
-        required_skills: data?.required_skills ?? data?.requiredSkills ?? null,
-        status: data?.status ?? "active",
-        draft_data: data?.draft_data ?? null,
-        draft_step: data?.draft_step ?? 1
-      })
+      body: JSON.stringify(toJobApiPayload(data, { includeDefaults: true }))
     }),
 
   getAll: async (filters = {}) => {
@@ -224,32 +192,30 @@ export const jobAPI = {
 
   getById: async (id) => apiFetch(`/jobs/${id}`),
 
+  recruiterDashboard: async () => apiFetch("/recruiter/dashboard"),
+
+  recruiterJobs: async (filters = {}) => {
+    const params = new URLSearchParams();
+    if (filters?.status) params.set("status", filters.status);
+    if (filters?.includeStats) params.set("include_stats", "true");
+    const qs = params.toString();
+    return apiFetch(`/recruiter/jobs${qs ? `?${qs}` : ""}`);
+  },
+
+  recruiterCandidates: async (filters = {}) => {
+    const params = new URLSearchParams();
+    if (filters?.jobId != null) params.set("job_id", String(filters.jobId));
+    if (filters?.status) params.set("status", filters.status);
+    if (filters?.sort) params.set("sort", filters.sort);
+    if (filters?.page) params.set("page", String(filters.page));
+    const qs = params.toString();
+    return apiFetch(`/recruiter/candidates${qs ? `?${qs}` : ""}`);
+  },
+
   update: async (id, data) =>
     apiFetch(`/jobs/${id}`, {
       method: "PATCH",
-      body: JSON.stringify({
-        title: data?.title,
-        short_description: data?.shortDescription ?? data?.short_description,
-        description: data?.description,
-        location: data?.location,
-        salary_range: data?.salaryRange ?? data?.salary_range,
-        salary_currency: data?.salaryCurrency ?? data?.salary_currency,
-        salary_min: data?.salaryMin ?? data?.salary_min,
-        salary_max: data?.salaryMax ?? data?.salary_max,
-        variable_min: data?.variableMin ?? data?.variable_min,
-        variable_max: data?.variableMax ?? data?.variable_max,
-        opportunity_type: data?.opportunityType ?? data?.opportunity_type,
-        min_experience_years: data?.minExperienceYears ?? data?.min_experience_years,
-        job_type: data?.jobType ?? data?.job_type,
-        job_site: data?.jobSite ?? data?.job_site,
-        non_negotiables: data?.nonNegotiables ?? data?.non_negotiables,
-        additional_preferences: data?.additionalPreferences ?? data?.additional_preferences,
-        apply_by: data?.apply_by ?? data?.applyBy ?? null,
-        required_skills: data?.required_skills ?? data?.requiredSkills ?? null,
-        status: data?.status,
-        draft_data: data?.draft_data,
-        draft_step: data?.draft_step
-      })
+      body: JSON.stringify(toJobApiPayload(data))
     }),
 
   delete: async (id) =>
@@ -314,8 +280,5 @@ export const jobAPI = {
 
   // Candidate: delete application
   deleteApplication: async (applicationId) =>
-    apiFetch(`/jobs/applications/${applicationId}`, { method: "DELETE" }),
-
-  // Recruiter: ranked candidates per job
-  rankedCandidates: async (jobId) => apiFetch(`/jobs/${jobId}/ranked_candidates`)
+    apiFetch(`/jobs/applications/${applicationId}`, { method: "DELETE" })
 };

@@ -18,7 +18,7 @@ _MULTISPACE_RE = re.compile(r"[ \t]{2,}")
 _MULTINEWLINE_RE = re.compile(r"\n{3,}")
 _BULLET_RE = re.compile(r"^[\s\u2022\u00b7\u25cf\u25e6\u25aa\u25ab\u2219\u2043\u2023]+", re.MULTILINE)
 _PAGE_MARKER_RE = re.compile(
-    r"^\s*(page\s*\d+(\s*of\s*\d+)?)\s*$|^\s*\d+\s*/\s*\d+\s*$|^\s*[-–—]{0,3}\s*\d+\s*[-–—]{0,3}\s*$",
+    r"^\s*(page\s*\d+(\s*of\s*\d+)?)\s*$|^\s*\d+\s*/\s*\d+\s*$|^\s*[-\u2013\u2014]{0,3}\s*\d+\s*[-\u2013\u2014]{0,3}\s*$",
     re.IGNORECASE | re.MULTILINE,
 )
 _HYPHEN_LINEBREAK_RE = re.compile(r"([A-Za-z])-\n([A-Za-z])")
@@ -32,14 +32,14 @@ _ARTIFACT_REPLACEMENTS = {
     "\u2014": "-",
     "\u2026": "...",
     "\u00a0": " ",
-    "â€“": "-",
-    "â€”": "-",
-    "â€œ": '"',
-    "â€\u009d": '"',
-    "â€˜": "'",
-    "â€™": "'",
-    "â€¦": "...",
-    "â€¢": "-",
+    "\u00e2\u20ac\u201c": "-",
+    "\u00e2\u20ac\u201d": "-",
+    "\u00e2\u20ac\u0153": '"',
+    "\u00e2\u20ac\u009d": '"',
+    "\u00e2\u20ac\u02dc": "'",
+    "\u00e2\u20ac\u2122": "'",
+    "\u00e2\u20ac\u00a6": "...",
+    "\u00e2\u20ac\u00a2": "-",
 }
 
 

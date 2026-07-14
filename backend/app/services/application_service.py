@@ -4,6 +4,11 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from ..modules.matching.skills import (
+    classify_required_skills,
+    contains_skill,
+    normalize_required_skills,
+)
 from ..models.ai_resume_analysis import AIResumeAnalysis
 
 
@@ -114,121 +119,13 @@ def _raw_soft_skill_note(text: str) -> str:
     return "Soft skills should be verified through the non-negotiables and interview process."
 
 
-def _skill_aliases(skill: str) -> set[str]:
-    raw = _clean_text(skill).lower()
-    compact = re.sub(r"[^a-z0-9+#.]+", "", raw)
-    aliases = {raw, compact}
-    mapping = {
-        "rest apis": {"rest api", "rest apis", "restful api", "restful apis", "api workflows"},
-        "restful apis": {"rest api", "rest apis", "restful api", "restful apis"},
-        "machine learning": {"machine learning", "ml"},
-        "natural language processing nlp": {"natural language processing", "nlp"},
-        "natural language processing": {"natural language processing", "nlp"},
-        "large language models": {"large language models", "large language model", "llm", "llms", "llm integration"},
-        "large language models llms": {"large language models", "large language model", "llm", "llms", "llm integration"},
-        "scikit learn": {"scikit learn", "scikit-learn", "sklearn"},
-        "scikitlearn": {"scikit learn", "scikit-learn", "sklearn"},
-        "numpy": {"numpy", "num py"},
-        "pandas": {"pandas"},
-        "mysql": {"mysql", "sql"},
-        "sql": {"sql", "mysql", "postgresql", "sqlite"},
-        "fastapi": {"fastapi", "fast api"},
-        "react": {"react", "reactjs", "react.js"},
-        "javascript": {"javascript", "js"},
-        "gemini api": {"gemini api", "gemini"},
-        "openai api": {"openai api", "openai"},
-        "prompt engineering": {"prompt engineering"},
-        "semantic search": {"semantic search", "semantic similarity"},
-        "semantic similarity": {"semantic similarity", "semantic search"},
-        "transformer embeddings": {"transformer embeddings", "sentence transformers", "embeddings"},
-        "python docx": {"python-docx", "python docx"},
-        "pymupdf": {"pymupdf", "pymu pdf"},
-    }
-    key = re.sub(r"\([^)]*\)", "", raw)
-    key = re.sub(r"[^a-z0-9+#.]+", " ", key).strip()
-    aliases.update(mapping.get(key, set()))
-    aliases.update(mapping.get(compact, set()))
-    return {alias for alias in aliases if alias}
-
-
-def _contains_skill(text: str, skill: str) -> bool:
-    haystack = (text or "").lower()
-    compact_haystack = re.sub(r"[^a-z0-9+#.]+", "", haystack)
-    for alias in _skill_aliases(skill):
-        if " " in alias or "-" in alias or "." in alias or "+" in alias or "#" in alias:
-            pattern = re.escape(alias).replace("\\ ", r"\s+").replace("\\-", r"[-\s]?")
-            if re.search(rf"(^|[^a-z0-9+#.]){pattern}([^a-z0-9+#.]|$)", haystack):
-                return True
-        elif alias in compact_haystack:
-            return True
-    return False
-
-
 def classify_required_skills_from_resume(resume: Any | None, required_skills: list[str] | None) -> dict[str, list[str]]:
     text = _resume_text_blob(resume)
     return classify_required_skills_from_text(text=text, required_skills=required_skills)
 
 
 def classify_required_skills_from_text(*, text: str, required_skills: list[str] | None) -> dict[str, list[str]]:
-    matched: list[str] = []
-    missing: list[str] = []
-    seen: set[str] = set()
-    for skill in required_skills or []:
-        label = _clean_text(skill)
-        key = re.sub(r"[^a-z0-9+#.]+", " ", label.lower()).strip()
-        if not label or key in seen:
-            continue
-        seen.add(key)
-        if _contains_skill(text, label):
-            matched.append(label)
-        else:
-            missing.append(label)
-    return {"matched_skills": matched, "missing_skills": missing}
-
-
-def apply_skill_snapshot_to_score(
-    *,
-    breakdown: dict[str, Any],
-    semantic_score: float,
-    ai_recommendation: str | None,
-    matched_skills: list[str],
-    missing_skills: list[str],
-) -> tuple[float, int, dict[str, Any]]:
-    from .scoring_service import compute_final_score
-
-    required_count = len(matched_skills) + len(missing_skills)
-    skills_ratio = (len(matched_skills) / required_count) if required_count else 0.0
-    experience_pct = float(breakdown.get("experience_score") or 0.0)
-    recommendation_map = {
-        "strong fit": 100,
-        "good fit": 80,
-        "average fit": 60,
-        "review manually": 40,
-        "weak fit": 20,
-    }
-    ai_score = recommendation_map.get(str(ai_recommendation or "").strip().lower(), float(breakdown.get("ai_score") or 0.0))
-    semantic_ratio = float(semantic_score or 0.0)
-    if semantic_ratio > 1.0:
-        semantic_ratio /= 100.0
-    final_score = compute_final_score(
-        semantic_score=semantic_ratio,
-        skills_score=skills_ratio,
-        experience_score=experience_pct / 100.0,
-        ai_evaluation_score=float(ai_score or 0.0) / 100.0,
-    )
-    updated = dict(breakdown or {})
-    updated["matched_skills"] = matched_skills
-    updated["missing_skills"] = missing_skills
-    updated["skills_score"] = round(skills_ratio * 100.0, 2)
-    updated["semantic_score"] = round(semantic_ratio * 100.0, 2)
-    updated["ai_score"] = float(ai_score or 0.0)
-    updated["weighted_contributions"] = {
-        "skills": round(0.45 * updated["skills_score"], 2),
-        "experience": round(0.20 * experience_pct, 2),
-        "semantic": round(0.25 * updated["semantic_score"], 2),
-        "ai": round(0.10 * updated["ai_score"], 2),
-    }
-    return updated["skills_score"], int(final_score), updated
+    return classify_required_skills(text=text, required_skills=required_skills)
 
 
 def analysis_conflicts_with_skill_snapshot(analysis: dict[str, Any], matched_skills: list[str]) -> bool:
@@ -240,7 +137,7 @@ def analysis_conflicts_with_skill_snapshot(analysis: dict[str, Any], matched_ski
         else:
             text_parts.append(str(value or ""))
     text = " ".join(text_parts)
-    return any(_contains_skill(text, skill) for skill in matched_skills or [])
+    return any(contains_skill(text, skill) for skill in matched_skills or [])
 
 
 def factual_candidate_summary_from_resume(resume: Any | None) -> str:
@@ -398,8 +295,7 @@ def backfill_missing_application_scores(db: Session) -> int:
 
     from ..models.application import Application
     from ..models.resume import Resume
-    from .job_service import normalize_required_skills
-    from .scoring_service import score_application
+    from .matching_pipeline import evaluate_candidate_for_job
 
     rows = db.query(Application).filter(Application.experience_score.is_(None)).all()
     updated = 0
@@ -422,7 +318,7 @@ def backfill_missing_application_scores(db: Session) -> int:
         semantic_normalized = float(application.semantic_score or 0.0)
         if semantic_normalized > 1.0:
             semantic_normalized /= 100.0
-        skills_score, final_score, breakdown = score_application(
+        match_result = evaluate_candidate_for_job(
             job_title=job.job_title,
             job_description=job.job_description,
             job_required_skills=normalize_required_skills(job.required_skills),
@@ -431,6 +327,9 @@ def backfill_missing_application_scores(db: Session) -> int:
             semantic_score=semantic_normalized,
             ai_recommendation=recommendation,
         )
+        skills_score = match_result.skills_score
+        final_score = match_result.final_score
+        breakdown = match_result.breakdown
         application.semantic_score = round(semantic_normalized * 100.0, 2)
         application.skills_score = skills_score
         application.experience_score = float(breakdown.get("experience_score") or 0.0)

@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import "./JobSearch.css";
 import { jobAPI } from "../utils/api";
 import { PageTransition, SkeletonBlock, SkeletonText } from "../components/ui";
+import { formatDate } from "../shared/utils/dates";
 
 const SORT_OPTIONS = {
   RELEVANCE: "relevance",
@@ -234,7 +235,7 @@ export default function JobSearch() {
                     </div>
                     <div className="job-detail-item">
                       <Calendar className="job-detail-icon" aria-hidden="true" />
-                      <span>{job.created_at ? new Date(job.created_at).toLocaleDateString() : "—"}</span>
+                      <span>{formatDate(job.created_at)}</span>
                     </div>
                   </div>
 

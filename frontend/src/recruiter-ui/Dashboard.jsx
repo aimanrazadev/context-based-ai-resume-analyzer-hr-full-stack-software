@@ -3,26 +3,6 @@ import { useEffect, useState } from "react";
 import { jobAPI } from "../utils/api";
 import { PageTransition, SkeletonBlock, SkeletonText } from "../components/ui";
 
-const getStartOfDay = (d) => {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  return x;
-};
-
-const getStartOfWeek = (d) => {
-  const x = getStartOfDay(d);
-  const day = x.getDay();
-  const diff = (day + 6) % 7;
-  x.setDate(x.getDate() - diff);
-  return x;
-};
-
-const getStartOfMonth = (d) => {
-  const x = getStartOfDay(d);
-  x.setDate(1);
-  return x;
-};
-
 const pctChange = (current, previous) => {
   const cur = Number(current) || 0;
   const prev = Number(previous) || 0;
@@ -30,28 +10,29 @@ const pctChange = (current, previous) => {
   return ((cur - prev) / prev) * 100;
 };
 
-const getApplicationStatus = (app) => {
-  const value = String(app?.status || "not-reviewed").toLowerCase().trim().replaceAll("_", "-").replace(/\s+/g, "-");
-  if (value === "submitted" || value === "accepted" || value === "applied" || value === "pending") {
-    return "not-reviewed";
-  }
-  if (value === "hold" || value === "onhold") return "on-hold";
-  return value;
+const metricFromServer = (metric, rangeLabel) => {
+  const current = Number(metric?.current) || 0;
+  const previous = Number(metric?.previous) || 0;
+  return {
+    current,
+    previous,
+    change: pctChange(current, previous),
+    rangeLabel,
+  };
 };
 
-const statusIncludes = (app, keyword) => getApplicationStatus(app).includes(keyword);
-const statusEquals = (app, status) => getApplicationStatus(app) === status;
+const EMPTY_METRICS = {
+  newApplicants: { current: 0, previous: 0, change: 0, rangeLabel: "vs yesterday" },
+  applications: { current: 0, previous: 0, change: 0, rangeLabel: "vs last week" },
+  notReviewed: { current: 0, previous: 0, change: 0, rangeLabel: "vs last month" },
+  shortlisted: { current: 0, previous: 0, change: 0, rangeLabel: "vs last month" },
+  onHold: { current: 0, previous: 0, change: 0, rangeLabel: "vs last month" },
+  rejected: { current: 0, previous: 0, change: 0, rangeLabel: "vs last month" },
+};
 
 const useDashboardCounts = () => {
   const [loading, setLoading] = useState(true);
-  const [metrics, setMetrics] = useState({
-    newApplicants: { current: 0, previous: 0, change: 0, rangeLabel: "vs yesterday" },
-    applications: { current: 0, previous: 0, change: 0, rangeLabel: "vs last week" },
-    notReviewed: { current: 0, previous: 0, change: 0, rangeLabel: "vs last month" },
-    shortlisted: { current: 0, previous: 0, change: 0, rangeLabel: "vs last month" },
-    onHold: { current: 0, previous: 0, change: 0, rangeLabel: "vs last month" },
-    rejected: { current: 0, previous: 0, change: 0, rangeLabel: "vs last month" }
-  });
+  const [metrics, setMetrics] = useState(EMPTY_METRICS);
   const [recent, setRecent] = useState([]);
 
   useEffect(() => {
@@ -59,105 +40,23 @@ const useDashboardCounts = () => {
     (async () => {
       try {
         setLoading(true);
-        const allRes = await jobAPI.getAll({});
+        const dashboardRes = await jobAPI.recruiterDashboard();
         if (!alive) return;
-        const jobs = allRes?.jobs || [];
 
-        const allCandidates = await Promise.all(
-          jobs.map(async (job) => {
-            try {
-              const res = await jobAPI.rankedCandidates(job.id);
-              return Array.isArray(res?.candidates) ? res.candidates : [];
-            } catch {
-              return [];
-            }
-          })
-        );
-
-        if (!alive) return;
-        const applications = allCandidates.flat();
-
-        const now = new Date();
-        const startToday = getStartOfDay(now);
-        const startYesterday = new Date(startToday);
-        startYesterday.setDate(startYesterday.getDate() - 1);
-
-        const startWeek = getStartOfWeek(now);
-        const startLastWeek = new Date(startWeek);
-        startLastWeek.setDate(startLastWeek.getDate() - 7);
-
-        const startMonth = getStartOfMonth(now);
-        const startLastMonth = new Date(startMonth);
-        startLastMonth.setMonth(startLastMonth.getMonth() - 1);
-
-        const inRange = (ts, start, end) => {
-          if (!ts) return false;
-          const t = new Date(ts).getTime();
-          return t >= start.getTime() && t < end.getTime();
-        };
-
-        const todayApps = applications.filter((a) => inRange(a?.created_at, startToday, now));
-        const yesterdayApps = applications.filter((a) => inRange(a?.created_at, startYesterday, startToday));
-        const weekApps = applications.filter((a) => inRange(a?.created_at, startWeek, now));
-        const lastWeekApps = applications.filter((a) => inRange(a?.created_at, startLastWeek, startWeek));
-        const monthApps = applications.filter((a) => inRange(a?.created_at, startMonth, now));
-        const lastMonthApps = applications.filter((a) => inRange(a?.created_at, startLastMonth, startMonth));
-
-        const monthShortlisted = monthApps.filter((a) => statusIncludes(a, "shortlist"));
-        const lastMonthShortlisted = lastMonthApps.filter((a) => statusIncludes(a, "shortlist"));
-        const monthNotReviewed = monthApps.filter((a) => statusEquals(a, "not-reviewed"));
-        const lastMonthNotReviewed = lastMonthApps.filter((a) => statusEquals(a, "not-reviewed"));
-        const monthOnHold = monthApps.filter((a) => statusEquals(a, "on-hold"));
-        const lastMonthOnHold = lastMonthApps.filter((a) => statusEquals(a, "on-hold"));
-        const monthRejected = monthApps.filter((a) => statusIncludes(a, "reject"));
-        const lastMonthRejected = lastMonthApps.filter((a) => statusIncludes(a, "reject"));
-
+        const serverMetrics = dashboardRes?.metrics || {};
         setMetrics({
-          newApplicants: {
-            current: todayApps.length,
-            previous: yesterdayApps.length,
-            change: pctChange(todayApps.length, yesterdayApps.length),
-            rangeLabel: "vs yesterday"
-          },
-          applications: {
-            current: weekApps.length,
-            previous: lastWeekApps.length,
-            change: pctChange(weekApps.length, lastWeekApps.length),
-            rangeLabel: "vs last week"
-          },
-          shortlisted: {
-            current: monthShortlisted.length,
-            previous: lastMonthShortlisted.length,
-            change: pctChange(monthShortlisted.length, lastMonthShortlisted.length),
-            rangeLabel: "vs last month"
-          },
-          notReviewed: {
-            current: monthNotReviewed.length,
-            previous: lastMonthNotReviewed.length,
-            change: pctChange(monthNotReviewed.length, lastMonthNotReviewed.length),
-            rangeLabel: "vs last month"
-          },
-          onHold: {
-            current: monthOnHold.length,
-            previous: lastMonthOnHold.length,
-            change: pctChange(monthOnHold.length, lastMonthOnHold.length),
-            rangeLabel: "vs last month"
-          },
-          rejected: {
-            current: monthRejected.length,
-            previous: lastMonthRejected.length,
-            change: pctChange(monthRejected.length, lastMonthRejected.length),
-            rangeLabel: "vs last month"
-          }
+          newApplicants: metricFromServer(serverMetrics.new_applicants, "vs yesterday"),
+          applications: metricFromServer(serverMetrics.applications, "vs last week"),
+          notReviewed: metricFromServer(serverMetrics.not_reviewed, "vs last month"),
+          shortlisted: metricFromServer(serverMetrics.shortlisted, "vs last month"),
+          onHold: metricFromServer(serverMetrics.on_hold, "vs last month"),
+          rejected: metricFromServer(serverMetrics.rejected, "vs last month"),
         });
-
-        setRecent(
-          [...applications]
-            .sort((a, b) => new Date(b?.created_at || 0).getTime() - new Date(a?.created_at || 0).getTime())
-            .slice(0, 6)
-        );
+        setRecent(Array.isArray(dashboardRes?.recent_candidates) ? dashboardRes.recent_candidates : []);
       } catch {
-        // Dashboard metrics are non-critical; keep fallback values visible.
+        if (!alive) return;
+        setMetrics(EMPTY_METRICS);
+        setRecent([]);
       } finally {
         if (alive) setLoading(false);
       }
@@ -193,7 +92,7 @@ export default function Dashboard({ onNavigate }) {
       <div className="summary-label">{label}</div>
       <div className="summary-value">{metric.current ?? "-"}</div>
       {renderChange(metric.change, metric.rangeLabel)}
-      <div className="card-hover-effect">View Details →</div>
+      <div className="card-hover-effect">View Details {">"}</div>
     </div>
   );
 

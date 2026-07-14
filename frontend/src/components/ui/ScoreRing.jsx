@@ -1,10 +1,11 @@
 import { getRingMetrics } from "../../utils/matchScore";
+import { getScoreTone } from "../../shared/utils/scores";
 
 export default function ScoreRing({ score = 0, size = 72, label = "Match score" }) {
   const strokeWidth = Math.max(5, Math.round(size * 0.09));
   const radius = (size - strokeWidth) / 2;
   const ring = getRingMetrics(score, radius);
-  const color = ring.score >= 75 ? "#16a34a" : ring.score >= 50 ? "#f59e0b" : "#ef4444";
+  const { color } = getScoreTone(ring.score);
   return (
     <div className="ds-score-ring" aria-label={`${label} ${ring.score}%`} style={{ width: size, height: size }}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">

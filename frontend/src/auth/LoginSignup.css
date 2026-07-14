@@ -50,10 +50,6 @@
   text-align: left;
 }
 
-.auth-status-line {
-  margin-top: 8px;
-}
-
 /* User Type Selection */
 .user-type-selection {
   display: flex;
@@ -252,96 +248,6 @@
   color: #6c757d;
 }
 
-.auth-divider {
-  text-align: center;
-  margin: 24px 0;
-  position: relative;
-  color: #adb5bd;
-  font-size: 12px;
-}
-
-.auth-divider::before,
-.auth-divider::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  width: 40%;
-  height: 1px;
-  background: #e9ecef;
-}
-
-.auth-divider::before {
-  left: 0;
-}
-
-.auth-divider::after {
-  right: 0;
-}
-
-.auth-social-login {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-}
-
-.social-btn {
-  width: 48px;
-  height: 48px;
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
-  background: #ffffff;
-  font-size: 20px;
-  font-weight: 400;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  outline: none;
-  color: #495057;
-}
-
-.social-btn:hover {
-  border-color: #007bff;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  background: #f8f9fa;
-}
-
-.social-btn:active {
-  transform: translateY(0);
-}
-
-.social-btn.google {
-  color: #4285f4;
-}
-
-.social-btn.google:hover {
-  border-color: #4285f4;
-  background: #e8f0fe;
-  color: #4285f4;
-}
-
-.social-btn.facebook {
-  color: #1877f2;
-}
-
-.social-btn.facebook:hover {
-  border-color: #1877f2;
-  background: #e7f3ff;
-  color: #1877f2;
-}
-
-.social-btn.slack {
-  color: #495057;
-}
-
-.social-btn.slack:hover {
-  background: #f8f9fa;
-  border-color: #007bff;
-  color: #495057;
-}
-
 /* Responsive */
 @media (max-width: 768px) {
   .auth-form-container {
@@ -361,7 +267,6 @@
   }
 }
 
-/* UI consistency audit pass */
 .auth-card {
   max-width: 760px;
 }
@@ -391,8 +296,7 @@
 .auth-checkbox,
 .auth-input,
 .auth-message,
-.auth-switch,
-.auth-divider {
+.auth-switch {
   font-weight: 400;
 }
 
@@ -407,8 +311,4 @@
 
 .auth-switch {
   margin-top: 18px;
-}
-
-.auth-divider {
-  margin: 18px 0;
 }

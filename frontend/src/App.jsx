@@ -1,10 +1,9 @@
-import { useMemo, useState } from "react";
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import "./App.css";
 import RecruiterApp from "./recruiter-ui/RecruiterApp";
 import CandidateApp from "./candidate-ui/CandidateApp";
 import LoginSignup from "./auth/LoginSignup";
 import ApplicationDetailsPage from "./components/ApplicationDetailsPage";
+import { useAuth } from "./shared/auth/useAuth";
 
 function RequireAuth({ user, role, allowedRole, children }) {
   const location = useLocation();
@@ -21,27 +20,16 @@ function RequireAuth({ user, role, allowedRole, children }) {
 
 export default function App() {
   const navigate = useNavigate();
-
-  const [user, setUser] = useState(() => {
-    try {
-      const raw = localStorage.getItem("user");
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
-    }
-  });
-
-  const role = useMemo(() => user?.role || user?.userType || null, [user]);
+  const { user, role, login, logout } = useAuth();
 
   const handleLoginSuccess = (nextUser) => {
-    setUser(nextUser);
+    login(nextUser);
     const nextRole = nextUser?.role || nextUser?.userType;
     navigate(nextRole === "candidate" ? "/candidate" : "/recruiter", { replace: true });
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("user");
-    setUser(null);
+    logout();
     navigate("/", { replace: true });
   };
 

@@ -1,20 +1,12 @@
 import { useMemo } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import AppliedJobDetails from "./AppliedJobDetails";
-
-function getStoredRole() {
-  try {
-    const raw = localStorage.getItem("user");
-    const u = raw ? JSON.parse(raw) : null;
-    return u?.role || u?.userType || null;
-  } catch {
-    return null;
-  }
-}
+import { useAuth } from "../shared/auth/useAuth";
 
 export default function ApplicationDetailsPage() {
   const navigate = useNavigate();
   const params = useParams();
+  const { role } = useAuth();
 
   const applicationId = useMemo(() => {
     const raw = params?.applicationId;
@@ -23,9 +15,8 @@ export default function ApplicationDetailsPage() {
   }, [params?.applicationId]);
 
   const fallbackHome = useMemo(() => {
-    const r = getStoredRole();
-    return r === "recruiter" ? "/recruiter" : "/candidate";
-  }, []);
+    return role === "recruiter" ? "/recruiter" : "/candidate";
+  }, [role]);
 
   if (!applicationId) return <Navigate to={fallbackHome} replace />;
 

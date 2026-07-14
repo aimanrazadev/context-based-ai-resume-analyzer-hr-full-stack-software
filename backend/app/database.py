@@ -63,10 +63,3 @@ def get_db():
         yield db
     finally:
         db.close()
-
-
-def init_db():
-    # Import models so they register with SQLAlchemy metadata before create_all.
-    from . import models  # noqa: F401
-
-    Base.metadata.create_all(bind=engine)

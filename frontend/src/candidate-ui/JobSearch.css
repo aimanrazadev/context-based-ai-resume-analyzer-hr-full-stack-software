@@ -298,7 +298,6 @@
   gap: 10px;
 }
 
-/* Visual consistency audit pass */
 .job-search-container {
   align-items: start;
 }
@@ -328,7 +327,6 @@
   margin-bottom: 12px;
 }
 
-/* Final compact scale pass for normal 100% browser zoom */
 .job-search-container {
   grid-template-columns: 220px minmax(0, 1fr);
   column-gap: 18px;

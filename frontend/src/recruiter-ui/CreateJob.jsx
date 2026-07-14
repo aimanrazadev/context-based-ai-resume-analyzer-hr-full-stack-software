@@ -2,7 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import "./CreateJob.css";
 import { BackButton } from "../components/ui";
 import { jobAPI } from "../utils/api";
+import { useAuth } from "../shared/auth/useAuth";
 import { ALL_SKILLS } from "../utils/skillsList";
+import {
+  DEFAULT_JOB_FORM_DATA,
+  buildJobFormPayload,
+  hasRequiredActiveJobFields,
+  toCreateJobResetData,
+} from "../features/jobs/create/jobFormMapper";
 
 const NON_MATCHING_SKILL_KEYS = new Set([
   "communication",
@@ -18,26 +25,6 @@ const NON_MATCHING_SKILL_KEYS = new Set([
   "project management",
   "analytical thinking"
 ]);
-
-const DEFAULT_FORM_DATA = {
-  opportunityType: "job",
-  jobTitle: "",
-  shortDescription: "",
-  applyBy: "",
-  minExperienceYears: "",
-  jobType: "full-time",
-  jobSite: "remote",
-  salaryCurrency: "Rs",
-  salaryRange: "",
-  location: "",
-  jobDescription: "",
-  requiredSkills: [],
-  nonNegotiables: [
-    "Candidate should communicate clearly with team members and stakeholders.",
-    "Candidate should collaborate well in a team environment.",
-    "Candidate should solve problems independently and think critically."
-  ]
-};
 
 const normalizeSkill = (skill) => String(skill || "").replace(/\s+/g, " ").trim();
 
@@ -65,25 +52,16 @@ const SYSTEM_REQUIRED_SKILLS = uniqueSkills(ALL_SKILLS).filter(
 const skillLookup = new Map(SYSTEM_REQUIRED_SKILLS.map((skill) => [skillKey(skill), skill]));
 
 export default function CreateJob({ onClose, onCreated, draftJobId = null, initialDraft = null }) {
+  const { user, role } = useAuth();
   const isEditingDraft = useMemo(() => Boolean(draftJobId), [draftJobId]);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const isBusy = isPublishing || isSavingDraft;
   const [error, setError] = useState("");
-  const [formData, setFormData] = useState(DEFAULT_FORM_DATA);
+  const [formData, setFormData] = useState(DEFAULT_JOB_FORM_DATA);
   const [skillsDropdown, setSkillsDropdown] = useState(false);
   const [skillSearch, setSkillSearch] = useState("");
   const [skillWarning, setSkillWarning] = useState("");
-
-  // Helper function to convert datetime-local to ISO string
-  const toISOString = (dateTimeLocal) => {
-    if (!dateTimeLocal) return null;
-    try {
-      return new Date(dateTimeLocal).toISOString();
-    } catch {
-      return null;
-    }
-  };
 
   useEffect(() => {
     if (!initialDraft) return;
@@ -244,7 +222,7 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
 
   const handleSubmit = async () => {
     // Validation
-    if (!formData.jobTitle || !formData.location || !formData.jobDescription || !String(formData.salaryRange || "").trim()) {
+    if (!hasRequiredActiveJobFields(formData)) {
       setError("Please fill in all required fields");
       return;
     }
@@ -253,29 +231,11 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
     setError("");
 
     try {
-      // Get user from localStorage
-      const user = JSON.parse(localStorage.getItem("user"));
-      if (!user || user.userType !== "recruiter") {
+      if (!user || role !== "recruiter") {
         throw new Error("You must be logged in as a recruiter");
       }
 
-      // Prepare data for API
-      const jobData = {
-        title: formData.jobTitle,
-        shortDescription: formData.shortDescription?.trim() || null,
-        description: formData.jobDescription,
-        location: formData.location,
-        salaryRange: formData.salaryRange ? `${formData.salaryCurrency} ${formData.salaryRange}` : null,
-        salaryCurrency: formData.salaryCurrency || null,
-        opportunityType: formData.opportunityType || null,
-        minExperienceYears: formData.minExperienceYears || null,
-        jobType: formData.jobType || null,
-        jobSite: formData.jobSite || null,
-        apply_by: toISOString(formData.applyBy),
-        status: "active",
-        required_skills: formData.requiredSkills || [],
-        nonNegotiables: formData.nonNegotiables.filter(req => req.trim() !== "")
-      };
+      const jobData = buildJobFormPayload(formData, "active");
 
       const response = isEditingDraft
         ? await jobAPI.update(draftJobId, {
@@ -293,20 +253,7 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
           return;
         }
         // Reset form
-        setFormData({
-          opportunityType: "job",
-          jobTitle: "",
-          shortDescription: "",
-          minExperienceYears: "",
-          jobType: "full-time",
-          jobSite: "remote",
-          salaryCurrency: "Rs",
-          salaryRange: "",
-          location: "",
-          jobDescription: "",
-          requiredSkills: [],
-          nonNegotiables: DEFAULT_FORM_DATA.nonNegotiables
-        });
+        setFormData(toCreateJobResetData());
       }
     } catch (err) {
       const msg =
@@ -325,29 +272,11 @@ export default function CreateJob({ onClose, onCreated, draftJobId = null, initi
     setIsSavingDraft(true);
     setError("");
     try {
-      const user = JSON.parse(localStorage.getItem("user"));
-      if (!user || user.userType !== "recruiter") {
+      if (!user || role !== "recruiter") {
         throw new Error("You must be logged in as a recruiter");
       }
 
-      const jobData = {
-        title: formData.jobTitle?.trim() ? formData.jobTitle : "Untitled Draft",
-        shortDescription: formData.shortDescription?.trim() || null,
-        description: formData.jobDescription?.trim() ? formData.jobDescription : null,
-        location: formData.location?.trim() ? formData.location : null,
-        salaryRange: formData.salaryRange ? `${formData.salaryCurrency} ${formData.salaryRange}` : null,
-        salaryCurrency: formData.salaryCurrency || null,
-        opportunityType: formData.opportunityType || null,
-        minExperienceYears: formData.minExperienceYears || null,
-        jobType: formData.jobType || null,
-        jobSite: formData.jobSite || null,
-        apply_by: toISOString(formData.applyBy),
-        required_skills: formData.requiredSkills || [],
-        nonNegotiables: formData.nonNegotiables.filter(req => req.trim() !== ""),
-        status: "draft",
-        draft_data: { formData },
-        draft_step: 1
-      };
+      const jobData = buildJobFormPayload(formData, "draft");
 
       const response = isEditingDraft ? await jobAPI.update(draftJobId, jobData) : await jobAPI.create(jobData);
       if (response?.success || response?.job?.id || response?.id) {

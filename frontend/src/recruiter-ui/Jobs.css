@@ -2,26 +2,6 @@
   padding: 24px;
 }
 
-.jobs-header {
-  margin-bottom: 32px;
-}
-
-.jobs-header h2 {
-  font-family: var(--font-heading);
-  font-size: var(--type-page-title);
-  font-weight: var(--type-weight-regular);
-  letter-spacing: var(--tracking-title);
-  line-height: var(--leading-title);
-  color: #212529;
-  margin-bottom: 8px;
-}
-
-.jobs-header p {
-  color: #6c757d;
-  font-size: 14px;
-}
-
-/* Filter Tabs */
 .jobs-filters {
   display: flex;
   gap: 8px;
@@ -51,7 +31,6 @@
   border-bottom-color: #007bff;
 }
 
-/* Error Message */
 .error-message {
   padding: 12px 16px;
   background: #f8d7da;
@@ -60,21 +39,18 @@
   margin-bottom: 24px;
 }
 
-/* Empty State */
 .empty-state {
   text-align: center;
   padding: 48px;
   color: #6c757d;
 }
 
-/* Jobs List */
 .jobs-list {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-/* Job Card */
 .job-card-item {
   background: white;
   border-radius: 12px;
@@ -109,7 +85,6 @@
   margin: 0;
 }
 
-/* Status Badge */
 .status-badge {
   padding: 4px 12px;
   border-radius: 12px;
@@ -186,15 +161,6 @@
   gap: 4px;
 }
 
-.job-card-meta-label {
-  font-size: 12px;
-  font-weight: 400;
-  color: #6c757d;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
 .job-card-meta-value {
   font-size: 14px;
   color: #1f2937;
@@ -218,12 +184,6 @@
   border: 1px solid rgba(15, 23, 42, 0.10);
 }
 
-.metric-hint {
-  font-size: 12px;
-  color: #6c757d;
-  align-self: center;
-}
-
 .job-detail-item {
   display: flex;
   align-items: center;
@@ -236,27 +196,12 @@
   font-size: 16px;
 }
 
-/* UI consistency audit pass */
 .jobs-page {
   padding: 18px;
 }
 
-.jobs-header {
-  margin-bottom: 20px;
-}
-
-.jobs-header h2 {
-  font-family: var(--font-heading);
-  font-size: var(--type-page-title);
-  font-weight: var(--type-weight-regular);
-  letter-spacing: var(--tracking-title);
-  line-height: var(--leading-title);
-}
-
-.jobs-header p,
 .job-card-meta-value,
-.job-detail-item,
-.metric-hint {
+.job-detail-item {
   font-weight: 400;
 }
 
@@ -373,15 +318,6 @@
   position: relative;
 }
 
-.job-card-meta-icon {
-  display: none;
-}
-
-.job-card-meta-label {
-  font-size: 11px;
-  font-weight: 400;
-}
-
 .job-card-meta-value {
   font-size: 12.5px;
 }
@@ -480,23 +416,9 @@
   }
 }
 
-/* Recruiter jobs final design-system pass */
 .jobs-page {
   max-width: 1280px;
   margin: 0 auto;
-}
-
-.jobs-header h2 {
-  color: var(--color-text);
-  font-family: var(--font-heading);
-  font-size: var(--type-page-title);
-  font-weight: var(--type-weight-regular);
-  letter-spacing: var(--tracking-title);
-  line-height: var(--leading-title);
-}
-
-.jobs-header p {
-  color: #64748b;
 }
 
 .jobs-filters {
@@ -535,7 +457,6 @@
   min-height: 34px;
 }
 
-/* Final job-card layout pass: stable placement at recruiter viewport widths */
 .jobs-page .job-card-item {
   align-items: start;
   display: grid;

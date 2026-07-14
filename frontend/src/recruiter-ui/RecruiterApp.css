@@ -111,6 +111,13 @@
   color: #8b5cf6;
 }
 
+.nav-icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  color: rgba(255, 255, 255, 0.72);
+}
+
 /* Main Content */
 .main {
   flex: 1;
@@ -159,6 +166,10 @@
 .search-icon {
   position: absolute;
   left: 12px;
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+  color: #94a3b8;
 }
 
 .search {

@@ -57,7 +57,7 @@ def _safe_truncate(s: str, n: int = 800) -> str:
     s = s or ""
     if len(s) <= n:
         return s
-    return s[:n] + "…"
+    return s[:n] + "..."
 
 
 async def _list_models(
@@ -126,12 +126,16 @@ def _pick_best_model(models: list[dict[str, Any]]) -> str | None:
     if not candidates:
         return None
 
-    # Prefer flash, then 1.5, then anything.
-    def score(m: dict[str, Any]) -> tuple[int, int]:
+    # Prefer lighter generally available text models. Some listed preview/pro
+    # models can still reject generation for an API key even when listModels
+    # returns them, so keep those below concrete 2.0/lite options.
+    def score(m: dict[str, Any]) -> tuple[int, int, int, int]:
         name = str(m.get("name") or "").lower()
         is_flash = 1 if "flash" in name else 0
-        is_15 = 1 if "1.5" in name or "15" in name else 0
-        return (is_flash, is_15)
+        is_lite = 1 if "lite" in name else 0
+        is_20 = 1 if "2.0" in name or "20" in name else 0
+        is_stable = 0 if "preview" in name or "2.5" in name or "pro" in name else 1
+        return (is_stable, is_20, is_lite, is_flash)
 
     best = sorted(candidates, key=score, reverse=True)[0]
     name = best.get("name")

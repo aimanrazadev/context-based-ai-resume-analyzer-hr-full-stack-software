@@ -8,19 +8,12 @@ import {
   MapPin,
 } from "lucide-react";
 import { jobAPI } from "../utils/api";
-import { getRingMetrics } from "../utils/matchScore";
-import { BackButton, ScoreRing, SkeletonBlock, SkeletonText, SkillPill } from "./ui";
+import { BackButton } from "./ui";
+import { useAuth } from "../shared/auth/useAuth";
+import { formatDateTime } from "../shared/utils/dates";
+import CandidateJobDetail from "./job-detail/CandidateJobDetail";
+import RecruiterJobDetail from "./job-detail/RecruiterJobDetail";
 import "./JobDetailModal.css";
-
-function getStoredRole() {
-  try {
-    const raw = localStorage.getItem("user");
-    const u = raw ? JSON.parse(raw) : null;
-    return u?.role || u?.userType || null;
-  } catch {
-    return null;
-  }
-}
 
 function cleanScanError(message) {
   const text = String(message || "").trim();
@@ -38,9 +31,34 @@ function cleanScanError(message) {
   return text;
 }
 
+function briefify(text) {
+  const value = String(text || "").trim();
+  if (!value) return "-";
+  const parts = value.split(/(?<=[.!?])\s+/).filter(Boolean);
+  const short = parts.slice(0, 2).join(" ");
+  const out = short || value;
+  return out.length > 320 ? `${out.slice(0, 320).trim()}...` : out;
+}
+
+function getDescriptionBullets(description) {
+  const raw = String(description || "").trim();
+  if (!raw) return [];
+  const lines = raw
+    .split(/\r?\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (lines.length >= 3) return lines.slice(0, 24);
+
+  return raw
+    .split(/(?<=[.!?])\s+/)
+    .map((sentence) => sentence.trim())
+    .filter(Boolean)
+    .slice(0, 18);
+}
+
 export default function JobDetailModal({ jobId, onClose, onContinueDraft, onApplied }) {
   const navigate = useNavigate();
-  const role = useMemo(() => getStoredRole(), []);
+  const { role } = useAuth();
   const canEdit = role === "recruiter";
   const isCandidate = role === "candidate";
 
@@ -55,14 +73,15 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
     title: "",
     description: "",
     location: "",
-    salary_range: ""
+    salary_range: "",
   });
 
-  // Candidate: resume upload & analysis (per job application)
   const resumeInputRef = useRef(null);
   const pollRef = useRef(null);
-  const uploadModeRef = useRef("apply"); // 'scan' | 'apply'
+  const uploadModeRef = useRef("apply");
   const cachedFileRef = useRef(null);
+  const rafRef = useRef(null);
+
   const [applying, setApplying] = useState(false);
   const [applyError, setApplyError] = useState("");
   const [applyResult, setApplyResult] = useState(null);
@@ -70,18 +89,19 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
   const [checkingApplication, setCheckingApplication] = useState(false);
   const [progress, setProgress] = useState({ active: false, percent: 0, message: "", taskId: null });
   const [scanTaskId, setScanTaskId] = useState(null);
-  const rafRef = useRef(null);
   const [displayPct, setDisplayPct] = useState(0);
+
   const alreadyApplied = Boolean(existingApplication?.id);
   const canApplyAfterScan = Boolean(applyResult && scanTaskId && !progress.active && !applying && !checkingApplication);
 
   const jobTags = useMemo(() => {
-    // Use required_skills from job data if available
-    if (job?.required_skills && Array.isArray(job.required_skills) && job.required_skills.length > 0) {
+    if (Array.isArray(job?.required_skills) && job.required_skills.length > 0) {
       return job.required_skills;
     }
     return [];
   }, [job?.required_skills]);
+
+  const bullets = useMemo(() => getDescriptionBullets(job?.description), [job?.description]);
 
   const detailCards = useMemo(() => {
     if (!job) return [];
@@ -93,7 +113,7 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
         editor: (
           <input
             value={form.location}
-            onChange={(e) => setForm((p) => ({ ...p, location: e.target.value }))}
+            onChange={(e) => setForm((prev) => ({ ...prev, location: e.target.value }))}
             placeholder="Location"
           />
         ),
@@ -105,14 +125,14 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
         editor: (
           <input
             value={form.salary_range}
-            onChange={(e) => setForm((p) => ({ ...p, salary_range: e.target.value }))}
+            onChange={(e) => setForm((prev) => ({ ...prev, salary_range: e.target.value }))}
             placeholder="Salary range"
           />
         ),
       },
       {
         label: "Date & Time",
-        value: job.created_at ? new Date(job.created_at).toLocaleString() : "Not specified",
+        value: job.created_at ? formatDateTime(job.created_at) : "Not specified",
         icon: Calendar,
       },
       {
@@ -138,32 +158,6 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
     ];
   }, [form.location, form.salary_range, isEditing, job]);
 
-  const bullets = useMemo(() => {
-    const raw = String(job?.description || "").trim();
-    if (!raw) return [];
-    const lines = raw
-      .split(/\r?\n+/)
-      .map((l) => l.trim())
-      .filter(Boolean);
-    if (lines.length >= 3) return lines.slice(0, 24);
-
-    return raw
-      .split(/(?<=[.!?])\s+/)
-      .map((s) => s.trim())
-      .filter(Boolean)
-      .slice(0, 18);
-  }, [job?.description]);
-
-  const briefify = (text) => {
-    const t = String(text || "").trim();
-    if (!t) return "—";
-    // Keep it brief: prefer the first 1–2 sentences; fallback to a safe length.
-    const parts = t.split(/(?<=[.!?])\s+/).filter(Boolean);
-    const short = parts.slice(0, 2).join(" ");
-    const out = short || t;
-    return out.length > 320 ? `${out.slice(0, 320).trim()}…` : out;
-  };
-
   useEffect(() => {
     let alive = true;
     setLoading(true);
@@ -174,6 +168,7 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
     setExistingApplication(null);
     setCheckingApplication(false);
     setProgress({ active: false, percent: 0, message: "", taskId: null });
+
     if (pollRef.current) {
       clearInterval(pollRef.current);
       pollRef.current = null;
@@ -183,13 +178,13 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
       .getById(jobId)
       .then((res) => {
         if (!alive) return;
-        const j = res?.job;
-        setJob(j);
+        const loadedJob = res?.job;
+        setJob(loadedJob);
         setForm({
-          title: j?.title ?? "",
-          description: j?.description ?? "",
-          location: j?.location ?? "",
-          salary_range: j?.salary_range ?? ""
+          title: loadedJob?.title ?? "",
+          description: loadedJob?.description ?? "",
+          location: loadedJob?.location ?? "",
+          salary_range: loadedJob?.salary_range ?? "",
         });
 
         if (isCandidate) {
@@ -198,11 +193,7 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
             .myApplicationForJob(jobId)
             .then((appRes) => {
               if (!alive) return;
-              if (appRes?.already_applied && appRes?.application) {
-                setExistingApplication(appRes.application);
-              } else {
-                setExistingApplication(null);
-              }
+              setExistingApplication(appRes?.already_applied && appRes?.application ? appRes.application : null);
             })
             .catch(() => {
               if (!alive) return;
@@ -238,23 +229,20 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
     };
   }, [jobId, isCandidate]);
 
-  // Animate ring fill + number counting whenever we receive a new result.
   useEffect(() => {
     if (rafRef.current) {
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
-    const t = Number(applyResult?.final_score ?? 0);
+    const target = Number(applyResult?.final_score ?? 0);
     const start = performance.now();
-    const duration = 900; // ms
-    const from = 0;
+    const duration = 900;
 
     const tick = (now) => {
-      const k = Math.min(1, (now - start) / duration);
-      const eased = 1 - Math.pow(1 - k, 3); // easeOutCubic
-      const val = Math.round(from + (t - from) * eased);
-      setDisplayPct(val);
-      if (k < 1) {
+      const progressRatio = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - progressRatio, 3);
+      setDisplayPct(Math.round(target * eased));
+      if (progressRatio < 1) {
         rafRef.current = requestAnimationFrame(tick);
       } else {
         rafRef.current = null;
@@ -271,52 +259,50 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
 
   const startPoll = (taskId) => {
     const poll = async () => {
-      const st = await jobAPI.applyStatus(taskId);
-      const t = st?.task;
-      if (!t) return;
-      const pct = typeof t.percent === "number" ? t.percent : 0;
-      const msg = t.message || "Analyzing…";
-      const status = t.status;
+      const statusRes = await jobAPI.applyStatus(taskId);
+      const task = statusRes?.task;
+      if (!task) return;
+      const percent = typeof task.percent === "number" ? task.percent : 0;
+      const message = task.message || "Analyzing...";
 
-      if (status === "done") {
-        setApplyResult(t.result || null);
+      if (task.status === "done") {
+        setApplyResult(task.result || null);
         setScanTaskId(taskId);
         setProgress({ active: false, percent: 100, message: "Done", taskId: null });
-        if (pollRef.current) {
-          clearInterval(pollRef.current);
-          pollRef.current = null;
-        }
+        clearActivePoll();
         return;
       }
-      if (status === "error") {
-        setApplyError(cleanScanError(t.error || msg || "Analysis failed"));
+
+      if (task.status === "error") {
+        setApplyError(cleanScanError(task.error || message || "Analysis failed"));
         setApplyResult(null);
         setScanTaskId(null);
-        setProgress({ active: false, percent: pct, message: msg, taskId: null });
-        if (pollRef.current) {
-          clearInterval(pollRef.current);
-          pollRef.current = null;
-        }
+        setProgress({ active: false, percent, message, taskId: null });
+        clearActivePoll();
         return;
       }
 
-      setProgress({ active: true, percent: pct, message: msg, taskId });
+      setProgress({ active: true, percent, message, taskId });
     };
 
-    if (pollRef.current) clearInterval(pollRef.current);
+    clearActivePoll();
     pollRef.current = setInterval(() => {
       poll().catch((err) => {
         setApplyError(cleanScanError(err?.message || "Failed to fetch progress"));
         setApplyResult(null);
         setScanTaskId(null);
         setProgress({ active: false, percent: 0, message: "", taskId: null });
-        if (pollRef.current) {
-          clearInterval(pollRef.current);
-          pollRef.current = null;
-        }
+        clearActivePoll();
       });
     }, 800);
     return poll();
+  };
+
+  const clearActivePoll = () => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
   };
 
   const runScan = async (file) => {
@@ -324,13 +310,13 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
     setApplyResult(null);
     setScanTaskId(null);
     setApplying(true);
-    setProgress({ active: true, percent: 1, message: "Uploading resume for scan…", taskId: null });
+    setProgress({ active: true, percent: 1, message: "Uploading resume for scan...", taskId: null });
     try {
       cachedFileRef.current = file;
       const start = await jobAPI.scanResumeAsync(jobId, file);
       const taskId = start?.task_id || null;
       if (!taskId) throw new Error("Failed to start scan");
-      setProgress({ active: true, percent: 3, message: "Scanning resume…", taskId });
+      setProgress({ active: true, percent: 3, message: "Scanning resume...", taskId });
       setApplying(false);
       await startPoll(taskId);
     } catch (e) {
@@ -342,7 +328,6 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
   };
 
   const runApply = async () => {
-    // Apply now saves the exact completed scan result. No second scoring pass runs here.
     setApplyError("");
     setApplying(true);
     setProgress({ active: false, percent: 0, message: "", taskId: null });
@@ -380,7 +365,7 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
         title: form.title,
         description: form.description,
         location: form.location,
-        salary_range: form.salary_range
+        salary_range: form.salary_range,
       });
       setJob(res?.job || null);
       setIsEditing(false);
@@ -406,19 +391,14 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
   };
 
   const handleBack = () => {
-    // Preferred: let the parent close the modal (RecruiterApp / CandidateApp).
     if (typeof onClose === "function") {
       onClose();
       return;
     }
-
-    // Fallback: try browser history.
     if (typeof window !== "undefined" && window.history?.length > 1) {
       navigate(-1);
       return;
     }
-
-    // Last resort: route to role home.
     navigate(role === "candidate" ? "/candidate" : "/recruiter", { replace: true });
   };
 
@@ -436,442 +416,53 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
           Back
         </BackButton>
 
-        {/* Candidate view (single-card Internshala-like layout) */}
         {isCandidate && !isEditing ? (
-          <>
-            {loading ? (
-              <div className="jd-card jd-main-card jd-loading-skeleton">
-                <div className="jd-top">
-                  <div className="jd-top-left">
-                    <SkeletonBlock className="jd-badge-skeleton" />
-                    <SkeletonText lines={3} />
-                  </div>
-                  <SkeletonBlock className="jd-brand" />
-                </div>
-                <div className="jd-facts">
-                  <SkeletonBlock className="jd-fact-skeleton" />
-                  <SkeletonBlock className="jd-fact-skeleton" />
-                </div>
-                <SkeletonBlock className="jd-detail-skeleton-row" />
-                <SkeletonText lines={5} />
-              </div>
-            ) : error ? (
-              <div className="jd-card jd-main-card">
-                <div className="job-detail-error">{error}</div>
-              </div>
-            ) : (
-              <>
-                <div className="jd-page-title">{job?.title || "Job Details"}</div>
-
-                <div className="jd-card jd-main-card">
-                  {(() => {
-                    const opp = String(job?.opportunity_type || "").toLowerCase();
-                    const jt = String(job?.job_type || "").toLowerCase();
-                    const isInternship = opp === "internship" || jt.includes("intern");
-                    const stipendLabel = isInternship ? "STIPEND" : "CTC";
-                    return (
-                      <>
-                  <div className="jd-top">
-                    <div className="jd-top-left">
-                      <div className="jd-badge-row">
-                        <span className="jd-badge">Actively hiring</span>
-                        {isInternship && <span className="jd-pill-internship">Internship</span>}
-                      </div>
-                      <div className="jd-role">{job?.short_description || job?.title || "Role"}</div>
-                      <div className="jd-company">{job?.location || "Location not specified"}</div>
-                      <div className="jd-subline">
-                        <div className="jd-subline-text">
-                          {job?.created_at ? `Posted ${new Date(job.created_at).toLocaleDateString()}` : ""}
-                        </div>
-                        <div className="jd-posted-chip">
-                          <span className="jd-chip success">Posted recently</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="jd-top-right">
-                      <div className="jd-brand" aria-hidden="true">
-                        {(job?.title || "J").slice(0, 1).toUpperCase()}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="jd-facts">
-                    <div className="jd-fact">
-                      <div className="jd-fact-k">{stipendLabel}</div>
-                      <div className="jd-fact-v">{job?.salary_range || "—"}</div>
-                    </div>
-                    <div className="jd-fact">
-                      <div className="jd-fact-k">APPLY BY</div>
-                      <div className="jd-fact-v">
-                        {job?.apply_by 
-                          ? new Date(job.apply_by).toLocaleDateString('en-US', { 
-                              year: 'numeric', 
-                              month: 'short', 
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })
-                          : "—"}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="jd-detail-grid">
-                    <div className="jd-detail-item">
-                      <div className="jd-detail-k">Job type</div>
-                      <div className="jd-detail-v">{job?.job_type || "—"}</div>
-                    </div>
-                    <div className="jd-detail-item">
-                      <div className="jd-detail-k">Job site</div>
-                      <div className="jd-detail-v">{job?.job_site || "—"}</div>
-                    </div>
-                    <div className="jd-detail-item">
-                      <div className="jd-detail-k">Min experience</div>
-                      <div className="jd-detail-v">
-                        {job?.min_experience_years != null ? `${job.min_experience_years} years` : "—"}
-                      </div>
-                    </div>
-                  </div>
-                      </>
-                    );
-                  })()}
-
-                  <div className="jd-actions-row">
-                    <div className="jd-actions-right">
-                      <input
-                        ref={resumeInputRef}
-                        type="file"
-                        accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                        style={{ display: "none" }}
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-                          try {
-                            if (uploadModeRef.current === "scan") {
-                              await runScan(file);
-                            } else {
-                              await runApply();
-                            }
-                          } catch (err) {
-                            setApplyError(err?.message || "Failed to apply");
-                            // Avoid showing stale results when the request fails/timeouts.
-                            setApplyResult(null);
-                            setProgress({ active: false, percent: 0, message: "", taskId: null });
-                          } finally {
-                            setApplying(false);
-                            e.target.value = "";
-                          }
-                        }}
-                      />
-
-                      {alreadyApplied ? (
-                        <div className="jd-applied-state">
-                          <span className="jd-chip success">Already Applied</span>
-                          <button
-                            type="button"
-                            className="jd-scan"
-                            onClick={() => navigate(`/applications/${existingApplication.id}`)}
-                          >
-                            View Application
-                          </button>
-                        </div>
-                      ) : (
-                        <>
-                          <button
-                            type="button"
-                            className="jd-scan"
-                            onClick={() => {
-                              uploadModeRef.current = "scan";
-                              resumeInputRef.current?.click();
-                            }}
-                            disabled={applying || checkingApplication}
-                          >
-                            Scan resume
-                          </button>
-
-                          <button
-                            type="button"
-                            className="jd-apply"
-                            onClick={async () => {
-                              if (!canApplyAfterScan) {
-                                setApplyError("Please scan your resume first. You can apply after the match score is generated.");
-                                return;
-                              }
-                              // Apply now: persist the completed scan result only.
-                              uploadModeRef.current = "apply";
-                              await runApply();
-                            }}
-                            disabled={!canApplyAfterScan}
-                            title={
-                              canApplyAfterScan
-                                ? "Apply with the scanned resume"
-                                : "Scan your resume first to generate a match score"
-                            }
-                          >
-                            {applying ? "Working..." : "Apply now"}
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="jd-upload-note-inline">Upload PDF/DOCX — resume is tied to this job application only.</div>
-
-                  {applyError && <div className="jd-alert">{applyError}</div>}
-
-                  {progress.active && (
-                    <div className="jd-progress" aria-live="polite">
-                      <div className="jd-progress-head">
-                        <div className="jd-progress-msg">
-                          <span className="jd-spinner" aria-hidden="true" />
-                          Calculating your match score…
-                        </div>
-                        <div className="jd-progress-pct">{Math.max(0, Math.min(100, progress.percent || 0))}%</div>
-                      </div>
-                      <div className="jd-progress-bar">
-                        <div
-                          className="jd-progress-fill"
-                          style={{ width: `${Math.max(0, Math.min(100, progress.percent || 0))}%` }}
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {applyResult && (
-                    (() => {
-                      const ring = getRingMetrics(displayPct || 0, 46);
-                      return (
-                        <div className={`jd-result ${applyResult.ai_error ? "error" : ""}`}>
-                          <div className="jd-result-label">Match Score</div>
-
-                          <ScoreRing score={ring.score} size={112} />
-
-                          <div className="jd-score-ring-sub">Overall Match</div>
-
-                          {applyResult.ai_error ? (
-                            <div className="jd-result-text jd-result-text-error">
-                              {cleanScanError(applyResult.ai_error?.message)}
-                            </div>
-                          ) : applyResult.ai_analysis ? (
-                            <div className="jd-summary-cards" style={{ gridTemplateColumns: "1fr" }}>
-                              <div className="jd-summary-card">
-                                <div className="jd-summary-card-title">{applyResult.ai_analysis.recommendation || "Review Manually"}</div>
-                                <div className="jd-summary-text">{applyResult.ai_analysis.candidate_summary || "—"}</div>
-                                <div className="jd-summary-text"><span>Reasoning:</span> {applyResult.ai_analysis.reasoning || "—"}</div>
-                                {Array.isArray(applyResult.ai_analysis.strengths) && applyResult.ai_analysis.strengths.length > 0 && (
-                                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
-                                    {applyResult.ai_analysis.strengths.map((item) => <SkillPill key={item} tone="positive">{item}</SkillPill>)}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="jd-result-text">{briefify(applyResult.ai_explanation)}</div>
-                          )}
-                        </div>
-                      );
-                    })()
-                  )}
-
-                  <div className="jd-section">
-                    <div className="jd-section-h">About the job</div>
-                    {bullets.length ? (
-                      <ol className="jd-list">
-                        {bullets.slice(0, 18).map((b, idx) => (
-                          <li key={idx}>{b}</li>
-                        ))}
-                      </ol>
-                    ) : (
-                      <div className="jd-muted">No description provided.</div>
-                    )}
-                  </div>
-
-                  <div className="jd-section">
-                    <div className="jd-section-h">Skill(s) required</div>
-                    {jobTags.length > 0 ? (
-                      <div className="jd-tags">
-                        {jobTags.map((t) => (
-                          <span key={t} className="jd-pill">
-                            {t}
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="jd-muted">No specific skills specified by recruiter</div>
-                    )}
-                  </div>
-
-                </div>
-              </>
-            )}
-          </>
+          <CandidateJobDetail
+            loading={loading}
+            error={error}
+            job={job}
+            jobTags={jobTags}
+            bullets={bullets}
+            resumeInputRef={resumeInputRef}
+            uploadModeRef={uploadModeRef}
+            runScan={runScan}
+            runApply={runApply}
+            applyError={applyError}
+            setApplyError={setApplyError}
+            setApplyResult={setApplyResult}
+            setProgress={setProgress}
+            setApplying={setApplying}
+            applying={applying}
+            checkingApplication={checkingApplication}
+            alreadyApplied={alreadyApplied}
+            existingApplication={existingApplication}
+            canApplyAfterScan={canApplyAfterScan}
+            applyResult={applyResult}
+            progress={progress}
+            displayPct={displayPct}
+            briefify={briefify}
+            cleanScanError={cleanScanError}
+            onViewApplication={(applicationId) => navigate(`/applications/${applicationId}`)}
+          />
         ) : (
-          /* Recruiter + editing view (keep existing UI) */
-          <div className="job-detail-card">
-            {loading ? (
-              <div className="job-detail-loading job-detail-skeleton">
-                <SkeletonText lines={2} />
-                <div className="job-detail-info-grid">
-                  {Array.from({ length: 6 }).map((_, index) => (
-                    <SkeletonBlock className="job-detail-info-skeleton" key={index} />
-                  ))}
-                </div>
-                <SkeletonText lines={5} />
-              </div>
-            ) : error ? (
-              <div className="job-detail-error">{error}</div>
-            ) : (
-              <>
-                <div className="job-detail-header">
-                  <div className="job-detail-title-group">
-                    {!isEditing && (
-                      <div className="job-detail-avatar" aria-hidden="true">
-                        {(job?.title || "J").trim().charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                    {isEditing ? (
-                      <input
-                        className="job-detail-title-input"
-                        value={form.title}
-                        onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
-                        placeholder="Job title"
-                      />
-                    ) : (
-                      <h2 className="job-detail-title">{job?.title}</h2>
-                    )}
-                  </div>
-
-                  {canEdit && (
-                    <div className="job-detail-actions">
-                      {isEditing ? (
-                        <>
-                          <button
-                            type="button"
-                            className="job-detail-btn secondary"
-                            onClick={() => {
-                              setIsEditing(false);
-                              setForm({
-                                title: job?.title ?? "",
-                                description: job?.description ?? "",
-                                location: job?.location ?? "",
-                                salary_range: job?.salary_range ?? ""
-                              });
-                            }}
-                            disabled={saving}
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            type="button"
-                            className="job-detail-btn primary"
-                            onClick={handleSave}
-                            disabled={saving}
-                          >
-                            {saving ? "Saving..." : "Save"}
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          {isDraft && typeof onContinueDraft === "function" && (
-                            <button
-                              type="button"
-                              className="job-detail-btn primary"
-                              onClick={() => onContinueDraft(job)}
-                            >
-                              Continue editing
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            className="job-detail-btn secondary"
-                            onClick={() => setIsEditing(true)}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            className="job-detail-btn danger"
-                            onClick={handleDelete}
-                            disabled={saving}
-                          >
-                            Delete
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                <div className="job-detail-info-grid">
-                  {detailCards.map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <div className="job-detail-info-card" key={item.label}>
-                        <div className="job-detail-info-icon">
-                          <Icon aria-hidden="true" />
-                        </div>
-                        <div className="job-detail-info-body">
-                          <div className="job-detail-info-label">{item.label}</div>
-                          <div className="job-detail-info-value">
-                            {item.editor && isEditing ? item.editor : item.value}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div className="job-detail-section">
-                  <h3>Description</h3>
-                  {isEditing ? (
-                    <textarea
-                      value={form.description}
-                      onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-                      rows={10}
-                    />
-                  ) : (
-                    <p className="job-detail-desc">{job?.description || "No description provided."}</p>
-                  )}
-                </div>
-
-                <div className="job-detail-section">
-                  <h3>Non-negotiables</h3>
-                  {Array.isArray(job?.non_negotiables) && job.non_negotiables.length > 0 ? (
-                    <ul className="job-detail-list">
-                      {job.non_negotiables.map((item, idx) => (
-                        <li key={`${item}-${idx}`}>{item}</li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="job-detail-desc">No non-negotiables provided.</p>
-                  )}
-                </div>
-
-                <div className="job-detail-section">
-                  <h3>Required Skills</h3>
-                  <p className="job-detail-desc job-detail-help">
-                    These exact skills are used for resume matching and the green/red skill snapshot.
-                  </p>
-                  {Array.isArray(job?.required_skills) && job.required_skills.length > 0 ? (
-                    <div className="job-detail-skill-list" aria-label="Required skills used for matching">
-                      {job.required_skills.map((skill, idx) => (
-                        <span key={`${skill}-${idx}`} className="job-detail-skill-pill">
-                          {skill}
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="job-detail-desc">No required skills provided.</p>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
+          <RecruiterJobDetail
+            loading={loading}
+            error={error}
+            job={job}
+            canEdit={canEdit}
+            isEditing={isEditing}
+            setIsEditing={setIsEditing}
+            isDraft={isDraft}
+            onContinueDraft={onContinueDraft}
+            form={form}
+            setForm={setForm}
+            saving={saving}
+            handleSave={handleSave}
+            handleDelete={handleDelete}
+            detailCards={detailCards}
+          />
         )}
       </div>
     </div>
   );
 }
-
-

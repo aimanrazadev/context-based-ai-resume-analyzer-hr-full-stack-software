@@ -5,24 +5,18 @@ import { ClipboardCheck, LogOut, Search } from "lucide-react";
 import JobSearch from "./JobSearch";
 import AppliedJobsPage from "../components/AppliedJobsPage";
 import CandidateJobDetailPage from "../components/CandidateJobDetailPage";
+import { useAuth } from "../shared/auth/useAuth";
 
 export default function CandidateApp({ onLogout }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
   const activeKey = useMemo(() => {
     const p = location?.pathname || "";
     if (p.startsWith("/candidate/applied")) return "applied-jobs";
     return "job-search";
   }, [location?.pathname]);
 
-  const [user] = useState(() => {
-    try {
-      const raw = localStorage.getItem("user");
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
-    }
-  });
   const [appliedCount, setAppliedCount] = useState(0);
 
   const displayName =

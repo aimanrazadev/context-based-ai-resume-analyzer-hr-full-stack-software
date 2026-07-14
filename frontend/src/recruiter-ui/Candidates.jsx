@@ -2,11 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { Mail, SlidersHorizontal, Sparkles, Trash2 } from "lucide-react";
 import { jobAPI } from "../utils/api";
 import { PageTransition, ScoreRing, SkeletonBlock, SkeletonText, SkillPill, StatusBadge } from "../components/ui";
+import { APPLICATION_STATUSES, formatApplicationStatus, normalizeApplicationStatus } from "../shared/utils/applicationStatus";
+import { toTimestamp } from "../shared/utils/dates";
 import "./Candidates.css";
 
 const ALL_JOBS_ID = "all";
 const ALL_STATUSES = "all";
-const STATUS_OPTIONS = ["not-reviewed", "shortlisted", "on-hold", "rejected"];
+const STATUS_OPTIONS = APPLICATION_STATUSES;
 const ACTION_STATUS_OPTIONS = ["shortlisted", "on-hold", "rejected"];
 const SORT_OPTIONS = {
   SCORE_DESC: "score_desc",
@@ -15,21 +17,6 @@ const SORT_OPTIONS = {
   OLDEST: "oldest",
 };
 
-const getStatusValue = (status) => {
-  const value = String(status || "not-reviewed").toLowerCase().trim().replaceAll("_", "-").replace(/\s+/g, "-");
-  if (value === "submitted" || value === "accepted" || value === "applied" || value === "pending") {
-    return "not-reviewed";
-  }
-  if (value === "hold" || value === "onhold") return "on-hold";
-  return STATUS_OPTIONS.includes(value) ? value : "not-reviewed";
-};
-
-const getStatusLabel = (status) =>
-  String(status || "")
-    .split("-")
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
 const getScore = (row) => Math.round(Number(row?.final_score) || 0);
 
 const getTopSkills = (row) => {
@@ -74,71 +61,22 @@ export default function Candidates({ initialStatusFilter = ALL_STATUSES }) {
     setError("");
     (async () => {
       try {
-        const [activeRes, closedRes, draftRes] = await Promise.all([
-          jobAPI.getAll({ status: "active" }),
-          jobAPI.getAll({ status: "closed" }),
-          jobAPI.getAll({ status: "draft" }),
-        ]);
-        if (!alive) return;
-        const all = [
-          ...(activeRes?.jobs || []),
-          ...(closedRes?.jobs || []),
-          ...(draftRes?.jobs || []),
-        ];
-        const unique = new Map();
-        all.forEach((job) => {
-          if (job && job.id != null && !unique.has(job.id)) unique.set(job.id, job);
+        const res = await jobAPI.recruiterCandidates({
+          jobId: jobId && jobId !== ALL_JOBS_ID ? jobId : undefined,
+          status: statusFilter !== ALL_STATUSES ? statusFilter : undefined,
+          sort: sortBy,
+          page: 1,
         });
-        const list = Array.from(unique.values());
+        if (!alive) return;
+        const list = Array.isArray(res?.jobs) ? res.jobs : [];
         setJobs(list);
         setJobId((prev) => {
           if (!list.length) return null;
+          if (!prev) return ALL_JOBS_ID;
           if (prev === ALL_JOBS_ID) return prev;
-          return list.some((job) => job.id === prev) ? prev : ALL_JOBS_ID;
+          return list.some((job) => Number(job.id) === Number(prev)) ? prev : ALL_JOBS_ID;
         });
-      } catch (e) {
-        if (!alive) return;
-        setError(e?.message || "Failed to load jobs");
-      } finally {
-        if (alive) setLoading(false);
-      }
-    })();
-    return () => {
-      alive = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    let alive = true;
-    if (!jobId || jobs.length === 0) {
-      setRows([]);
-      return;
-    }
-    setLoading(true);
-    setError("");
-    (async () => {
-      try {
-        if (jobId === ALL_JOBS_ID) {
-          const allRows = await Promise.all(
-            jobs.map(async (job) => {
-              try {
-                const res = await jobAPI.rankedCandidates(job.id);
-                const items = Array.isArray(res?.candidates) ? res.candidates : [];
-                return items.map((row, index) => ({ ...row, _job: job, _rankIndex: index }));
-              } catch {
-                return [];
-              }
-            })
-          );
-          if (!alive) return;
-          setRows(allRows.flat());
-        } else {
-          const res = await jobAPI.rankedCandidates(jobId);
-          if (!alive) return;
-          const job = jobs.find((item) => item.id === jobId) || null;
-          const items = Array.isArray(res?.candidates) ? res.candidates : [];
-          setRows(items.map((row, index) => ({ ...row, _job: job, _rankIndex: index })));
-        }
+        setRows(Array.isArray(res?.candidates) ? res.candidates : []);
       } catch (e) {
         if (!alive) return;
         setError(e?.message || "Failed to load candidates");
@@ -149,12 +87,12 @@ export default function Candidates({ initialStatusFilter = ALL_STATUSES }) {
     return () => {
       alive = false;
     };
-  }, [jobId, jobs]);
+  }, [jobId, sortBy, statusFilter]);
 
   const visibleRows = useMemo(() => {
     const filtered = rows.filter((row) => {
       if (statusFilter === ALL_STATUSES) return true;
-      return getStatusValue(row?.status) === statusFilter;
+      return normalizeApplicationStatus(row?.status) === statusFilter;
     });
 
     return [...filtered].sort((a, b) => {
@@ -162,10 +100,10 @@ export default function Candidates({ initialStatusFilter = ALL_STATUSES }) {
         return getScore(a) - getScore(b);
       }
       if (sortBy === SORT_OPTIONS.NEWEST) {
-        return new Date(b?.created_at || 0) - new Date(a?.created_at || 0);
+        return toTimestamp(b?.created_at) - toTimestamp(a?.created_at);
       }
       if (sortBy === SORT_OPTIONS.OLDEST) {
-        return new Date(a?.created_at || 0) - new Date(b?.created_at || 0);
+        return toTimestamp(a?.created_at) - toTimestamp(b?.created_at);
       }
       return getScore(b) - getScore(a);
     });
@@ -195,7 +133,7 @@ export default function Candidates({ initialStatusFilter = ALL_STATUSES }) {
   const handleStatusChange = async (row, status) => {
     const appId = row?.application_id;
     if (!appId) return;
-    const nextStatus = getStatusValue(status);
+    const nextStatus = normalizeApplicationStatus(status);
     setUpdatingStatusId(appId);
     setRows((prev) =>
       prev.map((item) =>
@@ -204,7 +142,7 @@ export default function Candidates({ initialStatusFilter = ALL_STATUSES }) {
     );
     try {
       const res = await jobAPI.updateApplicationStatus(appId, nextStatus);
-      const savedStatus = getStatusValue(res?.application?.status || nextStatus);
+      const savedStatus = normalizeApplicationStatus(res?.application?.status || nextStatus);
       const finalStatus = savedStatus === nextStatus ? savedStatus : nextStatus;
       setRows((prev) =>
         prev.map((item) =>
@@ -266,7 +204,7 @@ export default function Candidates({ initialStatusFilter = ALL_STATUSES }) {
         <div className="candidate-list">
           {visibleRows.map((row, index) => {
             const topSkills = getTopSkills(row);
-            const currentStatus = getStatusValue(row?.status);
+            const currentStatus = normalizeApplicationStatus(row?.status);
 
             return (
               <article
@@ -352,7 +290,7 @@ export default function Candidates({ initialStatusFilter = ALL_STATUSES }) {
                         <option value="" disabled>-</option>
                       )}
                       {ACTION_STATUS_OPTIONS.map((status) => (
-                        <option key={status} value={status}>{getStatusLabel(status)}</option>
+                        <option key={status} value={status}>{formatApplicationStatus(status)}</option>
                       ))}
                     </select>
                   </div>
@@ -406,7 +344,7 @@ export default function Candidates({ initialStatusFilter = ALL_STATUSES }) {
           <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} disabled={loading}>
             <option value={ALL_STATUSES}>All statuses</option>
             {STATUS_OPTIONS.map((status) => (
-              <option key={status} value={status}>{getStatusLabel(status)}</option>
+              <option key={status} value={status}>{formatApplicationStatus(status)}</option>
             ))}
           </select>
         </label>

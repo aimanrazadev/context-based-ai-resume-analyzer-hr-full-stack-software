@@ -1,82 +1,142 @@
-import threading
-import time
+import json
+from datetime import datetime, timedelta
 from typing import Any
 
+from sqlalchemy.exc import SQLAlchemyError
 
-_lock = threading.Lock()
-_tasks: dict[str, dict[str, Any]] = {}
+from ..database import SessionLocal
+from ..models.analysis_task import AnalysisTask
+
+
+TASK_TTL_HOURS = 24
+
+
+def _now() -> datetime:
+    return datetime.utcnow()
+
+
+def _serialize(value: Any) -> str | None:
+    if value is None:
+        return None
+    try:
+        return json.dumps(value)
+    except (TypeError, ValueError):
+        return json.dumps({"value": str(value)})
+
+
+def _deserialize(value: str | None) -> Any:
+    if not value:
+        return None
+    try:
+        return json.loads(value)
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return None
+
+
+def _row_to_task(row: AnalysisTask) -> dict[str, Any]:
+    return {
+        "task_id": row.id,
+        "user_id": int(row.user_id),
+        "job_id": int(row.job_id),
+        "status": row.status,
+        "percent": int(row.progress or 0),
+        "message": row.message or "",
+        "result": _deserialize(row.result_json),
+        "error": row.error_message,
+        "created_at": row.created_at.timestamp() if row.created_at else None,
+        "updated_at": row.updated_at.timestamp() if row.updated_at else None,
+    }
 
 
 def create_task(*, task_id: str, user_id: int, job_id: int) -> None:
-    now = time.time()
-    with _lock:
-        _tasks[task_id] = {
-            "task_id": task_id,
-            "user_id": int(user_id),
-            "job_id": int(job_id),
-            "status": "running",  # running|done|error
-            "percent": 0,
-            "message": "Starting…",
-            "result": None,
-            "error": None,
-            "created_at": now,
-            "updated_at": now,
-        }
+    db = SessionLocal()
+    try:
+        row = AnalysisTask(
+            id=task_id,
+            user_id=int(user_id),
+            job_id=int(job_id),
+            status="running",
+            progress=0,
+            message="Starting...",
+            expires_at=_now() + timedelta(hours=TASK_TTL_HOURS),
+        )
+        db.merge(row)
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
+        raise
+    finally:
+        db.close()
 
 
 def update_task(*, task_id: str, percent: int | None = None, message: str | None = None) -> None:
-    now = time.time()
-    with _lock:
-        t = _tasks.get(task_id)
-        if not t or t.get("status") != "running":
+    db = SessionLocal()
+    try:
+        row = db.query(AnalysisTask).filter(AnalysisTask.id == task_id).first()
+        if not row or row.status != "running":
             return
         if percent is not None:
-            p = int(percent)
-            if p < 0:
-                p = 0
-            if p > 99:
-                p = 99
-            t["percent"] = p
+            row.progress = max(0, min(99, int(percent)))
         if message is not None:
-            t["message"] = str(message)
-        t["updated_at"] = now
+            row.message = str(message)
+        row.updated_at = _now()
+        db.add(row)
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
+        raise
+    finally:
+        db.close()
 
 
 def complete_task(*, task_id: str, result: Any) -> None:
-    now = time.time()
-    with _lock:
-        t = _tasks.get(task_id)
-        if not t:
+    db = SessionLocal()
+    try:
+        row = db.query(AnalysisTask).filter(AnalysisTask.id == task_id).first()
+        if not row:
             return
-        t["status"] = "done"
-        t["percent"] = 100
-        t["message"] = "Done"
-        t["result"] = result
-        t["error"] = None
-        t["updated_at"] = now
+        row.status = "done"
+        row.progress = 100
+        row.message = "Done"
+        row.result_json = _serialize(result)
+        row.error_message = None
+        row.updated_at = _now()
+        db.add(row)
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
+        raise
+    finally:
+        db.close()
 
 
 def fail_task(*, task_id: str, error_message: str) -> None:
-    now = time.time()
-    with _lock:
-        t = _tasks.get(task_id)
-        if not t:
+    db = SessionLocal()
+    try:
+        row = db.query(AnalysisTask).filter(AnalysisTask.id == task_id).first()
+        if not row:
             return
-        t["status"] = "error"
-        t["error"] = str(error_message or "Failed")
-        t["message"] = t["error"]
-        # Keep whatever percent we had; clamp to < 100
-        p = int(t.get("percent") or 0)
-        if p >= 100:
-            p = 99
-        t["percent"] = p
-        t["updated_at"] = now
+        row.status = "error"
+        row.error_message = str(error_message or "Failed")
+        row.message = row.error_message
+        row.progress = max(0, min(99, int(row.progress or 0)))
+        row.updated_at = _now()
+        db.add(row)
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
+        raise
+    finally:
+        db.close()
 
 
 def get_task(*, task_id: str) -> dict[str, Any] | None:
-    with _lock:
-        t = _tasks.get(task_id)
-        return dict(t) if t else None
+    db = SessionLocal()
+    try:
+        row = db.query(AnalysisTask).filter(AnalysisTask.id == task_id).first()
+        return _row_to_task(row) if row else None
+    finally:
+        db.close()
 
 
 def _public_value(value: Any) -> Any:
@@ -98,4 +158,3 @@ def public_view(task: dict[str, Any]) -> dict[str, Any]:
         "error": task.get("error"),
         "updated_at": task.get("updated_at"),
     }
-

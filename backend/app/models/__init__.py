@@ -5,3 +5,4 @@ from .embedding import Embedding  # noqa: F401
 from .resume import Resume  # noqa: F401
 from .user import User  # noqa: F401
 from .ai_resume_analysis import AIResumeAnalysis  # noqa: F401
+from .analysis_task import AnalysisTask  # noqa: F401

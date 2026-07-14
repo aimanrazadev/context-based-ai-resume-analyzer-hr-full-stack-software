@@ -3,6 +3,7 @@ import { Calendar, DollarSign, Eye, Lock, MapPin, Trash2 } from "lucide-react";
 import "./Jobs.css";
 import { jobAPI } from "../utils/api";
 import { PageTransition, SkeletonBlock, SkeletonText } from "../components/ui";
+import { formatDate } from "../shared/utils/dates";
 
 export default function Jobs({ onViewJob, initialFilter = "all", onAllJobCountChange, onTopbarTitleChange }) {
   const [jobs, setJobs] = useState([]);
@@ -17,7 +18,6 @@ export default function Jobs({ onViewJob, initialFilter = "all", onAllJobCountCh
     draft: null,
   });
   const [jobStats, setJobStats] = useState({});
-  const [statsLoading, setStatsLoading] = useState(false);
 
   useEffect(() => {
     setFilter(initialFilter);
@@ -28,55 +28,27 @@ export default function Jobs({ onViewJob, initialFilter = "all", onAllJobCountCh
       setLoading(true);
       setError("");
 
-      // Fetch counts in parallel, and re-use the selected tab request as the list response.
-      const allP = jobAPI.getAll({});
-      const activeP = jobAPI.getAll({ status: "active" });
-      const closedP = jobAPI.getAll({ status: "closed" });
-      const draftP = jobAPI.getAll({ status: "draft" });
-
-      const listP =
-        filter === "all" ? allP : filter === "active" ? activeP : filter === "closed" ? closedP : draftP;
-
-      const [allRes, activeRes, closedRes, draftRes, listRes] = await Promise.all([
-        allP,
-        activeP,
-        closedP,
-        draftP,
-        listP,
-      ]);
+      const listRes = await jobAPI.recruiterJobs({
+        status: filter,
+        includeStats: true,
+      });
 
       if (listRes?.success) {
         const list = listRes.jobs || [];
         setJobs(list);
-        setStatsLoading(true);
-        try {
-          const statsEntries = await Promise.all(
-            list.map(async (job) => {
-              try {
-                const res = await jobAPI.rankedCandidates(job.id);
-                const candidates = res?.candidates || [];
-                const count = candidates.length;
-                const top = count ? Math.max(...candidates.map((c) => Number(c?.final_score) || 0)) : 0;
-                const shortlisted = candidates.filter((c) => (Number(c?.final_score) || 0) >= 70).length;
-                return [job.id, { count, top, shortlisted }];
-              } catch {
-                return [job.id, { count: null, top: null, shortlisted: null }];
-              }
-            })
-          );
-          setJobStats(Object.fromEntries(statsEntries));
-        } finally {
-          setStatsLoading(false);
-        }
+        setJobStats(Object.fromEntries(
+          list.map((job) => [job.id, job.stats || { count: 0, top: 0, shortlisted: 0 }])
+        ));
       }
 
-      const allCount = (allRes?.jobs || []).length;
-      setCounts({
-        all: allCount,
-        active: (activeRes?.jobs || []).length,
-        closed: (closedRes?.jobs || []).length,
-        draft: (draftRes?.jobs || []).length,
-      });
+      const nextCounts = {
+        all: Number(listRes?.counts?.all) || 0,
+        active: Number(listRes?.counts?.active) || 0,
+        closed: Number(listRes?.counts?.closed) || 0,
+        draft: Number(listRes?.counts?.draft) || 0,
+      };
+      setCounts(nextCounts);
+      const allCount = nextCounts.all;
       onAllJobCountChange?.(allCount);
     } catch (err) {
       setError(err.message || "Failed to load jobs");
@@ -229,7 +201,7 @@ export default function Jobs({ onViewJob, initialFilter = "all", onAllJobCountCh
                   )}
                   <div className="job-detail-item">
                     <Calendar className="detail-label" aria-hidden="true" />
-                    <span>{new Date(job.created_at).toLocaleDateString()}</span>
+                    <span>{formatDate(job.created_at)}</span>
                   </div>
                 </div>
                 <div className="job-card-meta job-meta-chips">
@@ -249,7 +221,6 @@ export default function Jobs({ onViewJob, initialFilter = "all", onAllJobCountCh
                   <div className="metric-pill">Applicants {fmtStat(jobStats?.[job.id]?.count)}</div>
                   <div className="metric-pill">Top score {fmtStat(jobStats?.[job.id]?.top)}</div>
                   <div className="metric-pill">Shortlist 70+ {fmtStat(jobStats?.[job.id]?.shortlisted)}</div>
-                  {statsLoading && <div className="metric-hint">Updating metrics…</div>}
                 </div>
                 <div className="job-card-actions">
                   <button

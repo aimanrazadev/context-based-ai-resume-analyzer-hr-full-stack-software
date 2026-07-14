@@ -3,6 +3,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from ..database import Base
+from ..modules.applications.status import DEFAULT_APPLICATION_STATUS
 
 
 class Application(Base):
@@ -29,7 +30,7 @@ class Application(Base):
     missing_skills_json = Column(Text, nullable=True)
     ranking_explanation = Column(Text, nullable=True)
     score_updated_at = Column(DateTime(timezone=True), nullable=True)
-    status = Column(String(50), nullable=True)
+    status = Column(String(50), nullable=False, default=DEFAULT_APPLICATION_STATUS, server_default=DEFAULT_APPLICATION_STATUS)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     job = relationship("Job", back_populates="applications")

@@ -14,6 +14,11 @@ DATABASE_URL = _raw_database_url
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+GEMINI_FALLBACK_MODELS = [
+    model.strip()
+    for model in os.getenv("GEMINI_FALLBACK_MODELS", "gemini-2.0-flash-lite,gemini-2.0-flash-lite-001,gemini-flash-lite-latest").split(",")
+    if model.strip()
+]
 GEMINI_BASE_URL = os.getenv("GEMINI_BASE_URL", "https://generativelanguage.googleapis.com")
 GEMINI_API_VERSION = os.getenv("GEMINI_API_VERSION", "v1")
 

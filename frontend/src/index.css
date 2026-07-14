@@ -96,7 +96,6 @@ h3,
 h4,
 h5,
 h6,
-.section-title,
 .auth-title,
 .page-title,
 .candidate-page-title,
@@ -139,7 +138,6 @@ select {
 .applied-job-card-v2,
 .ajd-card,
 .ajd-insight-box,
-.jd-card,
 .auth-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -164,9 +162,7 @@ select {
 .btn-apply,
 .btn-view-details,
 .btn-withdraw,
-.job-detail-btn,
-.jd-scan,
-.jd-apply {
+.job-detail-btn {
   min-height: 40px;
   border-radius: var(--radius-md);
   font-size: 14px;
@@ -188,9 +184,7 @@ select {
 .btn-apply:focus-visible,
 .btn-view-details:focus-visible,
 .btn-withdraw:focus-visible,
-.job-detail-btn:focus-visible,
-.jd-scan:focus-visible,
-.jd-apply:focus-visible {
+.job-detail-btn:focus-visible {
   outline: none;
   box-shadow: var(--shadow-focus);
 }
@@ -369,8 +363,7 @@ select {
 .candidate-row-card,
 .applied-job-card,
 .applied-job-card-v2,
-.ajd-card,
-.jd-card {
+.ajd-card {
   border-radius: var(--radius-lg);
 }
 
@@ -380,8 +373,7 @@ select {
 .candidate-row-card,
 .applied-job-card,
 .applied-job-card-v2,
-.ajd-card,
-.jd-main-card {
+.ajd-card {
   padding: var(--space-6);
 }
 
@@ -396,30 +388,25 @@ select {
 }
 
 .summary-label,
-.job-card-meta-label,
-.metric-hint,
 .match-label,
 .candidate-sidebar-role,
 .sidebar-profile-role,
 .candidate-sidebar-role,
-.ajd-sub,
-.jd-company {
+.ajd-sub {
   color: var(--color-text-muted);
 }
 
 .summary-value,
 .job-card-title,
 .recent-candidate-name,
-.ajd-title,
-.jd-role {
+.ajd-title {
   color: var(--color-text);
 }
 
 .card-title,
 .summary-label,
 .job-card-title,
-.ajd-title,
-.jd-role {
+.ajd-title {
   letter-spacing: -0.02em;
 }
 
@@ -442,16 +429,14 @@ select {
 }
 
 .btn-cancel,
-.btn-back,
-.jd-scan {
+.btn-back {
   background: #ffffff;
   border: 1px solid var(--color-border);
   color: var(--color-text);
 }
 
 .btn-cancel:hover,
-.btn-back:hover,
-.jd-scan:hover {
+.btn-back:hover {
   background: var(--color-surface-soft);
   border-color: var(--color-border-strong);
   color: var(--color-text);
@@ -472,10 +457,7 @@ select {
 }
 
 .status-badge,
-.job-type-pill,
 .metric-pill,
-.jd-badge,
-.jd-pill,
 .job-detail-skill-pill {
   border-radius: 999px;
   font-size: 12px;
@@ -501,23 +483,19 @@ select {
   color: #b45309;
 }
 
-.job-search-topbar-title,
-.jobs-header h2,
-.candidates-panel-header h2 {
+.job-search-topbar-title {
   color: var(--color-text);
   font-size: clamp(24px, 2vw, 28px);
   font-weight: 400;
   letter-spacing: -0.04em;
 }
 
-.jobs-header p,
 .applied-job-location,
 .job-description,
 .job-detail-item,
 .candidate-job-title,
 .candidate-email,
-.candidate-summary,
-.candidates-panel-header p {
+.candidate-summary {
   color: var(--color-text-muted);
   font-size: 14px;
   line-height: 1.6;
@@ -658,15 +636,13 @@ select {
   }
 }
 
-/* Global 100% zoom compactness pass */
 .dashboard-card,
 .summary-card,
 .job-card,
 .job-card-item,
 .candidate-row-card,
 .applied-job-card,
-.applied-job-card-v2,
-.jd-card {
+.applied-job-card-v2 {
   border-radius: 14px;
 }
 
@@ -675,8 +651,7 @@ select {
 .job-card-item,
 .candidate-row-card,
 .applied-job-card,
-.applied-job-card-v2,
-.jd-main-card {
+.applied-job-card-v2 {
   padding: 18px;
 }
 
@@ -686,8 +661,7 @@ select {
 
 .job-card-title,
 .applied-job-title,
-.recent-candidate-name,
-.jd-role {
+.recent-candidate-name {
   font-size: clamp(17px, 1.5vw, 20px);
   line-height: 1.28;
 }
@@ -700,9 +674,7 @@ select {
 
 .btn-view,
 .btn-apply,
-.btn-view-details,
-.jd-apply,
-.jd-scan {
+.btn-view-details {
   min-height: 38px;
   padding: 8px 16px;
   font-size: 14px;
@@ -717,7 +689,6 @@ select {
   letter-spacing: -0.04em;
 }
 
-/* UI consistency audit pass: lighter typography and balanced sizing */
 body,
 input,
 textarea,
@@ -735,9 +706,7 @@ label,
 .candidate-summary,
 .applied-job-location,
 .job-detail-item,
-.job-mini-sub,
-.summary-label,
-.metric-hint {
+.summary-label {
   font-weight: 400;
 }
 
@@ -752,16 +721,14 @@ h6,
 .job-search-topbar-title,
 .job-card-title,
 .applied-job-title,
-.ajd-title,
-.jd-role {
+.ajd-title {
   font-weight: 400;
 }
 
 .card-title,
 .ajd-expl-title,
 .job-filters h3,
-.filter-section label,
-.job-card-meta-label {
+.filter-section label {
   font-weight: 400;
 }
 
@@ -777,15 +744,12 @@ h6,
 .btn-view,
 .btn-apply,
 .btn-view-details,
-.jd-apply,
-.jd-scan,
 .topbar-create-btn {
   font-weight: 400;
 }
 
 .ds-skill-pill,
 .ds-status-badge,
-.job-type-pill,
 .ajd-recommendation-pill {
   font-weight: 400;
 }
@@ -807,7 +771,6 @@ h6,
 .candidate-row-card,
 .applied-job-card,
 .applied-job-card-v2,
-.jd-card,
 .ajd-insight-box,
 .ajd-verdict-card,
 .ajd-resume {
@@ -819,8 +782,7 @@ h6,
 .job-card-item,
 .candidate-row-card,
 .applied-job-card,
-.applied-job-card-v2,
-.jd-main-card {
+.applied-job-card-v2 {
   padding: 16px;
 }
 
@@ -830,7 +792,6 @@ h6,
   padding: 18px;
 }
 
-/* Shared typography hierarchy */
 body,
 input,
 textarea,
@@ -848,14 +809,11 @@ button,
 .btn-back,
 .btn-cancel,
 .btn-view,
-.btn-delete,
-.btn-apply,
-.btn-view-details,
-.btn-withdraw,
-.job-detail-btn,
-.jd-scan,
-.jd-apply,
-.ds-back-button {
+  .btn-delete,
+  .btn-apply,
+  .btn-view-details,
+  .btn-withdraw,
+  .job-detail-btn {
   font-family: var(--font-ui);
   font-weight: var(--type-weight-medium);
   letter-spacing: 0;
@@ -864,11 +822,8 @@ button,
 .page-title,
 .candidate-page-title,
 .job-search-topbar-title,
-.jobs-header h2,
-.candidates-panel-header h2,
 .auth-title,
 .create-job-modal-overlay .form-header h2,
-.jd-page-title,
 .ajd-title {
   font-family: var(--font-heading);
   font-size: var(--type-title);
@@ -880,15 +835,11 @@ button,
 
 .page-title,
 .candidate-page-title,
-.job-search-topbar-title,
-.jobs-header h2,
-.candidates-panel-header h2 {
+.job-search-topbar-title {
   font-size: var(--type-page-title);
 }
 
 .auth-subtitle,
-.jobs-header p,
-.candidates-panel-header p,
 .ajd-sub {
   font-family: var(--font-body);
   font-size: var(--type-body);
@@ -898,18 +849,13 @@ button,
   letter-spacing: 0;
 }
 
-.section-title,
 .section-header h3,
 .card-title,
 .ajd-expl-title,
-.jd-section-h,
 .job-filters h3,
 .candidate-section-label,
 .summary-label,
-.job-card-meta-label,
-.job-detail-info-label,
-.jd-fact-k,
-.jd-detail-k {
+.job-detail-info-label {
   font-family: var(--font-heading);
   font-size: var(--type-section-title);
   font-weight: var(--type-weight-medium);
@@ -920,10 +866,7 @@ button,
 
 .summary-label,
 .candidate-section-label,
-.job-card-meta-label,
-.job-detail-info-label,
-.jd-fact-k,
-.jd-detail-k {
+.job-detail-info-label {
   font-family: var(--font-ui);
   font-size: var(--type-label);
   color: var(--color-text-muted);
@@ -931,10 +874,7 @@ button,
   text-transform: uppercase;
 }
 
-.section-title::after,
-.skills-help-text,
 .job-detail-help,
-.metric-hint,
 .candidate-job-title,
 .candidate-email,
 .candidate-summary,
@@ -943,9 +883,6 @@ button,
 .job-card-meta-value,
 .job-detail-desc,
 .job-detail-list,
-.jd-muted,
-.jd-company,
-.jd-summary-text,
 .ajd-expl-text,
 .ajd-verdict-text,
 .ajd-empty-text {
@@ -1005,7 +942,6 @@ button,
 .applied-job-title,
 .candidate-name-line h3,
 .recent-candidate-name,
-.jd-role,
 .job-detail-title,
 .ajd-recommendation-pill,
 .candidate-name-section h4 {
@@ -1017,10 +953,7 @@ button,
 .ds-skill-pill,
 .ds-status-badge,
 .status-badge,
-.job-type-pill,
 .metric-pill,
-.jd-badge,
-.jd-pill,
 .job-detail-skill-pill,
 .skill-tag {
   font-family: var(--font-ui);

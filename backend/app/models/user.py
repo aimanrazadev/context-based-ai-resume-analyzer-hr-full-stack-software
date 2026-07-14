@@ -17,3 +17,4 @@ class User(Base):
 
     # Relationships
     jobs = relationship("Job", back_populates="user")
+    candidate_profile = relationship("Candidate", back_populates="user", uselist=False)

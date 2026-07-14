@@ -30,9 +30,9 @@
 
 .ajd-top-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 210px;
+  grid-template-columns: minmax(0, 1fr);
   align-items: start;
-  gap: 18px;
+  gap: 8px;
 }
 
 .ajd-head {
@@ -89,12 +89,9 @@
 }
 
 .ajd-note {
-  justify-self: end;
+  justify-self: stretch;
   width: 100%;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  box-shadow: none;
+  padding: 12px;
 }
 
 .ajd-note-title {
@@ -375,6 +372,20 @@
   gap: 10px;
 }
 
+.candidate-job-meta {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  min-height: 74px;
+  padding: 11px 13px;
+}
+
+.candidate-job-meta-value {
+  color: #172443;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .ajd-verdict-card {
   min-height: 58px;
   padding: 11px 13px;
@@ -636,7 +647,10 @@
 
   .ajd-note {
     justify-self: stretch;
-    max-width: 240px;
+  }
+
+  .candidate-job-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .ajd-insight-grid {

@@ -1,89 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { jobAPI } from "../utils/api";
 import { BackButton, ErrorState, PageTransition, ScoreRing, SkeletonBlock, SkeletonText, SkillPill, StatusBadge } from "./ui";
+import { usePolling } from "../shared/hooks/usePolling";
+import { formatDate } from "../shared/utils/dates";
+import { getScoreTone } from "../shared/utils/scores";
+import { cleanList, normalizeSkill, uniqueByNormalizedSkill } from "../shared/utils/skills";
 import "./AppliedJobDetails.css";
-
-const cleanList = (items = [], limit = 6) => {
-  if (!Array.isArray(items)) return [];
-  return [...new Set(items.map((item) => String(item || "").trim()).filter(Boolean))].slice(0, limit);
-};
 
 const getShortVerdict = (analysis) => {
   const text = String(analysis?.candidate_summary || "").trim();
   if (!text) return "No AI summary was saved for this application.";
   return text;
-};
-
-const getScoreTone = (score) => {
-  const safeScore = Number(score) || 0;
-  if (safeScore >= 75) return { color: "#16a34a", border: "#c7ecd6", background: "#f8fffb" };
-  if (safeScore >= 50) return { color: "#f59e0b", border: "#fde68a", background: "#fffbeb" };
-  return { color: "#ef4444", border: "#fecaca", background: "#fff5f5" };
-};
-
-const SKILL_ALIASES = {
-  fastapi: "fastapi",
-  "fast api": "fastapi",
-  js: "javascript",
-  javascript: "javascript",
-  "machine learning": "machine learning",
-  machinelearning: "machine learning",
-  ml: "machine learning",
-  "natural language processing": "nlp",
-  naturallanguageprocessing: "nlp",
-  nlp: "nlp",
-  mysql: "sql",
-  postgres: "sql",
-  postgresql: "sql",
-  sql: "sql",
-  sqlite: "sql",
-  react: "react",
-  reactjs: "react",
-  "react.js": "react",
-  "rest api": "api",
-  "rest apis": "api",
-  restapi: "api",
-  restapis: "api",
-  api: "api",
-  apis: "api",
-  "large language models": "llm",
-  largelanguagemodels: "llm",
-  llm: "llm",
-  llms: "llm",
-  "gemini api": "gemini",
-  gemini: "gemini",
-  "openai api": "openai",
-  openai: "openai",
-  "scikit learn": "scikit-learn",
-  "scikit-learn": "scikit-learn",
-  sklearn: "scikit-learn",
-  "problem solving": "problem solving",
-  problemsolving: "problem solving",
-  communication: "communication",
-  communications: "communication",
-  teamwork: "teamwork",
-};
-
-const normalizeSkill = (skill) => {
-  const normalized = String(skill || "")
-    .toLowerCase()
-    .replace(/[^a-z0-9+#. ]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-  const compact = normalized.replace(/\s+/g, "");
-  return SKILL_ALIASES[normalized] || SKILL_ALIASES[compact] || normalized;
-};
-
-const uniqueByNormalizedSkill = (items = [], excludeKeys = new Set()) => {
-  const seen = new Set(excludeKeys);
-  const result = [];
-  cleanList(items, 80).forEach((skill) => {
-    const key = normalizeSkill(skill);
-    if (!key || seen.has(key)) return;
-    seen.add(key);
-    result.push(skill);
-  });
-  return result;
 };
 
 const classifySkillSnapshot = ({ analysis }) => {
@@ -123,7 +50,7 @@ const formatJobDescription = (description) => {
   if (!text) return null;
 
   const normalized = text
-    .replace(/\s*•\s*/g, "\n• ")
+    .replace(/\s*\*\s*/g, "\n- ")
     .replace(/\s*(Responsibilities:)/gi, "\n$1\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
@@ -137,8 +64,8 @@ const formatJobDescription = (description) => {
   let bullets = [];
 
   lines.forEach((line) => {
-    if (line.startsWith("•")) {
-      bullets.push(line.replace(/^•\s*/, ""));
+    if (line.startsWith("-")) {
+      bullets.push(line.replace(/^-\s*/, ""));
       return;
     }
     if (bullets.length) {
@@ -156,7 +83,7 @@ export default function AppliedJobDetails({ applicationId, onBack }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
-  const pollRef = useRef(null);
+  const [pollingAnalysis, setPollingAnalysis] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
   const app = data?.application || null;
@@ -179,6 +106,7 @@ export default function AppliedJobDetails({ applicationId, onBack }) {
     setLoading(true);
     setError("");
     setData(null);
+    setPollingAnalysis(false);
 
     const fetchOnce = async () => {
       const res = await jobAPI.applicationDetails(applicationId);
@@ -193,29 +121,7 @@ export default function AppliedJobDetails({ applicationId, onBack }) {
         // If analysis is still running, poll briefly.
         const a = res?.application || null;
         const pending = !a?.score_updated_at && !a?.ai_analysis && !a?.ai_explanation;
-        if (!pending) return;
-        let tries = 0;
-        if (pollRef.current) clearInterval(pollRef.current);
-        pollRef.current = setInterval(async () => {
-          tries += 1;
-          try {
-            const rr = await jobAPI.applicationDetails(applicationId);
-            if (!alive) return;
-            setData(rr || null);
-            const aa = rr?.application || null;
-            const done = !!aa?.score_updated_at || !!aa?.ai_analysis || !!aa?.ai_explanation;
-            if (done || tries >= 25) {
-              clearInterval(pollRef.current);
-              pollRef.current = null;
-            }
-          } catch {
-            // ignore transient polling errors
-            if (tries >= 25 && pollRef.current) {
-              clearInterval(pollRef.current);
-              pollRef.current = null;
-            }
-          }
-        }, 1200);
+        setPollingAnalysis(pending);
       })
       .catch((e) => {
         if (!alive) return;
@@ -227,12 +133,37 @@ export default function AppliedJobDetails({ applicationId, onBack }) {
       });
     return () => {
       alive = false;
-      if (pollRef.current) {
-        clearInterval(pollRef.current);
-        pollRef.current = null;
-      }
     };
   }, [applicationId]);
+
+  const requestLatestApplication = useCallback(
+    () => jobAPI.applicationDetails(applicationId),
+    [applicationId]
+  );
+
+  const isAnalysisReady = useCallback((res) => {
+    const latest = res?.application || null;
+    return Boolean(latest?.score_updated_at || latest?.ai_analysis || latest?.ai_explanation);
+  }, []);
+
+  usePolling({
+    enabled: pollingAnalysis && Boolean(applicationId),
+    intervalMs: 1200,
+    maxAttempts: 25,
+    request: requestLatestApplication,
+    stopWhen: isAnalysisReady,
+    onSuccess: (res) => {
+      setData(res || null);
+      if (isAnalysisReady(res)) {
+        setPollingAnalysis(false);
+      }
+    },
+    onError: (_error, attempts) => {
+      if (attempts >= 25) {
+        setPollingAnalysis(false);
+      }
+    },
+  });
 
   const analysis = app?.ai_analysis || null;
   const skillSnapshot = analysis ? classifySkillSnapshot({ analysis }) : { matched: [], missing: [] };
@@ -241,6 +172,10 @@ export default function AppliedJobDetails({ applicationId, onBack }) {
   const resumeName = resume?.original_filename || "Resume";
   const analysisPending = !app?.score_updated_at && !analysis && !app?.ai_explanation;
   const scoreTone = getScoreTone(overallScore);
+  const jobType = String(job?.job_type || "").toLowerCase();
+  const opportunityType = String(job?.opportunity_type || "").toLowerCase();
+  const isInternship = opportunityType === "internship" || jobType.includes("intern");
+  const compensationLabel = isInternship ? "Stipend" : "CTC";
 
   const downloadResume = async () => {
     if (!applicationId || downloading) return;
@@ -323,10 +258,15 @@ export default function AppliedJobDetails({ applicationId, onBack }) {
                 <div className="ajd-expl-title">Your resume</div>
                 <div className="ajd-resume-row">
                   <div className="ajd-resume-name">{resumeName}</div>
-                  {downloading && <div className="ajd-resume-hint">Downloadingâ€¦</div>}
+                  {downloading && <div className="ajd-resume-hint">Downloading...</div>}
                 </div>
               </div>
             )}
+
+            <div className="ajd-note">
+              <div className="ajd-note-title">Application status</div>
+              <StatusBadge status={app?.status || "not-reviewed"} />
+            </div>
 
           </aside>
 
@@ -335,14 +275,6 @@ export default function AppliedJobDetails({ applicationId, onBack }) {
               <div className="ajd-head">
                 <div className="ajd-title">{job?.title || "Job"}</div>
                 <div className="ajd-sub">{job?.location || ""}</div>
-              </div>
-
-              <div className="ajd-note">
-                <div className="ajd-note-title">Application status</div>
-                <div className="ajd-note-text">
-                  Your resume has been saved. <span className="ajd-muted">Waiting for recruiter to review it.</span>
-                </div>
-                <StatusBadge status={app?.status || "not-reviewed"} />
               </div>
             </div>
 
@@ -353,7 +285,7 @@ export default function AppliedJobDetails({ applicationId, onBack }) {
               <div className="candidate-details">
                 <div className="candidate-name-section">
                   <h4>{app.candidate.name || "Candidate"}</h4>
-                  <p>{app.candidate.email || "—"}</p>
+                  <p>{app.candidate.email || "-"}</p>
                 </div>
 
                 {/* Social Links */}
@@ -380,33 +312,11 @@ export default function AppliedJobDetails({ applicationId, onBack }) {
             </div>
           )}
 
-          {applicationId && (
-            <div
-              className={`ajd-resume ${downloading ? "is-downloading" : ""}`}
-              role="button"
-              tabIndex={0}
-              aria-label="Download resume"
-              onClick={downloadResume}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  downloadResume();
-                }
-              }}
-            >
-              <div className="ajd-expl-title">Your resume</div>
-              <div className="ajd-resume-row">
-                <div className="ajd-resume-name">{resumeName}</div>
-                {downloading && <div className="ajd-resume-hint">Downloading…</div>}
-              </div>
-            </div>
-          )}
-
           {analysisPending && (
             <div className="ajd-pending">
               <div className="ajd-pending-row">
                 <div className="ajd-pending-dot" />
-                Analyzing your resume… this page will update automatically.
+                Analyzing your resume... this page will update automatically.
               </div>
             </div>
           )}
@@ -472,6 +382,31 @@ export default function AppliedJobDetails({ applicationId, onBack }) {
             </div>
           )}
 
+          <div className="candidate-job-meta ajd-insight-box">
+            <div>
+              <div className="ajd-expl-title">{compensationLabel}</div>
+              <div className="candidate-job-meta-value">{job?.salary_range || "-"}</div>
+            </div>
+            <div>
+              <div className="ajd-expl-title">Apply by</div>
+              <div className="candidate-job-meta-value">{job?.apply_by ? formatDate(job.apply_by) : "-"}</div>
+            </div>
+            <div>
+              <div className="ajd-expl-title">Job type</div>
+              <div className="candidate-job-meta-value">{job?.job_type || "-"}</div>
+            </div>
+            <div>
+              <div className="ajd-expl-title">Job site</div>
+              <div className="candidate-job-meta-value">{job?.job_site || "-"}</div>
+            </div>
+            <div>
+              <div className="ajd-expl-title">Min experience</div>
+              <div className="candidate-job-meta-value">
+                {job?.min_experience_years != null ? `${job.min_experience_years} years` : "-"}
+              </div>
+            </div>
+          </div>
+
           <div className="ajd-job">
             <div className="ajd-expl-title">Job description</div>
             <div className="ajd-expl-text ajd-job-description">
@@ -483,7 +418,7 @@ export default function AppliedJobDetails({ applicationId, onBack }) {
                 ) : (
                   <p key={`text-${index}`}>{block.text}</p>
                 )
-              )) || "—"}
+              )) || "-"}
             </div>
           </div>
           </main>

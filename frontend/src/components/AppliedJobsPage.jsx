@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Calendar, Eye, MapPin, Trash2 } from "lucide-react";
 import { jobAPI } from "../utils/api";
 import { PageTransition, ScoreRing, SkeletonBlock, SkeletonText, StatusBadge } from "./ui";
+import { formatLongDate } from "../shared/utils/dates";
 
 export default function AppliedJobsPage({ onCountChange, onViewDetails }) {
   const [loading, setLoading] = useState(true);
@@ -79,12 +80,7 @@ export default function AppliedJobsPage({ onCountChange, onViewDetails }) {
                     <Calendar className="applied-meta-icon" aria-hidden="true" />
                     <span>
                       {row?.created_at
-                        ? new Date(row.created_at).toLocaleDateString("en-US", {
-                            weekday: "long",
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric"
-                          })
+                        ? formatLongDate(row.created_at)
                         : "—"}
                     </span>
                   </div>
