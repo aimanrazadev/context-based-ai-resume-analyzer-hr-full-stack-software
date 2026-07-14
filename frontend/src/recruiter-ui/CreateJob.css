@@ -129,16 +129,20 @@
 }
 
 .option-row {
-  display: grid;
-  gap: 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex-wrap: nowrap;
 }
 
 .radio-option {
-  position: relative;
-  display: flex;
-  align-items: flex-start;
-  min-height: 22px;
-  padding: 0 0 0 23px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  min-height: 24px;
+  padding: 0;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -149,12 +153,10 @@
 }
 
 .radio-option input {
-  position: absolute;
-  top: 2px;
-  left: 0;
   width: 13px;
   height: 13px;
   margin: 0;
+  flex: 0 0 auto;
 }
 
 .radio-option:has(input:checked) {
@@ -513,6 +515,10 @@
 
   .job-description-field textarea {
     min-height: 150px;
+  }
+
+  .option-row {
+    flex-wrap: wrap;
   }
 
   .create-job-modal-overlay .form-actions {

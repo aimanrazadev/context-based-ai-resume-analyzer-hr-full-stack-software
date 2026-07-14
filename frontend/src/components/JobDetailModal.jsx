@@ -10,7 +10,7 @@ import {
 import { jobAPI } from "../utils/api";
 import { BackButton } from "./ui";
 import { useAuth } from "../shared/auth/useAuth";
-import { formatDateTime } from "../shared/utils/dates";
+import { formatDate } from "../shared/utils/dates";
 import CandidateJobDetail from "./job-detail/CandidateJobDetail";
 import RecruiterJobDetail from "./job-detail/RecruiterJobDetail";
 import "./JobDetailModal.css";
@@ -131,14 +131,9 @@ export default function JobDetailModal({ jobId, onClose, onContinueDraft, onAppl
         ),
       },
       {
-        label: "Date & Time",
-        value: job.created_at ? formatDateTime(job.created_at) : "Not specified",
+        label: "Apply By",
+        value: job.apply_by ? formatDate(job.apply_by) : "Not specified",
         icon: Calendar,
-      },
-      {
-        label: "Opportunity Type",
-        value: job.opportunity_type || "Not specified",
-        icon: Briefcase,
       },
       {
         label: "Job Type",

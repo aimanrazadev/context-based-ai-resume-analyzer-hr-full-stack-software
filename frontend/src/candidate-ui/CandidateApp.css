@@ -54,6 +54,12 @@
   flex-shrink: 0;
 }
 
+.candidate-logo-icon-svg {
+  width: 19px;
+  height: 19px;
+  stroke-width: 2;
+}
+
 .candidate-logo-text {
   font-size: 15px;
   font-weight: 400;

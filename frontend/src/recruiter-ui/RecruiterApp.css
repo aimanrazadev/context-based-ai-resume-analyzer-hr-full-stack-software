@@ -59,6 +59,12 @@
   flex-shrink: 0;
 }
 
+.logo-icon-svg {
+  width: 19px;
+  height: 19px;
+  stroke-width: 2;
+}
+
 .logo-text {
   font-size: 15px;
   font-weight: 400;

@@ -5,6 +5,7 @@ import {
   Briefcase,
   LayoutDashboard,
   LogOut,
+  Monitor,
   Plus,
   Search,
   Users
@@ -84,8 +85,10 @@ export default function RecruiterApp({ onLogout }) {
         {/* Left Sidebar */}
         <div className="sidebar">
           <div className="logo-container">
-            <div className="logo-icon">SN</div>
-            <div className="logo-text">StudentsNaukri</div>
+            <div className="logo-icon">
+              <Monitor className="logo-icon-svg" aria-hidden="true" />
+            </div>
+            <div className="logo-text">hireEZ</div>
           </div>
 
           <nav className="nav-menu">

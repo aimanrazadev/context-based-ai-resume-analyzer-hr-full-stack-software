@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import "./CandidateApp.css";
-import { ClipboardCheck, LogOut, Search } from "lucide-react";
+import { ClipboardCheck, LogOut, Monitor, Search } from "lucide-react";
 import JobSearch from "./JobSearch";
 import AppliedJobsPage from "../components/AppliedJobsPage";
 import CandidateJobDetailPage from "../components/CandidateJobDetailPage";
@@ -39,8 +39,10 @@ export default function CandidateApp({ onLogout }) {
         {/* Left Sidebar */}
         <div className="candidate-sidebar">
           <div className="candidate-logo-container">
-            <div className="candidate-logo-icon">SN</div>
-            <div className="candidate-logo-text">StudentsNaukri</div>
+            <div className="candidate-logo-icon">
+              <Monitor className="candidate-logo-icon-svg" aria-hidden="true" />
+            </div>
+            <div className="candidate-logo-text">hireEZ</div>
           </div>
           
           <nav className="candidate-nav-menu">
