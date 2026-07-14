@@ -75,11 +75,12 @@ Explicitly excluded:
 
 ## Local Development
 
-Apply database migrations before starting the API:
+Create a MySQL database, set `DATABASE_URL`, then create tables from the
+SQLAlchemy models:
 
 ```bash
 cd backend
-alembic upgrade head
+python -B -c "import app.models; from app.database import Base, engine; Base.metadata.create_all(bind=engine)"
 ```
 
 Backend only (port 8002):
@@ -113,7 +114,7 @@ If you push this repo to GitHub, Actions should run automatically on pushes and 
 
 ## Architecture Notes
 
-- Database schema changes are managed with Alembic in `backend/alembic/`; the FastAPI startup path does not create or alter tables at runtime.
+- SQLAlchemy models define the database schema. Local demo and CI setup create tables with `Base.metadata.create_all(bind=engine)`.
 - Long-running resume analysis progress is persisted in the `analysis_tasks` table instead of process memory, so polling survives API restarts and multi-worker deployments.
 - Application statuses are normalized through canonical frontend and backend helpers. Valid statuses are `not-reviewed`, `shortlisted`, `on-hold`, and `rejected`.
 - Candidate matching enters through `backend/app/services/matching_pipeline.py`, which delegates final scoring to the shared 45/25/20/10 scoring weights in `scoring_service.py`.
