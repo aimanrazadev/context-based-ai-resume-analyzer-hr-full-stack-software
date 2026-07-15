@@ -57,6 +57,13 @@ SessionLocal = sessionmaker(
 Base = declarative_base()
 
 
+def create_database_tables() -> None:
+    # Import models so SQLAlchemy registers every table before create_all runs.
+    from . import models  # noqa: F401
+
+    Base.metadata.create_all(bind=engine)
+
+
 def get_db():
     db = SessionLocal()
     try:

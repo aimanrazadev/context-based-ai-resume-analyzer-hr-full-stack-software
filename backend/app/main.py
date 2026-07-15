@@ -10,7 +10,7 @@ from sqlalchemy.exc import OperationalError, SQLAlchemyError
 from .api import auth as auth_api
 from .api import job as job_api
 from .api import recruiter as recruiter_api
-from .database import engine
+from .database import create_database_tables, engine
 from .utils.error_handlers import get_error_message
 from .services.application_service import backfill_missing_application_scores
 
@@ -127,12 +127,15 @@ def on_startup() -> None:
         if dialect and dialect != "mysql":
             raise RuntimeError(f"Unsupported database dialect '{dialect}'. This backend now requires MySQL.")
 
+        create_database_tables()
+
         from .database import SessionLocal
         with SessionLocal() as db:
             backfill_missing_application_scores(db)
 
         app.state.db_init_error = None
     except Exception as e:
+        logger.exception("Database initialization failed")
         app.state.db_init_error = str(e)
 
 
