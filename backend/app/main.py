@@ -14,7 +14,7 @@ from .database import engine
 from .utils.error_handlers import get_error_message
 from .services.application_service import backfill_missing_application_scores
 
-app = FastAPI(title="AI Resume Skill Analyzer")
+app = FastAPI(title="HireEZ")
 
 app.include_router(auth_api.router)
 app.include_router(job_api.router)

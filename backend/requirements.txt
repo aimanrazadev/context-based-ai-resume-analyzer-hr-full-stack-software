@@ -1,3 +1,4 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
 annotated-doc==0.0.4
 annotated-types==0.7.0
 anyio==4.12.1
@@ -15,7 +16,7 @@ httptools==0.7.1
 idna==3.11
 httpx==0.28.1
 sentence-transformers==5.1.0
-torch==2.8.0
+torch==2.8.0+cpu
 numpy==2.3.2
 pyasn1==0.6.1
 pycparser==2.23
