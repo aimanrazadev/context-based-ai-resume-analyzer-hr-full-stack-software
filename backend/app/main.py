@@ -100,7 +100,7 @@ def health_check():
     }
 
 
-_default_origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
+_default_origins = ["http://localhost:5173", "http://127.0.0.1:5173", "https://context-based-ai-resume-analyzer-hr.vercel.app"]
 _extra_origins = [
     origin.strip()
     for origin in os.getenv("FRONTEND_ORIGINS", "").split(",")
