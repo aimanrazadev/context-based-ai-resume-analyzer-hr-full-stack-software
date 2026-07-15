@@ -1,6 +1,6 @@
 import { useState } from "react";
 import "./LoginSignup.css";
-import { authAPI } from "../utils/api";
+import { authAPI } from "../shared/utils/api";
 
 export default function LoginSignup({ onLoginSuccess }) {
   const [isLogin, setIsLogin] = useState(false);

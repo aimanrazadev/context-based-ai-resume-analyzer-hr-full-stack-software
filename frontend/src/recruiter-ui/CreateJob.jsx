@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import "./CreateJob.css";
 import { BackButton } from "../components/ui";
-import { jobAPI } from "../utils/api";
+import { jobAPI } from "../shared/utils/api";
 import { useAuth } from "../shared/auth/useAuth";
-import { ALL_SKILLS } from "../utils/skillsList";
+import { ALL_SKILLS } from "../shared/utils/skillsList";
 import {
   DEFAULT_JOB_FORM_DATA,
   buildJobFormPayload,

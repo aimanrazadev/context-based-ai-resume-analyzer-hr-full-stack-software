@@ -5,8 +5,8 @@
  * - Jobs use the FastAPI backend
  */
 
-import { clearStoredUser, getStoredToken, getStoredUser } from "../shared/auth/storage";
-import { toJobApiPayload } from "../features/jobs/api/jobPayloadMapper";
+import { clearStoredUser, getStoredToken, getStoredUser } from "../auth/storage";
+import { toJobApiPayload } from "../../features/jobs/api/jobPayloadMapper";
 
 const DEFAULT_API_BASE_URL = import.meta.env.DEV ? "http://127.0.0.1:8002" : "";
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/$/, "");

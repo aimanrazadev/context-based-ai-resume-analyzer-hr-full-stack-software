@@ -8,7 +8,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
 
 from .api import auth as auth_api
-from .api import job as job_api
+from .api import job_router as job_api
 from .api import recruiter as recruiter_api
 from .database import create_database_tables, engine
 from .utils.error_handlers import get_error_message

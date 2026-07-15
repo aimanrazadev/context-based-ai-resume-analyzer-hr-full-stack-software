@@ -9,13 +9,13 @@ from ..database import get_db
 from ..models.application import Application
 from ..models.job import Job
 from ..modules.applications.status import normalize_application_status
-from ..utils.roles import recruiter_only
-from .job_handlers import (
-    _job_to_public,
+from ..services.application_serializer import job_to_public
+from ..services.application_service import (
     ai_analysis_payload,
     factual_candidate_summary_from_resume,
     is_evaluative_candidate_summary,
 )
+from ..utils.roles import recruiter_only
 from ..models.resume import Resume
 
 
@@ -108,7 +108,7 @@ def _application_row(db: Session, app: Application, *, job: Job | None = None, i
         },
     }
     if include_job and job:
-        row["_job"] = _job_to_public(job)
+        row["_job"] = job_to_public(job)
         row["job_title"] = job.job_title
     return row
 
@@ -185,7 +185,7 @@ def recruiter_jobs_aggregate(
         q = q.filter(func.lower(Job.status).in_(["active", "closed"]))
     q = q.filter(func.lower(Job.status) != "deleted")
     jobs = q.order_by(Job.created_at.desc()).all()
-    items = [_job_to_public(job, include_draft=job.status == "draft") for job in jobs]
+    items = [job_to_public(job, include_draft=job.status == "draft") for job in jobs]
 
     counts_rows = (
         db.query(func.lower(Job.status), func.count(Job.id))
@@ -264,7 +264,7 @@ def recruiter_candidates_aggregate(
     apps = q.offset((page - 1) * page_size).limit(page_size).all()
     return {
         "success": True,
-        "jobs": [_job_to_public(job, include_draft=job.status == "draft") for job in jobs],
+        "jobs": [job_to_public(job, include_draft=job.status == "draft") for job in jobs],
         "candidates": [
             _application_row(db, app, job=job_by_id.get(int(app.job_id)), include_job=True)
             for app in apps

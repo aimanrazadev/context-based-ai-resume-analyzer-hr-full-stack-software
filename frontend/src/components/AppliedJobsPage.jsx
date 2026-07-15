@@ -1,7 +1,7 @@
 import "./AppliedJobsPage.css";
 import { useCallback, useEffect, useState } from "react";
 import { Calendar, Eye, MapPin, Trash2 } from "lucide-react";
-import { jobAPI } from "../utils/api";
+import { jobAPI } from "../shared/utils/api";
 import { PageTransition, ScoreRing, SkeletonBlock, SkeletonText, StatusBadge } from "./ui";
 import { formatLongDate } from "../shared/utils/dates";
 

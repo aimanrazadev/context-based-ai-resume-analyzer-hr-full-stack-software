@@ -5,8 +5,8 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..models.application import Application
 from ..models.job import Job
+from ..services.application_serializer import job_to_public
 from ..utils.roles import recruiter_only
-from .job_handlers import _job_to_public
 from .recruiter import _application_row
 
 
@@ -38,6 +38,6 @@ def ranked_candidates(
 
     return {
         "success": True,
-        "job": _job_to_public(job),
+        "job": job_to_public(job),
         "candidates": [_application_row(db, app, job=job, include_job=False) for app in apps],
     }

@@ -7,7 +7,7 @@ import {
   GraduationCap,
   MapPin,
 } from "lucide-react";
-import { jobAPI } from "../utils/api";
+import { jobAPI } from "../shared/utils/api";
 import { BackButton } from "./ui";
 import { useAuth } from "../shared/auth/useAuth";
 import { formatDate } from "../shared/utils/dates";

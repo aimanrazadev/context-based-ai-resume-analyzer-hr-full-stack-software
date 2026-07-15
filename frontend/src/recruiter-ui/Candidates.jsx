@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Mail, SlidersHorizontal, Sparkles, Trash2 } from "lucide-react";
-import { jobAPI } from "../utils/api";
+import { jobAPI } from "../shared/utils/api";
 import { PageTransition, ScoreRing, SkeletonBlock, SkeletonText, SkillPill, StatusBadge } from "../components/ui";
 import { APPLICATION_STATUSES, formatApplicationStatus, normalizeApplicationStatus } from "../shared/utils/applicationStatus";
 import { toTimestamp } from "../shared/utils/dates";

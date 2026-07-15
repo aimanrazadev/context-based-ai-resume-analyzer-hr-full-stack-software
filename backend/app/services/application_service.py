@@ -356,3 +356,282 @@ def backfill_missing_application_scores(db: Session) -> int:
     if updated:
         db.commit()
     return updated
+
+
+def find_or_create_candidate(db: Session, *, user_id: int):
+    from fastapi import HTTPException
+
+    from ..models.candidate import Candidate
+    from ..models.user import User
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid user")
+
+    candidate = db.query(Candidate).filter(Candidate.user_id == user.id).first()
+    if not candidate and user.email:
+        candidate = db.query(Candidate).filter(Candidate.email == user.email).first()
+    if candidate:
+        if candidate.user_id is None:
+            candidate.user_id = user.id
+            db.add(candidate)
+            db.commit()
+            db.refresh(candidate)
+        return candidate
+
+    name = user.name or (user.email.split("@", 1)[0] if user.email else "Candidate")
+    candidate = Candidate(name=name, email=user.email, user_id=user.id)
+    db.add(candidate)
+    db.commit()
+    db.refresh(candidate)
+    return candidate
+
+
+def find_candidate_job_application(db: Session, *, candidate_id: int, job_id: int):
+    from ..models.application import Application
+
+    return (
+        db.query(Application)
+        .filter(Application.candidate_id == int(candidate_id), Application.job_id == int(job_id))
+        .order_by(Application.created_at.asc())
+        .first()
+    )
+
+
+def list_candidate_applications(db: Session, *, candidate_id: int):
+    from ..models.application import Application
+
+    return (
+        db.query(Application)
+        .filter(Application.candidate_id == int(candidate_id))
+        .order_by(Application.created_at.desc())
+        .all()
+    )
+
+
+def create_application_from_completed_scan(
+    db: Session,
+    *,
+    job_id: int,
+    user_id: int,
+    task_id: str,
+    upload_dir: str,
+):
+    from datetime import datetime, timezone
+    from pathlib import Path
+
+    from fastapi import HTTPException
+    from sqlalchemy.exc import IntegrityError
+
+    from ..models.application import Application
+    from ..models.job import Job
+    from ..models.resume import Resume
+    from ..modules.applications.status import normalize_application_status
+    from ..modules.resumes.storage import copy_scan_to_application_storage, safe_unlink
+    from ..services.progress_tracker import get_task
+    from ..services.resume_scan_service import extraction_metadata
+
+    job = db.query(Job).filter(Job.id == int(job_id)).first()
+    if not job or (job.status or "active") != "active":
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    candidate = find_or_create_candidate(db, user_id=int(user_id))
+    existing = find_candidate_job_application(db, candidate_id=int(candidate.id), job_id=int(job_id))
+    if existing:
+        return {"already_applied": True, "application": existing, "job": job}
+
+    task = get_task(task_id=task_id)
+    if (
+        not task
+        or int(task.get("user_id") or 0) != int(user_id)
+        or int(task.get("job_id") or 0) != int(job_id)
+        or task.get("status") != "done"
+    ):
+        raise HTTPException(status_code=404, detail="Completed scan not found. Please scan your resume again.")
+
+    result = task.get("result") if isinstance(task.get("result"), dict) else {}
+    internal = result.get("_internal") if isinstance(result.get("_internal"), dict) else {}
+    scan_file = Path(str(internal.get("scan_file_path") or ""))
+    if not scan_file.exists():
+        raise HTTPException(status_code=410, detail="Scanned resume expired. Please scan your resume again.")
+
+    original_filename = Path(str(internal.get("original_filename") or scan_file.name)).name
+    ext = Path(original_filename).suffix.lower() or scan_file.suffix.lower()
+    if ext not in {".pdf", ".docx"}:
+        raise HTTPException(status_code=400, detail="Only PDF or DOCX files are allowed")
+
+    dest, rel_path, stored_filename = copy_scan_to_application_storage(
+        scan_file=scan_file,
+        upload_dir=upload_dir,
+        job_id=int(job_id),
+        candidate_id=int(candidate.id),
+        original_filename=original_filename,
+    )
+
+    extraction = internal.get("extraction") if isinstance(internal.get("extraction"), dict) else {}
+    structured = internal.get("structured") if isinstance(internal.get("structured"), dict) else {}
+    ai_meta = internal.get("ai_meta") if isinstance(internal.get("ai_meta"), dict) else {}
+    ai_analysis = result.get("ai_analysis") if isinstance(result.get("ai_analysis"), dict) else {}
+    breakdown = result.get("score_breakdown") if isinstance(result.get("score_breakdown"), dict) else {}
+
+    try:
+        resume = Resume(
+            candidate_id=candidate.id,
+            file_path=rel_path.as_posix(),
+            stored_filename=stored_filename,
+            original_filename=original_filename,
+            content_type=internal.get("content_type"),
+            size_bytes=int(internal.get("size_bytes") or 0),
+            raw_extracted_text=extraction.get("raw_text") or "",
+            extracted_text=extraction.get("clean_text") or "",
+            extraction_status=str(extraction.get("extraction_status") or "success"),
+            extraction_metadata_json=json.dumps(extraction_metadata(extraction), ensure_ascii=False),
+            structured_json=json.dumps(structured, ensure_ascii=False),
+            structured_version=int(structured.get("version") or 1),
+            ai_structured_json=None,
+            ai_structured_version=1,
+            ai_model=str(ai_meta.get("model") or "") or None,
+            ai_generated_at=datetime.now(timezone.utc) if ai_analysis else None,
+            ai_warnings=json.dumps(ai_meta.get("warnings", []), ensure_ascii=False)
+            if isinstance(ai_meta.get("warnings"), list)
+            else None,
+        )
+        db.add(resume)
+        db.flush()
+
+        application = Application(job_id=job.id, candidate_id=candidate.id)
+        application.resume_id = int(resume.id)
+        application.ai_explanation = str(result.get("ai_explanation") or ai_analysis.get("reasoning") or "")
+        application.status = normalize_application_status(None)
+        application.semantic_score = float(result.get("semantic_score") or 0.0)
+        application.skills_score = float(result.get("skills_score") or 0.0)
+        application.experience_score = float(breakdown.get("experience_score") or 0.0)
+        application.ai_score = float(breakdown.get("ai_score") or 0.0)
+        application.final_score = int(result.get("final_score") or 0)
+        application.matched_skills_json = json.dumps(ai_analysis.get("matched_skills") or breakdown.get("matched_skills") or [], ensure_ascii=False)
+        application.missing_skills_json = json.dumps(ai_analysis.get("missing_skills") or breakdown.get("missing_skills") or [], ensure_ascii=False)
+        application.ranking_explanation = application.ai_explanation
+        application.score_breakdown_json = json.dumps(breakdown, ensure_ascii=False)
+        application.score_updated_at = datetime.now(timezone.utc)
+        db.add(application)
+        db.flush()
+
+        upsert_ai_resume_analysis(
+            db,
+            application_id=int(application.id),
+            analysis=ai_analysis,
+            metadata=ai_meta or {"status": "success"},
+        )
+        db.commit()
+        db.refresh(application)
+    except IntegrityError:
+        db.rollback()
+        safe_unlink(dest)
+        existing = find_candidate_job_application(db, candidate_id=int(candidate.id), job_id=int(job_id))
+        if existing:
+            return {"already_applied": True, "application": existing, "job": job}
+        raise HTTPException(status_code=409, detail="Application already exists") from None
+    except Exception:
+        db.rollback()
+        safe_unlink(dest)
+        raise
+
+    safe_unlink(scan_file)
+
+    return {
+        "already_applied": False,
+        "application": application,
+        "job": job,
+        "ai_analysis": ai_analysis,
+        "breakdown": breakdown,
+    }
+
+
+def update_application_status_for_recruiter(db: Session, *, application_id: int, status: str, recruiter_id: int):
+    from fastapi import HTTPException
+
+    from ..models.application import Application
+    from ..models.job import Job
+    from ..modules.applications.status import ALLOWED_APPLICATION_STATUSES, normalize_application_status
+
+    normalized = normalize_application_status(status)
+    if normalized not in ALLOWED_APPLICATION_STATUSES:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid application status. Use not-reviewed, shortlisted, on-hold, or rejected.",
+        )
+
+    application = db.query(Application).filter(Application.id == int(application_id)).first()
+    if not application:
+        raise HTTPException(status_code=404, detail="Application not found")
+
+    job = db.query(Job).filter(Job.id == int(application.job_id)).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if int(job.user_id or 0) != int(recruiter_id):
+        raise HTTPException(status_code=403, detail="You can only update applications for your own jobs")
+
+    application.status = normalized
+    db.add(application)
+    db.commit()
+    db.refresh(application)
+    return application
+
+
+def delete_application_for_user(db: Session, *, application_id: int, user: dict, upload_dir: str) -> int:
+    from pathlib import Path
+
+    from fastapi import HTTPException
+
+    from ..models.application import Application
+    from ..models.embedding import Embedding
+    from ..models.job import Job
+    from ..models.resume import Resume
+
+    application = db.query(Application).filter(Application.id == int(application_id)).first()
+    if not application:
+        raise HTTPException(status_code=404, detail="Application not found")
+
+    job = db.query(Job).filter(Job.id == int(application.job_id)).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    user_role = user.get("role")
+    user_id = int(user.get("sub"))
+    if user_role == "recruiter":
+        if job.user_id != user_id:
+            raise HTTPException(status_code=403, detail="You can only delete applications for your own jobs")
+    elif user_role == "candidate":
+        candidate = find_or_create_candidate(db, user_id=user_id)
+        if application.candidate_id != candidate.id:
+            raise HTTPException(status_code=403, detail="You can only withdraw your own applications")
+    else:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+    resume_id = application.resume_id
+    job_id = int(application.job_id)
+    try:
+        delete_ai_resume_analysis(db, application_id=int(application.id))
+        db.delete(application)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+
+    try:
+        if resume_id:
+            db.query(Embedding).filter(Embedding.entity_type == "resume", Embedding.entity_id == int(resume_id)).delete(synchronize_session=False)
+            resume = db.query(Resume).filter(Resume.id == int(resume_id)).first()
+            if resume:
+                try:
+                    path = Path(upload_dir) / (resume.file_path or "")
+                    if path.exists():
+                        path.unlink()
+                except Exception:
+                    pass
+                db.delete(resume)
+                db.commit()
+    except Exception:
+        db.rollback()
+
+    return job_id

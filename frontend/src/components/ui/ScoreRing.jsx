@@ -1,4 +1,4 @@
-import { getRingMetrics } from "../../utils/matchScore";
+import { getRingMetrics } from "../../shared/utils/matchScore";
 import { getScoreTone } from "../../shared/utils/scores";
 
 export default function ScoreRing({ score = 0, size = 72, label = "Match score" }) {

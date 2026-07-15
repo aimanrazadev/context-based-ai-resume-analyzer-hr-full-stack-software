@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useMemo, useState } from "react";
 import { Calendar, DollarSign, Eye, Lock, MapPin, Trash2 } from "lucide-react";
 import "./Jobs.css";
-import { jobAPI } from "../utils/api";
+import { jobAPI } from "../shared/utils/api";
 import { PageTransition, SkeletonBlock, SkeletonText } from "../components/ui";
 import { formatDate } from "../shared/utils/dates";
 

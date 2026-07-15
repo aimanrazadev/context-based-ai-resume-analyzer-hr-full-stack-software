@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Calendar, DollarSign, MapPin } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import "./JobSearch.css";
-import { jobAPI } from "../utils/api";
+import { jobAPI } from "../shared/utils/api";
 import { PageTransition, SkeletonBlock, SkeletonText } from "../components/ui";
 import { formatDate } from "../shared/utils/dates";
 

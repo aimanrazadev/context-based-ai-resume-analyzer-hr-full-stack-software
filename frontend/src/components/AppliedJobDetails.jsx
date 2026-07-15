@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { jobAPI } from "../utils/api";
+import { jobAPI } from "../shared/utils/api";
 import { BackButton, ErrorState, PageTransition, ScoreRing, SkeletonBlock, SkeletonText, SkillPill, StatusBadge } from "./ui";
 import { usePolling } from "../shared/hooks/usePolling";
 import { formatDate } from "../shared/utils/dates";

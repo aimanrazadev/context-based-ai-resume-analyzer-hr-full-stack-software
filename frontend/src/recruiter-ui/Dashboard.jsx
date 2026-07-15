@@ -1,6 +1,6 @@
 import "./Dashboard.css";
 import { useEffect, useState } from "react";
-import { jobAPI } from "../utils/api";
+import { jobAPI } from "../shared/utils/api";
 import { PageTransition, SkeletonBlock, SkeletonText } from "../components/ui";
 
 const pctChange = (current, previous) => {
