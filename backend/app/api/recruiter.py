@@ -1,14 +1,14 @@
 from datetime import datetime, timedelta
 import json
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import case, func, or_
 from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..models.application import Application
 from ..models.job import Job
-from ..modules.applications.status import normalize_application_status
+from ..modules.applications.status import validate_application_status
 from ..services.application_serializer import job_to_public
 from ..services.application_service import (
     ai_analysis_payload,
@@ -42,7 +42,10 @@ def _owned_application_query(db: Session, recruiter_id: int):
 
 
 def _status_filter(status: str):
-    normalized = normalize_application_status(status)
+    try:
+        normalized = validate_application_status(status)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
     if normalized == "not-reviewed":
         return or_(Application.status.is_(None), func.lower(Application.status).in_(["", "not-reviewed"]))
     return func.lower(Application.status) == normalized

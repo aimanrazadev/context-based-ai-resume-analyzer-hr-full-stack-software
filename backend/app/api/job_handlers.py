@@ -341,8 +341,13 @@ def download_application_resume(
     else:
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    abs_path = Path(UPLOAD_DIR) / Path(resume.file_path)
-    if not abs_path.exists():
+    upload_root = Path(UPLOAD_DIR).resolve()
+    abs_path = (upload_root / Path(resume.file_path or "")).resolve()
+    try:
+        abs_path.relative_to(upload_root)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="File missing on server") from None
+    if not abs_path.exists() or not abs_path.is_file():
         raise HTTPException(status_code=404, detail="File missing on server")
 
     return FileResponse(

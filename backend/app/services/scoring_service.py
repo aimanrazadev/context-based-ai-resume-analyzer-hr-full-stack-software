@@ -551,6 +551,8 @@ def score_application(
         "weak fit": 20,
     }
     recommendation_key = str(ai_recommendation or "").strip().lower()
+    if recommendation_key not in recommendation_map:
+        recommendation_key = "review manually"
     ai_score = recommendation_map.get(recommendation_key)
     ai_evaluation_score = float(ai_score / 100.0) if isinstance(ai_score, int) else 0.0
 
@@ -567,8 +569,8 @@ def score_application(
         notes.append("No structured resume data available; deterministic scoring may be limited.")
     if not job_skills:
         notes.append("No recruiter-required skills were available for skill-overlap scoring.")
-    if ai_score is None:
-        notes.append("No recognized AI recommendation was available; AI evaluation score set to 0.")
+    if str(ai_recommendation or "").strip().lower() not in recommendation_map:
+        notes.append("No recognized AI recommendation was available; AI evaluation score used Review Manually fallback.")
     if matched:
         evidence.append("Matched skills: " + ", ".join(matched[:6]))
     if projects_text.strip():
@@ -597,7 +599,7 @@ def score_application(
         "skills_score": component_scores["skills_score"],
         "experience_score": component_scores["experience_score"],
         "ai_score": component_scores["ai_score"],
-        "ai_recommendation": ai_recommendation or "",
+        "ai_recommendation": recommendation_key.title(),
         "matched_skills": matched,
         "missing_skills": missing,
         "projects_present": bool(projects_text.strip()),

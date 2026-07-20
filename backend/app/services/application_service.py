@@ -552,14 +552,15 @@ def update_application_status_for_recruiter(db: Session, *, application_id: int,
 
     from ..models.application import Application
     from ..models.job import Job
-    from ..modules.applications.status import ALLOWED_APPLICATION_STATUSES, normalize_application_status
+    from ..modules.applications.status import validate_application_status
 
-    normalized = normalize_application_status(status)
-    if normalized not in ALLOWED_APPLICATION_STATUSES:
+    try:
+        normalized = validate_application_status(status)
+    except ValueError as exc:
         raise HTTPException(
             status_code=400,
-            detail="Invalid application status. Use not-reviewed, shortlisted, on-hold, or rejected.",
-        )
+            detail=str(exc),
+        ) from None
 
     application = db.query(Application).filter(Application.id == int(application_id)).first()
     if not application:

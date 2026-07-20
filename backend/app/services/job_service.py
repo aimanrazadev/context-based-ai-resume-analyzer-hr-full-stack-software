@@ -34,6 +34,11 @@ def _serialize_string_list(value: list[str] | None, field_label: str) -> str | N
     return json.dumps(cleaned, ensure_ascii=False) if cleaned else None
 
 
+def _validate_range_pair(min_value: int | None, max_value: int | None, field_label: str) -> None:
+    if min_value is not None and max_value is not None and int(min_value) > int(max_value):
+        raise HTTPException(status_code=400, detail=f"{field_label} minimum cannot be greater than maximum")
+
+
 def serialize_job_json_fields(payload) -> dict[str, str | None]:
     values: dict[str, str | None] = {}
     if payload.perks is not None:
@@ -109,6 +114,13 @@ def create_job_record(db: Session, *, payload, user_id: int) -> Job:
     if draft_step < 1 or draft_step > 3:
         draft_step = 1
 
+    salary_min = validate_integer_field(payload.salary_min, "Salary min", min_value=0, max_value=10**9, required=False)
+    salary_max = validate_integer_field(payload.salary_max, "Salary max", min_value=0, max_value=10**9, required=False)
+    variable_min = validate_integer_field(payload.variable_min, "Variable min", min_value=0, max_value=10**9, required=False)
+    variable_max = validate_integer_field(payload.variable_max, "Variable max", min_value=0, max_value=10**9, required=False)
+    _validate_range_pair(salary_min, salary_max, "Salary")
+    _validate_range_pair(variable_min, variable_max, "Variable compensation")
+
     job = Job(
         user_id=user_id,
         job_title=title,
@@ -117,10 +129,10 @@ def create_job_record(db: Session, *, payload, user_id: int) -> Job:
         location=location or None,
         salary_range=salary_range or None,
         salary_currency=salary_currency or None,
-        salary_min=validate_integer_field(payload.salary_min, "Salary min", min_value=0, max_value=10**9, required=False),
-        salary_max=validate_integer_field(payload.salary_max, "Salary max", min_value=0, max_value=10**9, required=False),
-        variable_min=validate_integer_field(payload.variable_min, "Variable min", min_value=0, max_value=10**9, required=False),
-        variable_max=validate_integer_field(payload.variable_max, "Variable max", min_value=0, max_value=10**9, required=False),
+        salary_min=salary_min,
+        salary_max=salary_max,
+        variable_min=variable_min,
+        variable_max=variable_max,
         opportunity_type=(opportunity_type or None),
         min_experience_years=validate_integer_field(payload.min_experience_years, "Minimum experience years", min_value=0, max_value=60, required=False),
         job_type=(job_type or None),
@@ -217,6 +229,8 @@ def update_job_record(db: Session, *, job_id: int, payload, user_id: int) -> Job
         job.variable_min = validate_integer_field(payload.variable_min, "Variable min", min_value=0, max_value=10**9, required=False)
     if payload.variable_max is not None:
         job.variable_max = validate_integer_field(payload.variable_max, "Variable max", min_value=0, max_value=10**9, required=False)
+    _validate_range_pair(job.salary_min, job.salary_max, "Salary")
+    _validate_range_pair(job.variable_min, job.variable_max, "Variable compensation")
     if payload.opportunity_type is not None:
         job.opportunity_type = payload.opportunity_type.strip() if payload.opportunity_type else None
     if payload.min_experience_years is not None:

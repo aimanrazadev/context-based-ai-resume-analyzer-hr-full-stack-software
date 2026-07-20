@@ -129,21 +129,28 @@ def application_details_payload(*, db: Session, application: Application, candid
     if not isinstance(analysis, dict):
         analysis = {}
 
-    required_skills = job_required_skills_list(job)
-    live_skill_snapshot = classify_required_skills_from_resume(resume_row, required_skills)
-    live_matched = live_skill_snapshot.get("matched_skills") or []
-    live_missing = live_skill_snapshot.get("missing_skills") or []
+    stored_matched = safe_json_loads(application.matched_skills_json, default=[], expected_type=list) or []
+    stored_missing = safe_json_loads(application.missing_skills_json, default=[], expected_type=list) or []
+    if stored_matched or stored_missing:
+        matched_skills = [str(item).strip() for item in stored_matched if str(item or "").strip()]
+        missing_skills = [str(item).strip() for item in stored_missing if str(item or "").strip()]
+    else:
+        required_skills = job_required_skills_list(job)
+        live_skill_snapshot = classify_required_skills_from_resume(resume_row, required_skills)
+        matched_skills = live_skill_snapshot.get("matched_skills") or []
+        missing_skills = live_skill_snapshot.get("missing_skills") or []
+
     deterministic = deterministic_insights_from_resume(
         resume_row,
-        matched_skills=live_matched,
-        missing_skills=live_missing,
+        matched_skills=matched_skills,
+        missing_skills=missing_skills,
     )
 
     if is_evaluative_candidate_summary(analysis.get("candidate_summary")) or not str(analysis.get("candidate_summary") or "").strip():
         analysis["candidate_summary"] = deterministic.get("candidate_summary") or factual_candidate_summary_from_resume(resume_row)
     if not (isinstance(analysis.get("strengths"), list) and analysis.get("strengths")):
         analysis["strengths"] = deterministic.get("strengths") or []
-    weakness_conflict = analysis_conflicts_with_skill_snapshot(analysis, live_matched)
+    weakness_conflict = analysis_conflicts_with_skill_snapshot(analysis, matched_skills)
     if weakness_conflict or not (isinstance(analysis.get("weaknesses"), list) and analysis.get("weaknesses")):
         analysis["weaknesses"] = deterministic.get("weaknesses") or []
     if not str(analysis.get("strength_reasoning") or "").strip():
@@ -152,12 +159,12 @@ def application_details_payload(*, db: Session, application: Application, candid
         analysis["weakness_reasoning"] = deterministic.get("weakness_reasoning") or ""
     if not str(analysis.get("reasoning") or "").strip():
         analysis["reasoning"] = deterministic.get("reasoning") or ""
-    analysis["matched_skills"] = live_matched
-    analysis["missing_skills"] = live_missing
+    analysis["matched_skills"] = matched_skills
+    analysis["missing_skills"] = missing_skills
     analysis["recommendation"] = analysis.get("recommendation") or "Review Manually"
     if isinstance(breakdown, dict):
-        breakdown["matched_skills"] = live_matched
-        breakdown["missing_skills"] = live_missing
+        breakdown["matched_skills"] = matched_skills
+        breakdown["missing_skills"] = missing_skills
 
     return {
         "id": application.id,
